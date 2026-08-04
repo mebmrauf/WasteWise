@@ -33,8 +33,7 @@ server/prisma/dev.db
 # ephemeral in production anyway (see docs/api-contract.md "User Profile"
 # caveat for docs-deploy-agent).
 server/uploads/
-design-reference/*
-!design-reference/README.md
+design-reference/
 *.docx
 
 # Test/e2e tooling output
