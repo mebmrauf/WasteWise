@@ -1,0 +1,17 @@
+{
+  "name": "wastewise",
+  "private": true,
+  "workspaces": ["web", "server"],
+  "scripts": {
+    "dev": "concurrently -n web,server -c green,blue \"npm run dev -w web\" \"npm run dev -w server\"",
+    "build": "npm run build -w web && npm run build -w server",
+    "lint": "npm run lint -w web && npm run lint -w server",
+    "typecheck": "npm run typecheck -w web && npm run typecheck -w server",
+    "test": "npm run test -w web && npm run test -w server",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "@playwright/test": "^1.62.1"
+  }
+}

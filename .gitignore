@@ -1,0 +1,45 @@
+node_modules/
+.next/
+dist/
+build/
+.env
+.env.*
+.envrc
+.direnv/
+.env.local
+.env.test.local
+# server/.env.test is intentionally committed (dummy/fake values only) — see
+# its own header comment. `.env.*` above would otherwise swallow it too.
+!server/.env.test
+*.log
+*.key
+*.pem
+*.crt
+*.cer
+*.p12
+*.pfx
+*.der
+*.tsbuildinfo
+.DS_Store
+.vscode/
+.idea/
+.fleet/
+.history/
+.npmrc
+.eslintcache
+server/prisma/dev.db
+
+# User-generated content (local-disk avatar uploads) — never source, and
+# ephemeral in production anyway (see docs/api-contract.md "User Profile"
+# caveat for docs-deploy-agent).
+server/uploads/
+design-reference/*
+!design-reference/README.md
+*.docx
+
+# Test/e2e tooling output
+coverage/
+playwright-report/
+test-results/
+/blob-report/
+.vitest-cache/

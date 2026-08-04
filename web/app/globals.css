@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base app-shell styles — see docs/design-system.md §1.2 (neutral scale) and §2 (typography).
+   Every value here resolves to a Tailwind utility class backed by web/lib/tokens.ts; nothing
+   below is a raw hex/px value. */
+@layer base {
+  body {
+    @apply bg-neutral-50 text-neutral-900 font-body text-body antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading;
+  }
+}
