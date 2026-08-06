@@ -1,36 +1,5 @@
 "use client";
 
-/**
- * AddressAutocomplete — presentational text-input + suggestions-dropdown for an address
- * field backed by Google Places Autocomplete. This is a fully custom, token-styled input +
- * suggestions list, deliberately not Google's own Autocomplete widget — that renders a
- * Google-styled dropdown that can't be reskinned to match the design system. It does not
- * call Google's API itself; the parent fetches suggestions (see lib/api/places.ts) and
- * feeds `suggestions`/`isLoading`/`error` in via props.
- *
- * Usage:
- *   <AddressAutocomplete
- *     label="Address"
- *     value={query}
- *     onChange={handleAddressQueryChange}
- *     suggestions={suggestions}
- *     isLoading={isLoading}
- *     error={error}
- *     onSelectSuggestion={handleSelectAddressSuggestion}
- *   />
- *
- * Accessibility: implements the WAI-ARIA "Editable Combobox With List Autocomplete"
- * pattern directly on the `<input>` (role="combobox", aria-autocomplete, aria-expanded,
- * aria-controls, aria-activedescendant via Input's passthrough props). The listbox stays
- * mounted whenever the panel is open, even with zero options, so aria-controls never
- * references a nonexistent id. ArrowUp/ArrowDown move the highlighted option (wrapping),
- * Enter selects it, Escape closes the panel without blurring the input.
- *
- * Blur-vs-click race: clicking a suggestion blurs the input (mousedown moves focus) before
- * the row's own click handler fires. Closing the dropdown synchronously on blur would
- * unmount the row before that click lands, so close-on-blur is delayed 120ms and cancelled
- * if a selection or re-focus happens first.
- */
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/Input";
@@ -41,25 +10,17 @@ export interface AddressSuggestion {
 }
 
 export interface AddressAutocompleteProps {
-  /** Field label rendered above the input, same as Input's own `label` prop. */
   label?: string;
-  /** Current query text — fully controlled by the parent. */
   value: string;
-  /** Fires on every keystroke with the new raw text. */
   onChange: (value: string) => void;
-  /** Suggestions to render below the input — populated by the parent's Google Places call. */
   suggestions: AddressSuggestion[];
-  /** Fires when a suggestion is chosen via click, tap, or Enter. */
   onSelectSuggestion: (suggestion: AddressSuggestion) => void;
-  /** True while the parent's suggestions request is in flight. */
   isLoading?: boolean;
-  /** Parent-supplied error (e.g. the Google Places request failed) — rendered via ErrorBanner. */
   error?: string | null;
   disabled?: boolean;
   placeholder?: string;
   name?: string;
   id?: string;
-  /** Shown in the dropdown when a non-empty query resolves to zero suggestions. */
   noResultsText?: string;
   className?: string;
 }
@@ -87,8 +48,6 @@ export function AddressAutocomplete({
   const [highlightedIndex, setHighlightedIndex] = React.useState(-1);
   const blurTimeoutRef = React.useRef<number | null>(null);
 
-  // Keyed by placeId content rather than array identity, so a parent that recreates an
-  // equal array on every render doesn't spuriously reset the highlighted index.
   const suggestionsKey = suggestions.map((suggestion) => suggestion.placeId).join("|");
   React.useEffect(() => {
     setHighlightedIndex(-1);
@@ -118,7 +77,6 @@ export function AddressAutocomplete({
   }
 
   function handleBlur() {
-    // Delayed so a click on a suggestion (which blurs the input first) still lands on a mounted row.
     blurTimeoutRef.current = window.setTimeout(() => {
       setIsOpen(false);
       setHighlightedIndex(-1);

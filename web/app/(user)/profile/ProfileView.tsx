@@ -1,25 +1,5 @@
 "use client";
 
-// Client Component because it uses useRequireRole and holds local edit/save state, mirroring
-// the page.tsx (server) + *View.tsx (client) split used for /login and /signup. Gated to
-// USER-role accounts only — Household and Business share `role: "USER"`, distinguished by
-// `accountType`, so no extra gate is needed.
-//
-// `GET /users/me` returns fields (formattedAddress, avatarUrl, notification prefs, ...) that
-// AuthContext's AuthUser type doesn't carry, and there's no shared "extended user" type for
-// it — so fullName/phone are seeded from useAuth().user immediately (page isn't blank while
-// the real fetch is pending) while the rest lives in a separate `extras` state (ProfileExtras
-// below), null until GET /users/me resolves. Fields reading from `extras` show a disabled
-// "Loading…" state rather than guessing a value.
-//
-// The address field uses AddressAutocomplete instead of EditableField: PATCH /users/me only
-// accepts a Google `placeId` for the address, never free text, so selecting a suggestion *is*
-// the save action — there's no separate Save button, only Cancel. The Places Autocomplete
-// session-token lifecycle (Google bills per session, not per keystroke) is owned entirely
-// here: one token per edit attempt (ensureAddressSessionToken), rotated once a suggestion is
-// picked or editing is cancelled (rotateAddressSessionToken). Keystrokes are debounced and
-// gated to a minimum length before calling fetchAddressSuggestions, and a monotonically
-// increasing request sequence ref discards stale out-of-order responses.
 import * as React from "react";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/AddressAutocomplete";
@@ -41,7 +21,6 @@ import {
   type UpdateProfileInput,
 } from "@/lib/api/users";
 
-// Never surface a raw AuthApiError.message for an unmapped code — fall back to the caller-supplied default.
 const profileErrorMessages: Record<string, string> = {
   VALIDATION_ERROR: "Please check that value and try again.",
   PHONE_IN_USE: "That phone number is already linked to another account.",
@@ -62,7 +41,6 @@ function resolveProfileErrorMessage(err: unknown, fallback: string): string {
 const ADDRESS_DEBOUNCE_MS = 300;
 const ADDRESS_MIN_QUERY_LENGTH = 3;
 
-/** The `GET /users/me` fields beyond what AuthContext's AuthUser already carries. */
 interface ProfileExtras {
   formattedAddress: string | null;
   latitude: number | null;
@@ -83,8 +61,6 @@ const idleSaveState: FieldSaveState = { isSaving: false, error: null };
 export function ProfileView() {
   const { user, isLoading, refetchUser } = useRequireRole(["USER"]);
 
-  // Tracked as local drafts (rather than reading straight from `user`) so EditableField's
-  // optimistic local update on save has somewhere to live, kept in sync via the effect below.
   const [fullName, setFullName] = React.useState(user?.fullName ?? "");
   const [phone, setPhone] = React.useState(user?.phone ?? "");
 
@@ -96,8 +72,6 @@ export function ProfileView() {
   }, [user]);
 
   const [extras, setExtras] = React.useState<ProfileExtras | null>(null);
-  // Distinct from the per-field save errors below — surfaced via ErrorBanner so a failed
-  // load doesn't leave every field stuck silently on "Loading…".
   const [extrasError, setExtrasError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -142,10 +116,7 @@ export function ProfileView() {
 
   const addressSessionTokenRef = React.useRef<string | null>(null);
   const addressDebounceTimerRef = React.useRef<number | null>(null);
-  // Guards against a slower earlier suggestions request overwriting a faster later one.
   const addressRequestSeqRef = React.useRef(0);
-  // When address edit mode closes (save or cancel), move focus back to the reappeared "Edit"
-  // button rather than leaving keyboard/screen-reader focus stranded nowhere.
   const addressEditButtonRef = React.useRef<HTMLButtonElement>(null);
   const wasEditingAddressRef = React.useRef(false);
 
@@ -193,7 +164,7 @@ export function ProfileView() {
     try {
       const token = ensureAddressSessionToken();
       const results = await fetchAddressSuggestions(query, token);
-      if (seq !== addressRequestSeqRef.current) return; // a newer request superseded this one
+      if (seq !== addressRequestSeqRef.current) return;
       setAddressSuggestions(results);
       setIsLoadingAddressSuggestions(false);
     } catch (err) {
@@ -215,8 +186,6 @@ export function ProfileView() {
 
     const trimmed = nextQuery.trim();
     if (trimmed.length < ADDRESS_MIN_QUERY_LENGTH) {
-      // Invalidate any in-flight request too, so a slow response for a longer,
-      // since-deleted query can't reappear.
       addressRequestSeqRef.current += 1;
       setAddressSuggestions([]);
       setIsLoadingAddressSuggestions(false);
@@ -240,7 +209,7 @@ export function ProfileView() {
 
   function handleCancelAddress() {
     clearPendingAddressDebounce();
-    addressRequestSeqRef.current += 1; // invalidate any in-flight suggestions fetch
+    addressRequestSeqRef.current += 1;
     rotateAddressSessionToken();
     setAddressSuggestions([]);
     setIsLoadingAddressSuggestions(false);
@@ -251,9 +220,7 @@ export function ProfileView() {
 
   async function handleSelectAddressSuggestion(suggestion: AddressSuggestion) {
     clearPendingAddressDebounce();
-    addressRequestSeqRef.current += 1; // invalidate any in-flight suggestions fetch
-    // The Autocomplete "session" ends the moment a suggestion is chosen,
-    // regardless of whether the follow-up PATCH below succeeds — rotate now.
+    addressRequestSeqRef.current += 1;
     rotateAddressSessionToken();
     setAddressQuery(suggestion.description);
     setAddressSuggestions([]);
@@ -276,7 +243,6 @@ export function ProfileView() {
       setAddressSave({ isSaving: false, error: null });
       setIsEditingAddress(false);
     } catch (err) {
-      // Stay in editing mode on failure so the user can pick another suggestion or retry.
       setAddressSave({
         isSaving: false,
         error: resolveProfileErrorMessage(err, "Couldn't save that address. Try again."),
@@ -296,7 +262,6 @@ export function ProfileView() {
       const { user: updated } = await updateMyProfile({ fullName: newValue });
       setFullName(updated.fullName);
       setFullNameSave({ isSaving: false, error: null });
-      // Keep AuthContext/NavBar's "Hi, {name}" greeting in sync — fire and forget.
       void refetchUser();
     } catch (err) {
       setFullNameSave({
@@ -361,7 +326,6 @@ export function ProfileView() {
   }
 
   if (!user) {
-    // useRequireRole is already redirecting — render nothing rather than flash gated content.
     return null;
   }
 

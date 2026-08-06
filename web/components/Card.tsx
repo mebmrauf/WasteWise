@@ -1,16 +1,7 @@
-/**
- * Card — general-purpose container. `interactive` adds the hover elevation/border treatment
- * for clickable cards; radius and padding never change on hover (design-system.md §6.2).
- *
- * Usage:
- *   <Card>Plain content block</Card>
- *   <Card interactive onClick={() => {}}>Clickable card row</Card>
- */
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** Adds the hover elevation/border treatment for clickable cards. */
   interactive?: boolean;
 }
 

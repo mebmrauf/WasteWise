@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 import { colors } from "@/lib/tokens";
 
-// Colors pulled from lib/tokens.ts rather than hardcoded, per design-system.md.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "WasteWise",

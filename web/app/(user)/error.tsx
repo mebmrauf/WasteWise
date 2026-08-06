@@ -6,14 +6,6 @@ import { Card } from "@/components/Card";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { PageContainer } from "@/components/PageContainer";
 
-// Route-group error boundary for app/(user)/. Renders inside layout.tsx, so the NavBar there
-// keeps rendering around it. Must be a Client Component accepting exactly `{ error, reset }` —
-// that's the Next.js App Router error.tsx contract.
-//
-// SECURITY: never render the raw `error.message`. This boundary also catches client-thrown
-// errors (not just server-render failures, which Next.js already redacts in production), and
-// a raw error can leak internal variable/property names. The banner always shows a generic
-// message; the real error only goes to console.error in dev.
 export default function UserRouteError({
   error,
   reset,

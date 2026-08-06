@@ -1,35 +1,5 @@
 "use client";
 
-/**
- * DashboardNav — role-scoped app-shell navigation for dashboard layouts. Collector/Recycling
- * Company/Admin dashboards reuse this exact component with a different `accent`/`roleLabel`/
- * `items`.
- *
- * Usage:
- *   <DashboardNav
- *     accent="user"
- *     roleLabel="USER PORTAL"
- *     items={[{ label: "Profile", href: "/profile", icon: User }, ...]}
- *   />
- *
- * One component rather than three, since it's a single navigational concept reflowing across
- * breakpoints: a fixed left sidebar on desktop (`lg`+), an icon-only rail on tablet (`md`–`lg`,
- * with hover/focus tooltips), and a fixed bottom tab bar on mobile. All three mount
- * simultaneously and switch via responsive `hidden`/`flex` utilities, avoiding a hydration
- * flash or resize listener — each gets a distinct `aria-label` so only one is ever in the
- * a11y tree.
- *
- * The mobile tab bar renders at most 5 items (`items.slice(0, 5)`) — no overflow drawer for a
- * 6th item yet; flag for follow-up if a 6-item role nav shows up.
- *
- * The sidebar/rail render only `roleLabel`, not a `brand` slot — that space belongs to the
- * wrapping `NavBar`, which already renders the brand link above this component. `brand` stays
- * in `DashboardNavProps` unused so a future standalone usage isn't a breaking API change later.
- *
- * The dark sidebar/rail focus ring is built from `ring-neutral-0` + `ring-offset-role-
- * {accent}-900` rather than a role-tinted `shadow-focus`, since no role-scoped focus-shadow
- * token exists yet in tokens.ts — flagged as a real design-token gap.
- */
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -42,20 +12,13 @@ export interface DashboardNavItem {
   label: string;
   href: string;
   icon: LucideIcon;
-  /** Explicit active-state override. Omit to derive it from the current
-   * pathname via `usePathname()`. */
   active?: boolean;
 }
 
 export interface DashboardNavProps {
   items: DashboardNavItem[];
-  /** Role-accent — same prop pattern as NavBar/Avatar (docs/design-system.md §1.4). */
   accent: RoleAccent;
-  /** Eyebrow label at the top of the desktop sidebar, e.g. "USER PORTAL". */
   roleLabel: string;
-  /** Logo/wordmark slot. Not rendered here — the wrapping `NavBar` already renders the brand
-   * link above this component. Kept as an optional prop so a future standalone usage (without
-   * a wrapping `NavBar`) isn't a breaking API change. */
   brand?: React.ReactNode;
   className?: string;
 }
@@ -88,23 +51,11 @@ const mobileActiveTextClasses: Record<RoleAccent, string> = {
   admin: "text-role-admin-500",
 };
 
-/** Sidebar/rail focus ring — see the "Focus ring" note in the file header. */
 const darkSurfaceFocusRing =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-0 focus-visible:ring-offset-2";
 
-/** Mobile tab-bar focus ring — light surface, so the existing generic `shadow-focus` token applies directly. */
 const lightSurfaceFocusRing = "focus-visible:outline-none focus-visible:shadow-focus";
 
-/**
- * Resolves an active/inactive boolean per item. `item.active` is a per-item override that
- * skips path matching entirely when present.
- *
- * The rest can't just check "does `pathname` start with `item.href`" independently per item —
- * that false-positives whenever one item's `href` is a string-prefix of a sibling's (e.g.
- * "My Pickups" → /pickups and "Track Pickup" → /pickups/track are siblings, yet
- * /pickups/track/123 nests under both). So an exact match wins outright; otherwise only the
- * most specific (longest `href`) nested match is marked active.
- */
 function resolveActiveStates(items: DashboardNavItem[], pathname: string | null): boolean[] {
   const result = items.map((item) => item.active);
   const candidates = items
@@ -118,7 +69,7 @@ function resolveActiveStates(items: DashboardNavItem[], pathname: string | null)
     } else {
       let best: { index: number; length: number } | null = null;
       for (const { item, index } of candidates) {
-        if (item.href === "/") continue; // root only ever matches exactly, handled above
+        if (item.href === "/") continue;
         const matches = pathname === item.href || pathname.startsWith(`${item.href}/`);
         if (matches && (!best || item.href.length > best.length)) {
           best = { index, length: item.href.length };
@@ -134,7 +85,8 @@ function resolveActiveStates(items: DashboardNavItem[], pathname: string | null)
 export function DashboardNav({ items, accent, roleLabel, brand, className }: DashboardNavProps) {
   const pathname = usePathname();
   const activeStates = React.useMemo(() => resolveActiveStates(items, pathname), [items, pathname]);
-  const mobileItems = items.slice(0, 5);
+  const mobileScrollable = items.length > 5;
+  const mobileItems = mobileScrollable ? items : items.slice(0, 5);
 
   return (
     <>
@@ -223,13 +175,16 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
       {/* Mobile — bottom tab bar (below md, §6.4) */}
       <nav
         aria-label="Primary (mobile)"
-        className="fixed inset-x-0 bottom-0 z-10 flex h-16 items-stretch border-t border-neutral-200 bg-neutral-0 md:hidden"
+        className={cn(
+          "fixed inset-x-0 bottom-0 z-10 flex h-16 items-stretch border-t border-neutral-200 bg-neutral-0 md:hidden",
+          mobileScrollable && "overflow-x-auto"
+        )}
       >
         <ul className="flex w-full items-stretch">
           {mobileItems.map((item, index) => {
             const isActive = activeStates[index];
             return (
-              <li key={item.href} className="flex-1">
+              <li key={item.href} className={mobileScrollable ? "min-w-16 shrink-0" : "flex-1"}>
                 <Link
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}

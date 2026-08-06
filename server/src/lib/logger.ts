@@ -1,5 +1,3 @@
-// Structured logging (pino). Pretty-printed in development for readability,
-// plain JSON in production/test so log aggregators (Render, etc.) can parse it.
 import pino from "pino";
 import { env } from "./env";
 

@@ -1,12 +1,16 @@
-// Boot entry point. `dotenv/config` must load server/.env before anything
-// else (including `./app`, which transitively imports `./lib/env`) so the
-// process fails fast with a clear message if the environment is misconfigured,
-// instead of crashing cryptically on the first request that needs a missing var.
 import "dotenv/config";
+import http from "node:http";
 import { app } from "./app";
 import { env } from "./lib/env";
 import { logger } from "./lib/logger";
+import { createSocketServer } from "./realtime/socket";
+import { registerPickupTrackingHandlers } from "./realtime/pickupEvents";
 
-app.listen(env.PORT, () => {
+const httpServer = http.createServer(app);
+
+const io = createSocketServer(httpServer);
+registerPickupTrackingHandlers(io);
+
+httpServer.listen(env.PORT, () => {
   logger.info({ port: env.PORT, env: env.NODE_ENV }, "WasteWise API listening");
 });

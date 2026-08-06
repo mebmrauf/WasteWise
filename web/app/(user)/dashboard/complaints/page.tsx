@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Megaphone } from "lucide-react";
 import { ComingSoonPage } from "@/components/ComingSoonPage";
 
-// Authenticated, user-specific page — intentionally left off sitemap.ts.
 export const metadata: Metadata = {
   title: "Complaints — WasteWise",
   description: "Report an issue with a pickup and track its resolution.",

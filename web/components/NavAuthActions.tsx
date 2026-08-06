@@ -1,24 +1,18 @@
 "use client";
 
-/**
- * NavAuthActions — auth-aware content for NavBar's `actions` slot. Client Component (calls
- * useAuth()) kept separate from the pages that render it, so those pages can stay Server
- * Components — e.g. app/page.tsx needs a page-level `metadata` export.
- *
- * States: loading renders nothing (a brief blank beats a flash of the wrong state); signed in
- * shows a first-name greeting + "Dashboard" link (hidden once already under /dashboard/**,
- * where DashboardNav's own sidebar makes it redundant) + "Log out"; signed out shows "Log in"
- * / "Sign up".
- */
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/Button";
 import { useAuth } from "@/lib/auth/AuthContext";
+import type { Role } from "@/lib/api/auth";
+
+const DASHBOARD_HOME_BY_ROLE: Partial<Record<Role, string>> = {
+  COLLECTOR: "/collector",
+};
 
 export function NavAuthActions() {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const isInDashboardShell = pathname?.startsWith("/dashboard") ?? false;
 
   if (isLoading) {
     return null;
@@ -26,12 +20,14 @@ export function NavAuthActions() {
 
   if (user) {
     const shortName = user.fullName.trim().split(/\s+/)[0] ?? user.fullName;
+    const dashboardHomeHref = DASHBOARD_HOME_BY_ROLE[user.role] ?? "/dashboard";
+    const isInDashboardShell = pathname?.startsWith(dashboardHomeHref) ?? false;
 
     return (
       <div className="flex items-center gap-3">
         <span className="text-body-sm text-neutral-600">Hi, {shortName}</span>
         {!isInDashboardShell && (
-          <Button variant="ghost" size="sm" href="/dashboard">
+          <Button variant="ghost" size="sm" href={dashboardHomeHref}>
             Dashboard
           </Button>
         )}
@@ -39,8 +35,6 @@ export function NavAuthActions() {
           variant="ghost"
           size="sm"
           onClick={() => {
-            // Catch so a failed server-side revoke doesn't surface as an unhandled rejection —
-            // logout() already clears local state regardless, so the redirect still makes sense.
             void logout()
               .catch(() => undefined)
               .finally(() => {

@@ -1,15 +1,5 @@
 "use client";
 
-// Client Component because <form onSubmit> requires a client boundary in the App Router —
-// everything else about this page (copy, metadata, OAuth links) stays server-rendered in page.tsx.
-//
-// Household and Business are kept as distinct top-level choices in the "I'm signing up as"
-// selector, not merged into one "USER" option with a secondary dropdown — both share the
-// `role: "USER"` permission level today, but their dashboards diverge later, so the distinction
-// should be visible from the first interaction. `SignupRoleChoice` is a synthetic local union
-// covering all four options; `resolveRoleChoice` derives the `{ role, accountType }` pair the
-// backend expects (accountType must be omitted entirely for COLLECTOR/RECYCLING_COMPANY —
-// sending it is a 400 VALIDATION_ERROR per api-contract.md §4).
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/Input";
@@ -19,17 +9,15 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { AuthApiError, type AccountType, type SelectableRole } from "@/lib/api/auth";
 
-/** Synthetic value for the flat "I'm signing up as" select — not a wire type. */
 export type SignupRoleChoice = "HOUSEHOLD" | "BUSINESS" | "COLLECTOR" | "RECYCLING_COMPANY";
 
 const roleChoiceOptions: { value: SignupRoleChoice; label: string }[] = [
   { value: "HOUSEHOLD", label: "Household" },
   { value: "BUSINESS", label: "Business" },
-  { value: "COLLECTOR", label: "Collector (accept pickups)" },
+  { value: "COLLECTOR", label: "Collector" },
   { value: "RECYCLING_COMPANY", label: "Recycling Company" },
 ];
 
-/** Derives the `{ role, accountType }` pair docs/api-contract.md §4 expects from a flat choice. */
 function resolveRoleChoice(
   choice: SignupRoleChoice
 ): { role: SelectableRole; accountType?: AccountType } {
@@ -45,7 +33,6 @@ function resolveRoleChoice(
   }
 }
 
-// Never surface a raw AuthApiError.message for an unmapped code — fall back to something generic.
 const signupErrorMessages: Record<string, string> = {
   VALIDATION_ERROR:
     "Please check your details — make sure your email is valid and your password is at least 8 characters.",
@@ -60,7 +47,6 @@ function resolveSignupErrorMessage(err: unknown): string {
 }
 
 export interface SignupFormProps {
-  /** Pre-selected choice, e.g. from the `?role=collector` landing-page CTA. */
   defaultRoleChoice: SignupRoleChoice;
 }
 
@@ -69,6 +55,8 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [roleChoice, setRoleChoice] = React.useState<SignupRoleChoice>(defaultRoleChoice);
+  const isPhoneRequired = roleChoice === "COLLECTOR";
 
   return (
     <form
@@ -82,7 +70,6 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
         const email = String(formData.get("email") ?? "");
         const phone = String(formData.get("phone") ?? "").trim();
         const password = String(formData.get("password") ?? "");
-        const roleChoice = String(formData.get("roleChoice") ?? defaultRoleChoice) as SignupRoleChoice;
         const { role, accountType } = resolveRoleChoice(roleChoice);
 
         setIsSubmitting(true);
@@ -105,6 +92,15 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
     >
       {errorMessage && <ErrorBanner>{errorMessage}</ErrorBanner>}
 
+      <Select
+        label="I'm signing up as"
+        name="roleChoice"
+        value={roleChoice}
+        onChange={(event) => setRoleChoice(event.target.value as SignupRoleChoice)}
+        disabled={isSubmitting}
+        options={roleChoiceOptions}
+      />
+
       <Input label="Full name" name="fullName" autoComplete="name" required disabled={isSubmitting} />
       <Input
         label="Email"
@@ -115,11 +111,13 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
         disabled={isSubmitting}
       />
       <Input
-        label="Phone (optional)"
+        label={isPhoneRequired ? "Phone" : "Phone (optional)"}
         name="phone"
         type="tel"
         autoComplete="tel"
         placeholder="+8801700000000"
+        required={isPhoneRequired}
+        helperText={isPhoneRequired ? "Required for collector accounts — households use this to reach you." : undefined}
         disabled={isSubmitting}
       />
       <Input
@@ -131,14 +129,6 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
         required
         minLength={8}
         disabled={isSubmitting}
-      />
-
-      <Select
-        label="I'm signing up as"
-        name="roleChoice"
-        defaultValue={defaultRoleChoice}
-        disabled={isSubmitting}
-        options={roleChoiceOptions}
       />
 
       <Button type="submit" fullWidth className="mt-2" disabled={isSubmitting}>

@@ -1,24 +1,17 @@
-// JWT signing/verification for access + refresh tokens. Kept separate from
-// lib/authTokens.ts (which owns the refresh-token *rotation/revocation*
-// bookkeeping in the DB) so this file is pure crypto/encoding with no DB
-// dependency — easy to unit test in isolation.
 import jwt from "jsonwebtoken";
 import type { Role } from "@prisma/client";
 import { env } from "./env";
 
 export interface AccessTokenPayload {
-  sub: string; // User.id
+  sub: string;
   role: Role;
 }
 
 export interface RefreshTokenPayload {
-  sub: string; // User.id
-  jti: string; // unique id for this refresh token, ties the JWT to its RefreshToken DB row
+  sub: string;
+  jti: string;
 }
 
-// Pinned explicitly (rather than relying on jsonwebtoken's default behavior)
-// so a future refactor can never be tricked into accepting a token signed
-// with an unexpected algorithm — OWASP JWT hardening baseline.
 const JWT_ALGORITHM = "HS256" as const;
 
 export function signAccessToken(payload: AccessTokenPayload): string {
@@ -47,7 +40,6 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
   }) as RefreshTokenPayload;
 }
 
-/** Decodes (without verifying) to read the `exp` claim, e.g. to persist expiresAt. */
 export function decodeExpiry(token: string): Date {
   const decoded = jwt.decode(token) as { exp?: number } | null;
   if (!decoded?.exp) {

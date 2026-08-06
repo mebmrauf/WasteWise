@@ -14,12 +14,8 @@ export const metadata: Metadata = {
   },
 };
 
-// Messages for the `?error=` codes the OAuth callback redirects back with (api-contract.md §7).
-// Only covers codes this page's own redirect target can receive, not every auth error code.
 const oauthErrorMessages: Record<string, string> = {
   oauth_state_mismatch: "Your sign-in attempt expired or looked suspicious. Please try again.",
-  // In practice Facebook-specific (Google almost always returns an email), but the error code
-  // itself is provider-agnostic, so the copy doesn't name one provider.
   oauth_email_required:
     "That account doesn't have a verified email address on file, so we can't create a WasteWise account from it. Please sign up with email instead.",
   oauth_failed: "Something went wrong signing you in. Please try again.",

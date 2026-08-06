@@ -1,22 +1,3 @@
-/**
- * Input — WasteWise primitive text input with label + helper/error text.
- *
- * Usage:
- *   <Input label="Email" placeholder="you@example.com" />
- *   <Input label="Phone" helperText="We'll only use this for pickup updates." />
- *   <Input label="Weight (kg)" errorText="Enter a value greater than 0." />
- *
- * Colors/spacing/radius/type come from docs/design-system.md §1.2 (neutral
- * scale — resting/disabled border, placeholder/disabled text), §1.1 (focus
- * border = primary-500), §2.2 (text-label for the field label, text-body-sm
- * for helper/error text), §4.1 (radius-md for form inputs) via
- * web/lib/tokens.ts.
- *
- * Accessibility: label is associated via `htmlFor`/`id` (auto-generated with
- * `useId` when `id` isn't supplied); helper/error text is wired to the field
- * with `aria-describedby`; `aria-invalid` is set whenever `errorText` is
- * present. `errorText` takes precedence over `helperText` when both are set.
- */
 import * as React from "react";
 import { cn } from "@/lib/utils";
 

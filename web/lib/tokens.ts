@@ -1,10 +1,3 @@
-// WasteWise design tokens — typed export mirroring docs/design-system.md.
-//
-// This is the single source of truth consumed by web/tailwind.config.ts.
-// Do NOT hand-edit tailwind.config.ts with literal values — add/change values here
-// (and in docs/design-system.md) first, then let tailwind.config.ts reference them.
-
-/** 10-step ramp used for the primary brand color and the neutral scale. */
 export interface ColorRamp {
   50: string;
   100: string;
@@ -18,7 +11,6 @@ export interface ColorRamp {
   900: string;
 }
 
-/** Reduced 4-step ramp used for semantic colors and role accents (tint / base / dark / surface). */
 export interface AccentRamp {
   50: string;
   500: string;
@@ -26,7 +18,6 @@ export interface AccentRamp {
   900: string;
 }
 
-/** 3-step ramp used for category-only colors that don't need a dark "surface" shade. */
 export interface CategoryRamp {
   50: string;
   500: string;
@@ -47,10 +38,6 @@ export const colors = {
     900: "#0E2419",
   } satisfies ColorRamp,
 
-  // NOTE (docs/design-system.md §1.2): `neutral-400` fails WCAG AA as a text color (2.88:1 on
-  // white) — restrict it to non-text/decorative uses (icon-muted, disabled borders). Any
-  // placeholder/disabled/caption *text* must use `neutral-500` (5.09:1 on white, passes AA)
-  // or darker.
   neutral: {
     0: "#FFFFFF",
     50: "#F7F6F3",
@@ -72,8 +59,6 @@ export const colors = {
     info: { 50: "#E8F1FA", 500: "#2C6FB0", 700: "#1E4E7D" } satisfies CategoryRamp,
   },
 
-  /** One accent ramp per platform role. Each includes a `900` "surface" shade used for that
-   * role's sidebar/app-shell background. */
   role: {
     user: { 50: "#EAF3EE", 500: "#2F6B4F", 700: "#1F4834", 900: "#0E2419" } satisfies AccentRamp,
     collector: { 50: "#F7ECE3", 500: "#B5652F", 700: "#82461E", 900: "#3D2413" } satisfies AccentRamp,
@@ -81,16 +66,12 @@ export const colors = {
     admin: { 50: "#EAEAF6", 500: "#4A4E9E", 700: "#33366E", 900: "#23244F" } satisfies AccentRamp,
   },
 
-  /** Additional hue families that exist only to support waste-category chip colors — not
-   * exposed as general-purpose brand/semantic colors. */
   categoryOnly: {
     slate: { 50: "#E9EBEE", 500: "#5B6472", 700: "#3F4653" } satisfies CategoryRamp,
     violet: { 50: "#F1E9F7", 500: "#7C4FA6", 700: "#6B3F94" } satisfies CategoryRamp,
   },
 } as const;
 
-/** Waste-category chip colors. Deliberately a separate namespace from `colors.role` — see
- * docs/design-system.md §1.5 for why `organic` and `glass` intentionally reuse other ramps. */
 export const wasteCategoryColors = {
   plastic: { bg: colors.semantic.info[50], text: colors.semantic.info[700] },
   paper: { bg: colors.semantic.warning[50], text: colors.semantic.warning[700] },
@@ -107,15 +88,14 @@ export const fontFamily = {
 } as const;
 
 interface TypeStyle {
-  fontSize: string; // rem
-  lineHeight: string; // px
+  fontSize: string;
+  lineHeight: string;
   fontWeight: number;
   letterSpacing?: string;
   textTransform?: "uppercase";
 }
 
 export const typeScale = {
-  // Headings & eyebrows — Space Grotesk
   overline: { fontSize: "0.75rem", lineHeight: "16px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" } satisfies TypeStyle,
   display: { fontSize: "2.5rem", lineHeight: "48px", fontWeight: 700 } satisfies TypeStyle,
   h1: { fontSize: "2rem", lineHeight: "40px", fontWeight: 700 } satisfies TypeStyle,
@@ -123,25 +103,18 @@ export const typeScale = {
   h3: { fontSize: "1.25rem", lineHeight: "28px", fontWeight: 600 } satisfies TypeStyle,
   h4: { fontSize: "1.125rem", lineHeight: "26px", fontWeight: 600 } satisfies TypeStyle,
 
-  // Body — Inter
   bodyLg: { fontSize: "1.125rem", lineHeight: "28px", fontWeight: 400 } satisfies TypeStyle,
   body: { fontSize: "1rem", lineHeight: "24px", fontWeight: 400 } satisfies TypeStyle,
   bodySm: { fontSize: "0.875rem", lineHeight: "20px", fontWeight: 400 } satisfies TypeStyle,
   label: { fontSize: "0.8125rem", lineHeight: "18px", fontWeight: 500 } satisfies TypeStyle,
   caption: { fontSize: "0.75rem", lineHeight: "16px", fontWeight: 500 } satisfies TypeStyle,
 
-  // Data / numeric — IBM Plex Mono
   dataXl: { fontSize: "1.75rem", lineHeight: "32px", fontWeight: 600 } satisfies TypeStyle,
   dataLg: { fontSize: "1.25rem", lineHeight: "26px", fontWeight: 600 } satisfies TypeStyle,
   dataBase: { fontSize: "0.9375rem", lineHeight: "22px", fontWeight: 500 } satisfies TypeStyle,
   dataSm: { fontSize: "0.8125rem", lineHeight: "18px", fontWeight: 500 } satisfies TypeStyle,
 } as const;
 
-/** 4px base grid — deliberately a restricted subset, not the full arithmetic range.
- * NOTE: there is no `px` (1px) step here, which means Tailwind's implicit `px` spacing key
- * (used by `h-px`/`w-px`) is unavailable once this object fully replaces `theme.spacing` in
- * tailwind.config.ts. Hairline dividers must use `border-t`/`border`/`borderWidth` utilities
- * instead — see docs/design-system.md §3 and §9. */
 export const spacing = {
   0: "0px",
   1: "4px",
@@ -176,7 +149,6 @@ export const boxShadow = {
   focus: "0 0 0 3px rgba(47,107,79,0.35)",
 } as const;
 
-/** Standard Tailwind breakpoint defaults — kept as-is, see docs/design-system.md §7. */
 export const screens = {
   sm: "640px",
   md: "768px",
@@ -185,36 +157,26 @@ export const screens = {
   "2xl": "1536px",
 } as const;
 
-/** Content max-width used inside the `xl` container — see docs/design-system.md §3. */
 export const contentMaxWidth = "1280px";
 
-/** Narrow reading-width container for form-heavy/settings-style pages (profile, account
- * settings, single-record edit screens) — see docs/design-system.md §3. Matches Tailwind's
- * stock `max-w-2xl` value (672px), but is now a named, documented token rather than an ad hoc
- * default. */
 export const formMaxWidth = "672px";
 
-/** Dashboard app-shell nav dimensions — see docs/design-system.md §6.4 (264px desktop
- * sidebar, 72px tablet icon-only rail). Neither sits on the 4px spacing grid (§3), so — like
- * `contentMaxWidth`/`formMaxWidth` above — these are named tokens rather than arbitrary
- * Tailwind values in a component file. Wired into `tailwind.config.ts` as `width`/`minWidth`
- * extensions (`w-sidebar`, `w-rail`). */
 export const layout = {
   sidebarWidth: "264px",
   navRailWidth: "72px",
 } as const;
 
-/** Icon sizes (Lucide, see docs/design-system.md §6.5). Not a Tailwind core-plugin concept,
- * so this is exported for direct use by the shared `<Icon>` wrapper rather than wired into
- * tailwind.config.ts. */
+export const mapHeight = {
+  DEFAULT: "320px",
+  lg: "448px",
+} as const;
+
 export const iconSize = {
   sm: "16px",
   md: "20px",
   lg: "24px",
 } as const;
 
-/** Default Lucide stroke width — see docs/design-system.md §6.5. Set once on the shared
- * `<Icon>` wrapper; never override per-instance. */
 export const iconStrokeWidth = 1.75;
 
 export const tokens = {
@@ -229,6 +191,7 @@ export const tokens = {
   contentMaxWidth,
   formMaxWidth,
   layout,
+  mapHeight,
   iconSize,
   iconStrokeWidth,
 } as const;

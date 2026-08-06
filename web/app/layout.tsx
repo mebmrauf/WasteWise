@@ -4,8 +4,6 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import { publicEnv } from "@/lib/env";
 
-// Each font is exposed as a CSS custom property so Tailwind's font-heading/font-body/font-data
-// utilities (tailwind.config.ts) can reference it — weights match design-system.md §2.1.
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
@@ -28,7 +26,6 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  // Without this, Next.js silently falls back to localhost:3000 for relative OG/Twitter image URLs in production.
   metadataBase: new URL(publicEnv.NEXT_PUBLIC_APP_URL),
   title: "WasteWise",
   description: "Digital recycling logistics platform for Bangladesh",
