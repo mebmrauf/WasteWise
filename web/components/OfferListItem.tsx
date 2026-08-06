@@ -14,6 +14,9 @@ export interface OfferListItemCollector {
   id: string;
   fullName: string;
   vehicleType: VehicleType | null;
+  /** Already resolved to a real displayable URL (see `resolveAvatarUrl`) — this component never
+   * touches the raw Cloudinary public_id itself. */
+  avatarUrl?: string | null;
 }
 
 export interface OfferListItemOffer {
@@ -53,7 +56,7 @@ export function OfferListItem({
     <Card className={cn("flex flex-col gap-4", className)}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Avatar name={offer.collector.fullName} accent="collector" />
+          <Avatar src={offer.collector.avatarUrl} name={offer.collector.fullName} accent="collector" />
           <div className="flex flex-col gap-1">
             <span className="text-body font-medium text-neutral-900">{offer.collector.fullName}</span>
             <span className="flex items-center gap-1 text-body-sm text-neutral-500">
