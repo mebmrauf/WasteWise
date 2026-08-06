@@ -307,21 +307,29 @@ usersRouter.post(
       return;
     }
 
-    const filename = `${req.user!.id}-${randomBytes(8).toString("hex")}.${signature.ext}`;
-    fs.writeFileSync(path.join(AVATAR_UPLOAD_DIR, filename), req.file.buffer);
+    if (!isCloudinaryConfigured()) {
+      sendError(
+        res,
+        503,
+        "CLOUDINARY_NOT_CONFIGURED",
+        "Avatar upload is currently unavailable. Please try again later.",
+      );
+      return;
+    }
 
-    const avatarUrl = `/uploads/avatars/${filename}`;
+    let publicId: string;
+    try {
+      ({ publicId } = await uploadAvatarImage(req.file.buffer, existingUser.id));
+    } catch (err) {
+      logger.error({ err }, "Cloudinary avatar upload failed");
+      sendError(res, 502, "AVATAR_UPLOAD_FAILED", "Couldn't upload that image. Please try again.");
+      return;
+    }
+
     const updated = await prisma.user.update({
       where: { id: existingUser.id },
-      data: { avatarUrl },
+      data: { avatarUrl: publicId },
     });
-
-    if (existingUser.avatarUrl) {
-      const oldPath = path.join(AVATAR_UPLOAD_DIR, path.basename(existingUser.avatarUrl));
-      fs.unlink(oldPath, (err) => {
-        if (err) logger.warn({ err, oldPath }, "Failed to delete previous avatar file");
-      });
-    }
 
     sendData(res, 200, { user: toPublicProfile(updated) });
   }),

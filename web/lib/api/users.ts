@@ -63,13 +63,11 @@ export function uploadMyAvatar(file: File): Promise<{ user: UserProfile }> {
   });
 }
 
-export function getApiOrigin(): string {
-  return new URL(publicEnv.NEXT_PUBLIC_API_URL).origin;
-}
+const AVATAR_TRANSFORM = "c_fill,g_face,w_256,h_256,q_auto,f_auto";
 
 export function resolveAvatarUrl(avatarUrl: string | null): string | null {
   if (!avatarUrl) return null;
-  return `${getApiOrigin()}${avatarUrl}`;
+  return `https://res.cloudinary.com/${publicEnv.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${AVATAR_TRANSFORM}/${avatarUrl}`;
 }
 
 export interface UpdateCollectorProfileInput {

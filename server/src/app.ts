@@ -1,14 +1,13 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import helmet from "helmet";
 import { env } from "./lib/env";
 import { helmetMiddleware, generalRateLimiter, noStoreMiddleware } from "./middleware/security";
 import { requestLogger } from "./middleware/requestLogger";
 import { logger } from "./lib/logger";
 import { sendError } from "./lib/apiResponse";
 import { authRouter } from "./routes/auth";
-import { usersRouter, AVATAR_UPLOAD_DIR } from "./routes/users";
+import { usersRouter } from "./routes/users";
 import { pickupsRouter } from "./routes/pickups";
 import { offersRouter } from "./routes/offers";
 import { rewardsRouter } from "./routes/rewards";
@@ -45,12 +44,6 @@ export function createApp() {
   app.use("/api/v1/pickups", pickupsRouter);
   app.use("/api/v1/offers", offersRouter);
   app.use("/api/v1/rewards", rewardsRouter);
-
-  app.use(
-    "/uploads/avatars",
-    helmet.crossOriginResourcePolicy({ policy: "cross-origin" }),
-    express.static(AVATAR_UPLOAD_DIR),
-  );
 
   app.use((_req, res) => {
     sendError(res, 404, "NOT_FOUND", "Resource not found.");

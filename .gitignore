@@ -29,10 +29,6 @@ build/
 .eslintcache
 server/prisma/dev.db
 
-# User-generated content (local-disk avatar uploads) — never source, and
-# ephemeral in production anyway (see docs/api-contract.md "User Profile"
-# caveat for docs-deploy-agent).
-server/uploads/
 design-reference/
 *.docx
 

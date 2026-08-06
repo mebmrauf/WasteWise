@@ -11,6 +11,7 @@ const publicEnvSchema = z.object({
   NEXT_PUBLIC_FACEBOOK_APP_ID: z.string().optional().default(""),
   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: z.string().optional().default(""),
   NEXT_PUBLIC_SENTRY_DSN: z.string().optional().default(""),
+  NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: z.string().optional().default(""),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
@@ -23,6 +24,7 @@ export function loadPublicEnv(
     NEXT_PUBLIC_FACEBOOK_APP_ID: process.env.NEXT_PUBLIC_FACEBOOK_APP_ID,
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
     NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
   },
 ): PublicEnv {
   const result = publicEnvSchema.safeParse({
@@ -32,6 +34,7 @@ export function loadPublicEnv(
     NEXT_PUBLIC_FACEBOOK_APP_ID: source.NEXT_PUBLIC_FACEBOOK_APP_ID,
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: source.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
     NEXT_PUBLIC_SENTRY_DSN: source.NEXT_PUBLIC_SENTRY_DSN,
+    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: source.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
   });
 
   if (!result.success) {
