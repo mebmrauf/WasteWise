@@ -1,0 +1,111 @@
+import * as React from "react";
+import { Truck } from "lucide-react";
+import { Avatar } from "@/components/Avatar";
+import { Button } from "@/components/Button";
+import { Card } from "@/components/Card";
+import { Icon } from "@/components/Icon";
+import { InlineConfirm } from "@/components/InlineConfirm";
+import { StatusPill } from "@/components/StatusPill";
+import { OFFER_STATUS_TONE, OFFER_STATUS_LABEL, type OfferStatus } from "@/lib/offerStatus";
+import { VEHICLE_TYPE_LABELS, type VehicleType } from "@/lib/vehicleType";
+import { cn, formatBdt } from "@/lib/utils";
+
+export interface OfferListItemCollector {
+  id: string;
+  fullName: string;
+  vehicleType: VehicleType | null;
+}
+
+export interface OfferListItemOffer {
+  id: string;
+  bidAmount: number;
+  message?: string | null;
+  status: OfferStatus;
+  collector: OfferListItemCollector;
+}
+
+export interface OfferListItemProps {
+  offer: OfferListItemOffer;
+  isPickupOpen: boolean;
+  onAccept: (offerId: string) => void;
+  isAccepting?: boolean;
+  className?: string;
+}
+
+export function OfferListItem({
+  offer,
+  isPickupOpen,
+  onAccept,
+  isAccepting = false,
+  className,
+}: OfferListItemProps) {
+  const [confirming, setConfirming] = React.useState(false);
+  const triggerRef = React.useRef<HTMLButtonElement | HTMLAnchorElement>(null);
+
+  const vehicleLabel = offer.collector.vehicleType
+    ? VEHICLE_TYPE_LABELS[offer.collector.vehicleType]
+    : "Vehicle type not on file";
+
+  const showAcceptControl = offer.status === "PENDING";
+  const canAccept = showAcceptControl && isPickupOpen;
+
+  return (
+    <Card className={cn("flex flex-col gap-4", className)}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Avatar name={offer.collector.fullName} accent="collector" />
+          <div className="flex flex-col gap-1">
+            <span className="text-body font-medium text-neutral-900">{offer.collector.fullName}</span>
+            <span className="flex items-center gap-1 text-body-sm text-neutral-500">
+              <Icon icon={Truck} size="sm" />
+              {vehicleLabel}
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <span className="font-data text-data-lg text-neutral-900">{formatBdt(offer.bidAmount)}</span>
+          <StatusPill tone={OFFER_STATUS_TONE[offer.status]}>{OFFER_STATUS_LABEL[offer.status]}</StatusPill>
+        </div>
+      </div>
+
+      {offer.message && <p className="text-body-sm text-neutral-700">&ldquo;{offer.message}&rdquo;</p>}
+
+      {showAcceptControl && (
+        <div className="flex flex-col items-end gap-2 border-t border-neutral-200 pt-4">
+          {!canAccept && (
+            <p className="text-body-sm text-neutral-500">
+              This request is no longer open — another offer may already have been accepted.
+            </p>
+          )}
+          <InlineConfirm
+            confirming={confirming}
+            triggerRef={triggerRef}
+            trigger={
+              <Button
+                ref={triggerRef}
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={!canAccept || isAccepting}
+                onClick={() => setConfirming(true)}
+              >
+                {isAccepting ? "Accepting…" : "Accept offer"}
+              </Button>
+            }
+            message={`Accept ${offer.collector.fullName}'s offer of ${formatBdt(
+              offer.bidAmount
+            )}? This will reject every other pending offer on this request.`}
+            confirmLabel={isAccepting ? "Accepting…" : "Yes, accept"}
+            cancelLabel="Never mind"
+            isConfirmPending={isAccepting}
+            onConfirm={() => {
+              setConfirming(false);
+              onAccept(offer.id);
+            }}
+            onCancel={() => setConfirming(false)}
+          />
+        </div>
+      )}
+    </Card>
+  );
+}
