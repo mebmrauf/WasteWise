@@ -182,6 +182,9 @@ model User {
 
   // --- Notifications ---
   notifications Notification[]
+
+  // --- AI Waste Recognition ---
+  wasteRecognitionLogs WasteRecognitionLog[]
 }
 
 // One row per linked provider identity. Modeled separately (not flattened
@@ -459,6 +462,34 @@ model Notification {
   updatedAt DateTime @updatedAt
 
   @@index([userId, isRead])
+}
+
+// ---------------------------------------------------------------------------
+// AI Waste Recognition — user uploads a photo, Google Cloud Vision API
+// identifies the waste type; result is logged for the user's own reference
+// and as raw data for future Demand Forecast / Sustainability Reports work.
+// ---------------------------------------------------------------------------
+model WasteRecognitionLog {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Path to the uploaded image, same local-disk pattern as User.avatarUrl
+  // (see routes/users.ts) — root-relative, served via express.static.
+  imageUrl String
+
+  // Best-guess category, mapped from the Vision API's raw labels onto our
+  // existing WasteCategory enum (reused from PickupRequest) so this data
+  // stays consistent with the rest of the schema.
+  detectedCategory WasteCategory
+  isRecyclable     Boolean
+  confidence       Float // 0.0–1.0, Vision API's confidence score for the top label
+  rawLabels        Json // full label list from the Vision API response, kept for debugging/future features
+  preparationTip   String? // e.g. "Rinse before recycling" — short guidance shown to the user
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // ---------------------------------------------------------------------------
