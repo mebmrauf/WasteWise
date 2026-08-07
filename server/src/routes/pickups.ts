@@ -14,7 +14,7 @@ import {
   resolveAddressFromPlaceId,
 } from "../lib/geocoding";
 import { getLoadSizeKgRange } from "../lib/loadSize";
-import { getIO, pickupRoomName } from "../realtime/socket";
+import { emitToRoom } from "../realtime/emitToRoom";
 import { PICKUP_STATUS_EVENT } from "../realtime/pickupEvents";
 import { createPickupRequestSchema } from "./pickups.schemas";
 
@@ -283,7 +283,7 @@ pickupsRouter.post(
     ]);
 
     try {
-      getIO().to(pickupRoomName(id)).emit(PICKUP_STATUS_EVENT, {
+      emitToRoom(id, PICKUP_STATUS_EVENT, {
         pickupRequestId: id,
         status: updatedPickup.status,
         createdAt: updatedPickup.updatedAt,
@@ -313,7 +313,12 @@ pickupsRouter.get(
     }
 
     let collectorLocation: { lat: number; lng: number; updatedAt: Date } | null = null;
-    let collector: { fullName: string; phone: string | null; vehicleType: string | null } | null = null;
+    let collector: {
+      fullName: string;
+      phone: string | null;
+      vehicleType: string | null;
+      avatarUrl: string | null;
+    } | null = null;
     if (access.pickup.assignedCollectorId) {
       const [collectorProfile, collectorUser] = await Promise.all([
         prisma.collectorProfile.findUnique({
@@ -321,7 +326,7 @@ pickupsRouter.get(
         }),
         prisma.user.findUnique({
           where: { id: access.pickup.assignedCollectorId },
-          select: { fullName: true, phone: true },
+          select: { fullName: true, phone: true, avatarUrl: true },
         }),
       ]);
       if (
@@ -340,6 +345,7 @@ pickupsRouter.get(
           fullName: collectorUser.fullName,
           phone: collectorUser.phone,
           vehicleType: collectorProfile?.vehicleType ?? null,
+          avatarUrl: collectorUser.avatarUrl,
         };
       }
     }
@@ -389,6 +395,7 @@ pickupsRouter.get(
           id: offer.collector.id,
           fullName: offer.collector.fullName,
           vehicleType: offer.collector.collectorProfile?.vehicleType ?? null,
+          avatarUrl: offer.collector.avatarUrl,
         },
       })),
     });
