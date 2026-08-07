@@ -56,7 +56,7 @@ const AVATAR_MIME_EXTENSIONS: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp",
 };
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+const MAX_AVATAR_BYTES = 10 * 1024 * 1024;
 
 function detectImageSignature(buffer: Buffer): { ext: string } | null {
   if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
