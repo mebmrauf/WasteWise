@@ -23,6 +23,10 @@ export function uploadAvatarImage(buffer: Buffer, userId: string): Promise<{ pub
         overwrite: true,
         invalidate: true,
         resource_type: "image",
+        format: "webp",
+        transformation: [
+          { width: 512, height: 512, crop: "fill", gravity: "face" }
+        ],
       },
       (err, result) => {
         if (err || !result) {

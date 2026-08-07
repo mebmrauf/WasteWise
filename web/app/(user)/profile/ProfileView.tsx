@@ -25,7 +25,7 @@ const profileErrorMessages: Record<string, string> = {
   VALIDATION_ERROR: "Please check that value and try again.",
   PHONE_IN_USE: "That phone number is already linked to another account.",
   UNSUPPORTED_FILE_TYPE: "Please upload a JPEG, PNG, or WEBP image.",
-  FILE_TOO_LARGE: "Image must be smaller than 2MB.",
+  FILE_TOO_LARGE: "Image must be smaller than 10MB.",
   FILE_REQUIRED: "Please choose an image to upload.",
   GEOCODING_NOT_CONFIGURED: "Address lookup isn't available right now. Please try again later.",
   GEOCODING_FAILED: "Couldn't verify that address right now. Please try again.",
