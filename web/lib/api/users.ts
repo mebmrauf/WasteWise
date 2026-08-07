@@ -41,6 +41,9 @@ export interface UpdateProfileInput {
   fullName?: string;
   phone?: string;
   placeId?: string;
+  formattedAddress?: string;
+  latitude?: number;
+  longitude?: number;
   emailNotificationsEnabled?: boolean;
   smsNotificationsEnabled?: boolean;
 }

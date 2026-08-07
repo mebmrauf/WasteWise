@@ -178,50 +178,61 @@ usersRouter.patch(
       return;
     }
 
-    const { placeId, ...rest } = parsed.data;
+    const { placeId, formattedAddress, latitude, longitude, ...rest } = parsed.data;
     let updateData: Prisma.UserUpdateInput = rest;
 
     if (placeId !== undefined) {
-      if (!isGeocodingConfigured()) {
-        sendError(
-          res,
-          503,
-          "GEOCODING_NOT_CONFIGURED",
-          "Address lookup is currently unavailable. Please try again later.",
-        );
-        return;
-      }
-
-      try {
-        const resolved = await resolveAddressFromPlaceId(placeId);
+      if (formattedAddress && latitude !== undefined && longitude !== undefined) {
         updateData = {
           ...updateData,
           placeId,
-          formattedAddress: resolved.formattedAddress,
-          latitude: resolved.latitude,
-          longitude: resolved.longitude,
+          formattedAddress,
+          latitude,
+          longitude,
         };
-      } catch (err) {
-        if (err instanceof GeocodingResolutionError) {
-          if (err.details.type === "not_found") {
-            sendError(
-              res,
-              400,
-              "VALIDATION_ERROR",
-              "That address could not be found — try selecting a suggestion from the list again.",
-            );
-            return;
-          }
-          logger.error({ err: err.details }, "Geocoding upstream failure");
+      } else {
+        // Fallback for older clients that don't send coordinates directly
+        if (!isGeocodingConfigured()) {
           sendError(
             res,
-            502,
-            "GEOCODING_FAILED",
-            "We couldn't verify that address right now. Please try again shortly.",
+            503,
+            "GEOCODING_NOT_CONFIGURED",
+            "Address lookup is currently unavailable. Please try again later.",
           );
           return;
         }
-        throw err;
+
+        try {
+          const resolved = await resolveAddressFromPlaceId(placeId);
+          updateData = {
+            ...updateData,
+            placeId,
+            formattedAddress: resolved.formattedAddress,
+            latitude: resolved.latitude,
+            longitude: resolved.longitude,
+          };
+        } catch (err) {
+          if (err instanceof GeocodingResolutionError) {
+            if (err.details.type === "not_found") {
+              sendError(
+                res,
+                400,
+                "VALIDATION_ERROR",
+                "That address could not be found — try selecting a suggestion from the list again.",
+              );
+              return;
+            }
+            logger.error({ err: err.details }, "Geocoding upstream failure");
+            sendError(
+              res,
+              502,
+              "GEOCODING_FAILED",
+              "We couldn't verify that address right now. Please try again shortly.",
+            );
+            return;
+          }
+          throw err;
+        }
       }
     }
 

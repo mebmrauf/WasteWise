@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 enum Role {
@@ -160,6 +161,8 @@ model User {
 
   notifications Notification[]
 
+// --- AI Waste Recognition ---
+  wasteRecognitionLogs WasteRecognitionLog[]
   greenPointsTransactions    GreenPointsTransaction[]    @relation("GreenPointsTransactions")
   mobileRechargeTransactions MobileRechargeTransaction[] @relation("MobileRechargeTransactions")
 }
@@ -435,9 +438,31 @@ model Notification {
   @@index([userId, isRead])
 }
 
+// ---------------------------------------------------------------------------
+// AI Waste Recognition — user uploads a photo, Google Cloud Vision API
+// identifies the waste type; result is logged for the user's own reference
+// and as raw data for future Demand Forecast / Sustainability Reports work.
+// ---------------------------------------------------------------------------
+model WasteRecognitionLog {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  imageUrl String
+
+  detectedCategory WasteCategory
+  isRecyclable     Boolean
+  confidence       Float
+  rawLabels        Json
+  preparationTip   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
 model GreenPointsTransaction {
   id String @id @default(cuid())
-
   userId String
   user   User   @relation("GreenPointsTransactions", fields: [userId], references: [id], onDelete: Cascade)
 
@@ -446,7 +471,6 @@ model GreenPointsTransaction {
 
   points Int
   type   GreenPointsTransactionType
-
   description String
 
   mobileRechargeTransaction MobileRechargeTransaction?
