@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Ban } from "lucide-react";
+import { Avatar } from "@/components/Avatar";
 import { Card } from "@/components/Card";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
@@ -15,6 +16,7 @@ import {
   type PickupStatus,
   type TrackedCollector,
 } from "@/lib/api/pickups";
+import { resolveAvatarUrl } from "@/lib/api/users";
 import { VEHICLE_TYPE_LABELS } from "@/lib/vehicleType";
 import {
   getTrackingSocket,
@@ -148,12 +150,15 @@ export function TrackPickupView({ pickupId }: { pickupId: string }) {
 
       {loadState === "ready" && collector && (
         <Card className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-overline text-neutral-500">Your collector</p>
-            <p className="mt-1 text-h4 text-neutral-900">{collector.fullName}</p>
-            <p className="mt-1 text-body-sm text-neutral-500">
-              {collector.vehicleType ? VEHICLE_TYPE_LABELS[collector.vehicleType] : "Vehicle not set"}
-            </p>
+          <div className="flex items-center gap-3">
+            <Avatar src={resolveAvatarUrl(collector.avatarUrl)} name={collector.fullName} accent="collector" size="lg" />
+            <div>
+              <p className="text-overline text-neutral-500">Your collector</p>
+              <p className="mt-1 text-h4 text-neutral-900">{collector.fullName}</p>
+              <p className="mt-1 text-body-sm text-neutral-500">
+                {collector.vehicleType ? VEHICLE_TYPE_LABELS[collector.vehicleType] : "Vehicle not set"}
+              </p>
+            </div>
           </div>
           {collector.phone ? (
             <a

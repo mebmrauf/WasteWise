@@ -41,6 +41,8 @@ export interface TrackedCollector {
   fullName: string;
   phone: string | null;
   vehicleType: VehicleType | null;
+  /** A Cloudinary public_id, not a full URL — resolve via `resolveAvatarUrl` before rendering. */
+  avatarUrl: string | null;
 }
 
 export interface PickupTracking {
@@ -141,6 +143,8 @@ export interface PickupOffer {
     id: string;
     fullName: string;
     vehicleType: VehicleType | null;
+    /** A Cloudinary public_id, not a full URL — resolve via `resolveAvatarUrl` before rendering. */
+    avatarUrl: string | null;
   };
 }
 

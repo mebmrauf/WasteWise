@@ -22,6 +22,7 @@ import {
   type PickupOffer,
   type PickupRequestDetail,
 } from "@/lib/api/pickups";
+import { resolveAvatarUrl } from "@/lib/api/users";
 import { PICKUP_STATUS_TONE, PICKUP_STATUS_LABEL } from "@/lib/pickupStatus";
 
 const loadErrorMessages: Record<string, string> = {
@@ -184,7 +185,13 @@ export function PickupOffersView({ pickupId }: { pickupId: string }) {
                 <React.Fragment key={offer.id}>
                   {acceptErrors[offer.id] && <ErrorBanner>{acceptErrors[offer.id]}</ErrorBanner>}
                   <OfferListItem
-                    offer={offer}
+                    offer={{
+                      ...offer,
+                      collector: {
+                        ...offer.collector,
+                        avatarUrl: resolveAvatarUrl(offer.collector.avatarUrl),
+                      },
+                    }}
                     isPickupOpen={pickup.status === "PENDING"}
                     isAccepting={acceptingOfferId === offer.id}
                     onAccept={(offerId) => void handleAcceptOffer(offerId)}
