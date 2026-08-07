@@ -1,7 +1,10 @@
 {
   "name": "wastewise",
   "private": true,
-  "workspaces": ["web", "server"],
+  "workspaces": [
+    "web",
+    "server"
+  ],
   "scripts": {
     "dev": "concurrently -n web,server -c green,blue \"npm run dev -w web\" \"npm run dev -w server\"",
     "build": "npm run build -w web && npm run build -w server",
@@ -9,6 +12,8 @@
     "typecheck": "npm run typecheck -w web && npm run typecheck -w server"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "@types/supertest": "^7.2.1",
+    "concurrently": "^8.2.2",
+    "supertest": "^7.2.2"
   }
 }

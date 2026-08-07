@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function TrackPickupPage({ params }: { params: { id: string } }) {
-  return <TrackPickupView pickupId={params.id} />;
+export default async function TrackPickupPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <TrackPickupView pickupId={id} />;
 }

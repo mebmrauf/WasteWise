@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function PickupOffersPage({ params }: { params: { id: string } }) {
-  return <PickupOffersView pickupId={params.id} />;
+export default async function PickupOffersPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <PickupOffersView pickupId={id} />;
 }
