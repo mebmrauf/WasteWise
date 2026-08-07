@@ -36,6 +36,8 @@ export const envSchema = z.object({
   FACEBOOK_CALLBACK_URL: z.string().optional().default(""),
 
   GOOGLE_MAPS_SERVER_API_KEY: z.string().optional().default(""),
+  // --- AI Vision (Waste Recognition, optional — feature disabled if blank) ---
+  GOOGLE_VISION_API_KEY: z.string().optional().default(""),
 
   CLOUDINARY_CLOUD_NAME: z.string().optional().default(""),
   CLOUDINARY_API_KEY: z.string().optional().default(""),

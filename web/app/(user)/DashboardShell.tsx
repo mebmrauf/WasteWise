@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Gift, HandCoins, MapPin, Megaphone, Truck, User } from "lucide-react";
+import { ClipboardList, Gift, HandCoins, MapPin, Megaphone, Truck, User, Camera } from "lucide-react";
 import { DashboardNav, type DashboardNavItem } from "@/components/DashboardNav";
 import { PageContainer } from "@/components/PageContainer";
 import { useRequireRole } from "@/lib/auth/AuthContext";
@@ -40,6 +40,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         icon: MapPin,
         active: onTrackDetail ? true : undefined,
       },
+      { label: "Waste Recognition", href: "/waste-recognition", icon: Camera },
       { label: "Complaints", href: "/dashboard/complaints", icon: Megaphone },
       { label: "Green Rewards", href: "/dashboard/rewards", icon: Gift },
     ],

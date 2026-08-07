@@ -8,6 +8,7 @@ import { logger } from "./lib/logger";
 import { sendError } from "./lib/apiResponse";
 import { authRouter } from "./routes/auth";
 import { usersRouter } from "./routes/users";
+import { wasteRecognitionRouter, WASTE_PHOTO_UPLOAD_DIR } from "./routes/wasteRecognition";
 import { pickupsRouter } from "./routes/pickups";
 import { offersRouter } from "./routes/offers";
 import { rewardsRouter } from "./routes/rewards";
@@ -41,10 +42,21 @@ export function createApp() {
 
   app.use("/api/v1/auth", authRouter);
   app.use("/api/v1/users", usersRouter);
+app.use("/api/v1/waste-recognition", wasteRecognitionRouter);
   app.use("/api/v1/pickups", pickupsRouter);
   app.use("/api/v1/offers", offersRouter);
   app.use("/api/v1/rewards", rewardsRouter);
 
+  // Serves uploaded waste-recognition photos back out. Deliberately
+  // root-relative (not under /api/v1) since it's static file serving, not a
+  // JSON API route.
+  app.use(
+    "/uploads/waste-recognition",
+    helmet.crossOriginResourcePolicy({ policy: "cross-origin" }),
+    express.static(WASTE_PHOTO_UPLOAD_DIR),
+  );
+
+  // 404 fallback — kept last so it never shadows a real route.
   app.use((_req, res) => {
     sendError(res, 404, "NOT_FOUND", "Resource not found.");
   });
