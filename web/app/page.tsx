@@ -103,7 +103,7 @@ export default function Home() {
       />
 
       <main>
-        {/* Hero */}
+        {}
         <section className="bg-primary-50">
           <PageContainer className="py-16 lg:py-24">
             <div className="max-w-3xl">
@@ -133,7 +133,7 @@ export default function Home() {
           </PageContainer>
         </section>
 
-        {/* How it works */}
+        {}
         <section id="how-it-works" className="bg-neutral-0">
           <PageContainer className="py-16 lg:py-20">
             <p className="font-heading text-overline text-primary-600">How it works</p>
@@ -152,7 +152,7 @@ export default function Home() {
           </PageContainer>
         </section>
 
-        {/* Trust infrastructure */}
+        {}
         <section className="bg-neutral-50">
           <PageContainer className="py-16 lg:py-20">
             <p className="font-heading text-overline text-primary-600">Trust infrastructure</p>
@@ -174,7 +174,7 @@ export default function Home() {
           </PageContainer>
         </section>
 
-        {/* For collectors */}
+        {}
         <section id="collectors" className="bg-role-collector-50">
           <PageContainer className="py-16 lg:py-20">
             <p className="font-heading text-overline text-role-collector-700">For collectors</p>
@@ -202,7 +202,7 @@ export default function Home() {
           </PageContainer>
         </section>
 
-        {/* Four roles */}
+        {}
         <section className="bg-neutral-0">
           <PageContainer className="py-16 lg:py-20">
             <p className="font-heading text-overline text-primary-600">Who it&apos;s for</p>
@@ -223,7 +223,7 @@ export default function Home() {
           </PageContainer>
         </section>
 
-        {/* Closing CTA */}
+        {}
         <section className="bg-neutral-50">
           <PageContainer className="py-16 text-center lg:py-24">
             <p className="font-heading text-overline text-primary-600">Get started</p>

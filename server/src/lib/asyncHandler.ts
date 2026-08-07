@@ -1,5 +1,3 @@
-// Wraps an async Express handler so a rejected promise is forwarded to
-// next(err) instead of crashing the process / hanging the request.
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 
 export function asyncHandler(

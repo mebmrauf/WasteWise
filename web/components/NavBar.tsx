@@ -1,21 +1,5 @@
 "use client";
 
-/**
- * NavBar — top navigation bar (marketing header today, reusable as a role-scoped dashboard
- * topbar later). `accent` is a prop, not a per-role component: it tints the active link
- * (desktop + mobile) using that role's color steps. Omit it (or pass "user") for the default
- * brand-green treatment used on public pages.
- *
- * Usage:
- *   <NavBar
- *     brand={<span className="font-heading text-h4 text-neutral-900">WasteWise</span>}
- *     links={[{ label: "How it works", href: "#how-it-works" }]}
- *     actions={<Button href="/signup">Get started</Button>}
- *   />
- *
- * "use client" because it holds local mobile-menu-open state, so Server Component pages (e.g.
- * the landing page, which needs a page-level `metadata` export) can still import and render it.
- */
 import * as React from "react";
 import { Menu, X } from "lucide-react";
 import { Icon } from "@/components/Icon";
@@ -30,18 +14,13 @@ export interface NavLink {
 }
 
 export interface NavBarProps {
-  /** Logo/wordmark slot, rendered at the left edge. */
   brand?: React.ReactNode;
   links?: NavLink[];
-  /** Right-aligned CTA(s) or account chip. */
   actions?: React.ReactNode;
-  /** Role-accent used for the active link. Defaults to "user" (brand green). */
   accent?: RoleAccent;
   className?: string;
 }
 
-// "recyclingCompany" maps to the "role-recycler" Tailwind color group name in
-// tailwind.config.ts — a naming-only difference, the color values are identical.
 const accentActiveTextClasses: Record<RoleAccent, string> = {
   user: "text-role-user-700",
   collector: "text-role-collector-700",

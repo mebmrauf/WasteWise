@@ -1,12 +1,3 @@
-// WasteWise — Phase 1 schema (Layer 1: Trust Infrastructure + Layer 2: Efficiency & Income)
-// Source of truth for scope: docs/project-requirements.md
-//
-// Every model here traces back to a Phase 1 requirement. Phase 2/3 models
-// (Bulk Waste, Recycling Company Procurement details, AI Demand Forecast,
-// Green Rewards, Illegal Dumping Reporter, Municipal Analytics, Sustainability
-// Reports, Campaigns, Educational Hub) are intentionally deferred — see the
-// "Future models" comment block at the bottom of this file.
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -17,10 +8,6 @@ datasource db {
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
-// ---------------------------------------------------------------------------
-// Enums
-// ---------------------------------------------------------------------------
-
 enum Role {
   USER
   COLLECTOR
@@ -28,12 +15,6 @@ enum Role {
   ADMIN
 }
 
-// Household vs. Business distinction for USER-role accounts. Both share the
-// same `Role.USER` permission set today, but are tracked as distinct account
-// types starting at signup because their dashboards diverge later (business
-// dashboard details to follow — see docs/project-requirements.md Roles
-// section). Null for Collector/Recycling Company/Admin accounts, where this
-// distinction does not apply.
 enum AccountType {
   HOUSEHOLD
   BUSINESS
@@ -44,8 +25,6 @@ enum OAuthProvider {
   FACEBOOK
 }
 
-// Shared by CollectorProfile and RecyclingCompanyProfile — "collector &
-// business verification (license/ID upload) before appearing in directory".
 enum VerificationStatus {
   PENDING
   APPROVED
@@ -64,18 +43,24 @@ enum VehicleType {
 enum WasteCategory {
   PLASTIC
   PAPER
-  METAL
-  GLASS
-  ELECTRONIC
   ORGANIC
-  MIXED
-  OTHER
+  GLASS
+  METAL
+  ELECTRONIC
+}
+
+enum LoadSize {
+  SMALL
+  MEDIUM
+  LARGE
+  EXTRA_LARGE
 }
 
 enum PickupStatus {
-  PENDING // posted by requester, open for collector offers
-  ASSIGNED // a collector's offer has been accepted
-  IN_PROGRESS // collector en route / pickup underway
+  PENDING
+  ASSIGNED
+  EN_ROUTE
+  ARRIVED
   COMPLETED
   CANCELLED
 }
@@ -103,40 +88,39 @@ enum NotificationType {
   GENERIC
 }
 
-// ---------------------------------------------------------------------------
-// Auth: User, OAuthAccount, EmailVerificationCode, PasswordResetCode
-// ---------------------------------------------------------------------------
+enum GreenPointsTransactionType {
+  EARNED
+  REDEEMED
+}
+
+enum MobileOperator {
+  GRAMEENPHONE
+  BANGLALINK
+  ROBI
+  AIRTEL
+  TELETALK
+}
+
+enum SimType {
+  PREPAID
+  POSTPAID
+}
+
+enum MobileRechargeStatus {
+  SUCCESS
+  FAILED
+}
 
 model User {
   id              String       @id @default(cuid())
   email           String       @unique
   phone           String?      @unique
-  passwordHash    String? // nullable: OAuth-only accounts may never set a password
+  passwordHash    String?
   fullName        String
   role            Role         @default(USER)
-  // Household vs. Business — only meaningful when role === USER; left null
-  // for Collector/Recycling Company/Admin accounts rather than defaulted, so
-  // a null value never implies a false "Household" default for those roles.
   accountType     AccountType?
   isEmailVerified Boolean      @default(false)
 
-  // --- Household profile page fields (project-requirements.md "profile
-  // management" workflow). An avatar URL (stores the location of an
-  // already-uploaded image; upload handling itself lives in routes/users.ts)
-  // and two boolean notification toggles (no separate preferences
-  // table/JSON blob). General enough to be harmless for any role, but the
-  // near-term consumer is the Household User profile page.
-  //
-  // Address: previously a single free-text `address` string. Replaced with a
-  // Google Place-ID-backed shape because Layer 1 (Real-Time Pickup Tracking)
-  // and Layer 2 (Collector Route Planner) both depend on real coordinates,
-  // not free-text addresses. The client sends `placeId` (from Google Places
-  // Autocomplete) on save; the backend resolves `formattedAddress`,
-  // `latitude`, and `longitude` from it server-side (see lib/geocoding.ts).
-  // All four fields are nullable since not every user has been through the
-  // address-picker flow yet. This is distinct from PickupRequest's own
-  // `pickupAddress`/`latitude`/`longitude` fields, which capture the
-  // per-pickup location, not the user's profile address.
   placeId                   String?
   formattedAddress          String?
   latitude                  Float?
@@ -145,51 +129,44 @@ model User {
   emailNotificationsEnabled Boolean @default(true)
   smsNotificationsEnabled   Boolean @default(true)
 
+  greenPointsBalance Int @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // --- Auth ---
   oauthAccounts          OAuthAccount[]
   emailVerificationCodes EmailVerificationCode[]
   passwordResetCodes     PasswordResetCode[]
   refreshTokens          RefreshToken[]
 
-  // --- Role-specific profiles (populated only for the matching role) ---
   collectorProfile        CollectorProfile?        @relation("CollectorProfileUser")
   recyclingCompanyProfile RecyclingCompanyProfile? @relation("RecyclingCompanyProfileUser")
 
-  // --- Verification reviews this user performed while acting as ADMIN ---
   collectorVerificationsReviewed        CollectorProfile[]        @relation("CollectorVerificationReviewer")
   recyclingCompanyVerificationsReviewed RecyclingCompanyProfile[] @relation("RecyclingCompanyVerificationReviewer")
 
-  // --- Pickup requests ---
   pickupRequestsMade     PickupRequest[] @relation("PickupRequester")
   pickupRequestsAssigned PickupRequest[] @relation("AssignedCollector")
 
-  // --- Offers / bids placed by this user while acting as a collector ---
   offers Offer[] @relation("CollectorOffers")
 
-  // --- Weight records logged by this user while acting as a collector ---
   weightRecordsLogged WeightRecord[] @relation("WeightLogger")
 
-  // --- Ratings ---
   ratingsGiven    Rating[] @relation("RaterRatings")
   ratingsReceived Rating[] @relation("CollectorRatings")
 
-  // --- Complaints ---
   complaintsFiled    Complaint[] @relation("ComplaintFiler")
   complaintsAgainst  Complaint[] @relation("ComplaintTarget")
   complaintsResolved Complaint[] @relation("ComplaintResolver")
 
-  // --- Notifications ---
   notifications Notification[]
 
-  // --- AI Waste Recognition ---
+// --- AI Waste Recognition ---
   wasteRecognitionLogs WasteRecognitionLog[]
+  greenPointsTransactions    GreenPointsTransaction[]    @relation("GreenPointsTransactions")
+  mobileRechargeTransactions MobileRechargeTransaction[] @relation("MobileRechargeTransactions")
 }
 
-// One row per linked provider identity. Modeled separately (not flattened
-// onto User) so a single user can link both Google and Facebook.
 model OAuthAccount {
   id                String        @id @default(cuid())
   provider          OAuthProvider
@@ -204,7 +181,6 @@ model OAuthAccount {
   @@index([userId])
 }
 
-// Short-lived, single-use code emailed to the user to verify their address.
 model EmailVerificationCode {
   id         String    @id @default(cuid())
   userId     String
@@ -218,7 +194,6 @@ model EmailVerificationCode {
   @@index([userId])
 }
 
-// Short-lived, single-use code emailed to the user to authorize a password reset.
 model PasswordResetCode {
   id         String    @id @default(cuid())
   userId     String
@@ -232,11 +207,6 @@ model PasswordResetCode {
   @@index([userId])
 }
 
-// NOTE: not explicitly requested by name — added as a technical necessity to
-// support refresh-token revocation/rotation (logout invalidation, stolen-token
-// mitigation) alongside the JWT_REFRESH_EXPIRES_IN="7d" window already
-// configured in server.env. Stores a hash of the refresh token, never the raw
-// token value.
 model RefreshToken {
   id                String    @id @default(cuid())
   userId            String
@@ -244,8 +214,6 @@ model RefreshToken {
   tokenHash         String    @unique
   expiresAt         DateTime
   revokedAt         DateTime?
-  // Id of the token this one was rotated into, if any. Not modeled as a DB
-  // relation to keep self-referential rotation simple in Phase 1.
   replacedByTokenId String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -253,13 +221,6 @@ model RefreshToken {
   @@index([userId])
 }
 
-// ---------------------------------------------------------------------------
-// Role-specific profiles + verification
-// ---------------------------------------------------------------------------
-
-// Collector-only fields (vehicle type, license, verification, live location
-// for Real-Time Pickup Tracking, rating cache for the Verified Collector
-// Directory sort/filter).
 model CollectorProfile {
   id     String @id @default(cuid())
   userId String @unique
@@ -268,8 +229,8 @@ model CollectorProfile {
   vehicleType   VehicleType
   licenseNumber String?
 
-  // Verification status/document — "collector & business verification
-  // (license/ID upload) before appearing in directory"
+  serviceArea String?
+
   verificationStatus            VerificationStatus @default(PENDING)
   verificationDocumentUrl       String?
   verificationReviewedAt        DateTime?
@@ -277,13 +238,9 @@ model CollectorProfile {
   verificationReviewedByAdmin   User?              @relation("CollectorVerificationReviewer", fields: [verificationReviewedByAdminId], references: [id])
   verificationRejectionReason   String?
 
-  // Cached aggregates, derived from Rating rows, so the directory can sort/
-  // filter by rating without recomputing on every request.
   averageRating Float?
   totalRatings  Int    @default(0)
 
-  // Live location for Real-Time Pickup Tracking ("live collector location on
-  // map after offer accepted").
   lastKnownLatitude     Float?
   lastKnownLongitude    Float?
   lastLocationUpdatedAt DateTime?
@@ -292,7 +249,6 @@ model CollectorProfile {
   updatedAt DateTime @updatedAt
 }
 
-// Recycling-company-only fields (district, inventory, verification).
 model RecyclingCompanyProfile {
   id     String @id @default(cuid())
   userId String @unique
@@ -302,7 +258,6 @@ model RecyclingCompanyProfile {
   district           String
   currentInventoryKg Float  @default(0)
 
-  // Verification status/document — same pattern as CollectorProfile.
   verificationStatus            VerificationStatus @default(PENDING)
   verificationDocumentUrl       String?
   verificationReviewedAt        DateTime?
@@ -314,13 +269,6 @@ model RecyclingCompanyProfile {
   updatedAt DateTime @updatedAt
 }
 
-// ---------------------------------------------------------------------------
-// Core pickup loop: PickupRequest, Offer, WeightRecord, Rating, Complaint,
-// Notification
-// ---------------------------------------------------------------------------
-
-// Smart Pickup Request (category, quantity, time slot, status, requester,
-// assigned collector).
 model PickupRequest {
   id String @id @default(cuid())
 
@@ -330,34 +278,49 @@ model PickupRequest {
   assignedCollectorId String?
   assignedCollector   User?   @relation("AssignedCollector", fields: [assignedCollectorId], references: [id])
 
-  category            WasteCategory
-  estimatedQuantityKg Float
-  timeSlotStart       DateTime
-  timeSlotEnd         DateTime
-  status              PickupStatus  @default(PENDING)
+  items PickupRequestItem[]
 
-  // Not explicitly named in the required field list, but a pickup cannot be
-  // located/tracked/routed without an address and coordinates — added as a
-  // technical necessity for the Directory ("browse by distance") and
-  // Real-Time Pickup Tracking features.
-  pickupAddress String
-  latitude      Float?
-  longitude     Float?
+  timeSlotStart DateTime
+  timeSlotEnd   DateTime
+  status        PickupStatus @default(PENDING)
 
-  offers        Offer[]
-  weightRecord  WeightRecord?
-  rating        Rating?
-  complaints    Complaint[]
-  notifications Notification[]
+  placeId                String
+  pickupFormattedAddress String
+  latitude               Float?
+  longitude              Float?
+
+  offers                  Offer[]
+  weightRecord            WeightRecord?
+  rating                  Rating?
+  complaints              Complaint[]
+  notifications           Notification[]
+  trackingEvents          PickupTrackingEvent[]
+  greenPointsTransactions GreenPointsTransaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([assignedCollectorId])
+  @@index([requesterId, createdAt])
 }
 
-// Pickup Offer System — collectors bid on a posted PickupRequest.
+model PickupRequestItem {
+  id String @id @default(cuid())
+
+  pickupRequestId String
+  pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+
+  category WasteCategory
+  loadSize LoadSize
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([pickupRequestId, category])
+  @@index([pickupRequestId])
+}
+
 model Offer {
   id String @id @default(cuid())
 
@@ -368,6 +331,7 @@ model Offer {
   collector   User   @relation("CollectorOffers", fields: [collectorId], references: [id])
 
   bidAmount Float
+  message   String?
   status    OfferStatus @default(PENDING)
 
   createdAt DateTime @default(now())
@@ -377,8 +341,20 @@ model Offer {
   @@index([collectorId])
 }
 
-// Weight Verification & Estimator — estimated range shown up front, exact
-// weight logged at pickup.
+model PickupTrackingEvent {
+  id String @id @default(cuid())
+
+  pickupRequestId String
+  pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+
+  status PickupStatus
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pickupRequestId])
+}
+
 model WeightRecord {
   id String @id @default(cuid())
 
@@ -397,7 +373,6 @@ model WeightRecord {
   updatedAt DateTime @updatedAt
 }
 
-// Rating/Review tied to a completed pickup (requester rates the collector).
 model Rating {
   id String @id @default(cuid())
 
@@ -417,7 +392,6 @@ model Rating {
   updatedAt DateTime @updatedAt
 }
 
-// Complaint & Resolution Center — tied to a PickupRequest or a user.
 model Complaint {
   id String @id @default(cuid())
 
@@ -444,7 +418,6 @@ model Complaint {
   @@index([status])
 }
 
-// Generic notification, used for pickup status updates and reminders.
 model Notification {
   id String @id @default(cuid())
 
@@ -475,38 +448,60 @@ model WasteRecognitionLog {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Path to the uploaded image, same local-disk pattern as User.avatarUrl
-  // (see routes/users.ts) — root-relative, served via express.static.
   imageUrl String
 
-  // Best-guess category, mapped from the Vision API's raw labels onto our
-  // existing WasteCategory enum (reused from PickupRequest) so this data
-  // stays consistent with the rest of the schema.
   detectedCategory WasteCategory
   isRecyclable     Boolean
-  confidence       Float // 0.0–1.0, Vision API's confidence score for the top label
-  rawLabels        Json // full label list from the Vision API response, kept for debugging/future features
-  preparationTip   String? // e.g. "Rinse before recycling" — short guidance shown to the user
+  confidence       Float
+  rawLabels        Json
+  preparationTip   String?
 
   createdAt DateTime @default(now())
 
   @@index([userId])
 }
 
-// ---------------------------------------------------------------------------
-// Future models (Phase 2 — Layer 3: Market Expansion / Phase 3 — Layer 4:
-// Systemic & Public Good). Do NOT build these until explicitly requested.
-// ---------------------------------------------------------------------------
+model GreenPointsTransaction {
+  id String @id @default(cuid())
+  userId String
+  user   User   @relation("GreenPointsTransactions", fields: [userId], references: [id], onDelete: Cascade)
 
-// Phase 2 — Layer 3:
-// model BulkListing {}              // Bulk Waste Pickup for Business — mass pickup, collectors/recyclers bid
-// model BulkListingBid {}           // bids from collectors/recycling companies on a BulkListing
-// model GreenRewardTransaction {}   // Green Rewards Program — points for pickups, redeemable vouchers/recharges
-// model DemandForecast {}           // AI Demand Forecast — seasonal trend prediction for logistics
+  pickupRequestId String?
+  pickupRequest   PickupRequest? @relation(fields: [pickupRequestId], references: [id])
 
-// Phase 3 — Layer 4:
-// model DumpingReport {}            // Illegal Dumping Reporter — photo + GPS report
-// model WardAnalyticsSnapshot {}    // Municipal Waste Analytics — collection rates by ward
-// model SustainabilityReport {}     // total recycled, CO2 reduction, ESG/CSR support
-// model Campaign {}                 // Community Recycling Campaigns ("Green Apartment of the Month")
-// model EducationalResource {}      // Educational Recycling Hub — quizzes, videos, prep guides
+  points Int
+  type   GreenPointsTransactionType
+  description String
+
+  mobileRechargeTransaction MobileRechargeTransaction?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, createdAt])
+}
+
+model MobileRechargeTransaction {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation("MobileRechargeTransactions", fields: [userId], references: [id], onDelete: Cascade)
+
+  operator    MobileOperator
+  simType     SimType
+  phoneNumber String
+
+  amountTaka  Int
+  pointsSpent Int
+
+  status MobileRechargeStatus
+
+  greenPointsTransactionId String?                 @unique
+  greenPointsTransaction   GreenPointsTransaction? @relation(fields: [greenPointsTransactionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+}

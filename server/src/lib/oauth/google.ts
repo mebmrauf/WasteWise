@@ -1,7 +1,3 @@
-// Hand-rolled Google OAuth 2.0 authorization-code flow (no passport /
-// google-auth-library — this is a stateless single-provider redirect flow,
-// pulling in a strategy framework would be more machinery than the project
-// needs). See docs/api-contract.md "Authentication" for the full flow.
 import { env } from "../env";
 import type { OAuthProfile } from "./types";
 
@@ -39,7 +35,6 @@ interface GoogleUserInfoResponse {
   given_name?: string;
 }
 
-/** Exchanges an authorization `code` for a normalized OAuthProfile. Throws on any failure. */
 export async function exchangeGoogleCode(code: string): Promise<OAuthProfile> {
   const tokenRes = await fetch(TOKEN_ENDPOINT, {
     method: "POST",

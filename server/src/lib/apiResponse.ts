@@ -1,6 +1,3 @@
-// Shared response envelope so every route looks identical on the wire:
-// `{ data }` on success, always `{ error: { message, code } }` on failure.
-// See docs/api-contract.md.
 import type { Response } from "express";
 
 export function sendData<T>(res: Response, status: number, data: T) {

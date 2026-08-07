@@ -1,7 +1,5 @@
 "use client";
 
-// Client Component because it reads the signed-in user's name via useAuth(); no extra
-// useRequireRole gate needed here since DashboardShell already gates the whole route group.
 import { ClipboardList, Megaphone, MapPin, Truck, User } from "lucide-react";
 import { ComingSoonCard } from "@/components/ComingSoonCard";
 import { DashboardFeatureTile } from "@/components/DashboardFeatureTile";

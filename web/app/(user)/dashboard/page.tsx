@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { DashboardHome } from "./DashboardHome";
 
-// Authenticated, user-specific page — intentionally left off sitemap.ts (see that file).
 export const metadata: Metadata = {
   title: "Dashboard — WasteWise",
   description:

@@ -1,30 +1,51 @@
 "use client";
 
-// Client-side role gate + DashboardNav mount for every page under the `(user)` route group,
-// so the sidebar is one persistent nav rather than something that only appears on /dashboard.
-// ProfileView.tsx runs its own useRequireRole call too — harmless duplication, left as-is.
-//
-// DashboardNav renders `fixed`, so {children} needs matching offsets rather than assuming the
-// nav pushes content over on its own: `pb-16 md:pb-0` clears the fixed bottom tab bar below md,
-// and `md:pl-rail lg:pl-sidebar` clears the rail/sidebar at wider breakpoints (same
-// sidebarWidth/navRailWidth tokens DashboardNav itself uses).
 import * as React from "react";
-import { ClipboardList, Megaphone, MapPin, Truck, User, Camera } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { ClipboardList, Gift, HandCoins, MapPin, Megaphone, Truck, User, Camera } from "lucide-react";
 import { DashboardNav, type DashboardNavItem } from "@/components/DashboardNav";
 import { PageContainer } from "@/components/PageContainer";
 import { useRequireRole } from "@/lib/auth/AuthContext";
 
-const dashboardNavItems: DashboardNavItem[] = [
-  { label: "Profile", href: "/profile", icon: User },
-  { label: "Smart Pickup Request", href: "/dashboard/pickups/new", icon: Truck },
-  { label: "My Pickups", href: "/dashboard/pickups", icon: ClipboardList },
-  { label: "Track Pickup", href: "/dashboard/pickups/track", icon: MapPin },
-  { label: "Waste Recognition", href: "/waste-recognition", icon: Camera },
-  { label: "Complaints", href: "/dashboard/complaints", icon: Megaphone },
-];
+function isPickupDetailRoute(pathname: string | null, segment: "track" | "offers"): boolean {
+  if (!pathname) return false;
+  return new RegExp(`^/dashboard/pickups/[^/]+/${segment}$`).test(pathname);
+}
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useRequireRole(["USER"]);
+  const pathname = usePathname();
+  const onTrackDetail = isPickupDetailRoute(pathname, "track");
+  const onOffersDetail = isPickupDetailRoute(pathname, "offers");
+
+  const dashboardNavItems: DashboardNavItem[] = React.useMemo(
+    () => [
+      { label: "Profile", href: "/profile", icon: User },
+      { label: "Smart Pickup Request", href: "/dashboard/pickups/new", icon: Truck },
+      {
+        label: "My Pickups",
+        href: "/dashboard/pickups",
+        icon: ClipboardList,
+        active: onTrackDetail || onOffersDetail ? false : undefined,
+      },
+      {
+        label: "Offers",
+        href: "/dashboard/pickups/offers",
+        icon: HandCoins,
+        active: onOffersDetail ? true : undefined,
+      },
+      {
+        label: "Track Pickup",
+        href: "/dashboard/pickups/track",
+        icon: MapPin,
+        active: onTrackDetail ? true : undefined,
+      },
+      { label: "Waste Recognition", href: "/waste-recognition", icon: Camera },
+      { label: "Complaints", href: "/dashboard/complaints", icon: Megaphone },
+      { label: "Green Rewards", href: "/dashboard/rewards", icon: Gift },
+    ],
+    [onTrackDetail, onOffersDetail]
+  );
 
   if (isLoading) {
     return (
@@ -35,7 +56,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    // useRequireRole is already redirecting — render nothing rather than flash gated content.
     return null;
   }
 

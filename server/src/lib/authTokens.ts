@@ -1,9 +1,3 @@
-// Refresh-token issuance/rotation/revocation against the RefreshToken table.
-// Design: the refresh token handed to the client IS a signed JWT (so its
-// signature/expiry can be checked statelessly), but we additionally persist a
-// sha256 hash of it in RefreshToken so we can revoke a specific token before
-// its JWT `exp` (logout, rotation, reuse detection) without needing a
-// separate JWT blocklist. Never store/log the raw token — only its hash.
 import { randomUUID, createHash } from "node:crypto";
 import type { User } from "@prisma/client";
 import { prisma } from "./prisma";
@@ -18,7 +12,6 @@ export function hashRefreshToken(rawToken: string): string {
   return createHash("sha256").update(rawToken).digest("hex");
 }
 
-/** Issues a brand-new access+refresh token pair for a freshly authenticated user. */
 export async function issueTokenPair(user: Pick<User, "id" | "role">): Promise<TokenPair> {
   const accessToken = signAccessToken({ sub: user.id, role: user.role });
 
@@ -39,12 +32,6 @@ export async function issueTokenPair(user: Pick<User, "id" | "role">): Promise<T
 
 export class RefreshTokenError extends Error {}
 
-/**
- * Verifies a raw refresh token cookie value, checks it against the DB
- * (unrevoked, not expired, not already rotated-away), rotates it into a new
- * pair, and revokes the old row. Throws RefreshTokenError on any failure —
- * callers should respond 401 and clear cookies.
- */
 export async function rotateRefreshToken(rawToken: string): Promise<TokenPair> {
   let payload;
   try {
@@ -61,8 +48,6 @@ export async function rotateRefreshToken(rawToken: string): Promise<TokenPair> {
   }
 
   if (existing.revokedAt) {
-    // Reuse of an already-rotated/revoked token: treat as a possible theft
-    // and revoke every other active refresh token for this user defensively.
     await prisma.refreshToken.updateMany({
       where: { userId: existing.userId, revokedAt: null },
       data: { revokedAt: new Date() },
@@ -90,7 +75,6 @@ export async function rotateRefreshToken(rawToken: string): Promise<TokenPair> {
   return newPair;
 }
 
-/** Best-effort revoke on logout. Never throws — an invalid/missing token is a no-op. */
 export async function revokeRefreshToken(rawToken: string): Promise<void> {
   const tokenHash = hashRefreshToken(rawToken);
   await prisma.refreshToken

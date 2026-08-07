@@ -1,8 +1,3 @@
-// Auth routes — registration, email/phone login, refresh/logout, and
-// Google/Facebook OAuth (server-side authorization-code redirect flow).
-// Mounted at /api/v1/auth in app.ts. Design rationale (token delivery,
-// OAuth completion, role defaults, etc) is documented in
-// docs/api-contract.md under "Authentication" — read that first.
 import { randomBytes } from "node:crypto";
 import { Router } from "express";
 import { Prisma, type User } from "@prisma/client";
@@ -42,19 +37,14 @@ import type { OAuthProfile } from "../lib/oauth/types";
 
 export const authRouter = Router();
 
-// The frontend origin OAuth callbacks redirect back to once cookies are set.
-// CLIENT_ORIGIN may be a comma-separated list (multiple allowed origins for
-// CORS) — the first entry is treated as the canonical frontend URL for
-// browser redirects.
 const FRONTEND_ORIGIN = env.CLIENT_ORIGIN[0];
 const POST_LOGIN_REDIRECT_PATH = "/";
-const OAUTH_STATE_COOKIE_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes
+const OAUTH_STATE_COOKIE_MAX_AGE_MS = 10 * 60 * 1000;
 
 function loginErrorRedirect(reason: string): string {
   return `${FRONTEND_ORIGIN}/login?error=${encodeURIComponent(reason)}`;
 }
 
-/** Strips password hash and other internal fields before ever sending a user back to a client. */
 function toPublicUser(user: User) {
   return {
     id: user.id,
@@ -68,9 +58,6 @@ function toPublicUser(user: User) {
   };
 }
 
-// ---------------------------------------------------------------------------
-// POST /api/v1/auth/register
-// ---------------------------------------------------------------------------
 authRouter.post(
   "/register",
   authRateLimiter,
@@ -108,9 +95,6 @@ authRouter.post(
   }),
 );
 
-// ---------------------------------------------------------------------------
-// POST /api/v1/auth/login
-// ---------------------------------------------------------------------------
 authRouter.post(
   "/login",
   authRateLimiter,
@@ -153,9 +137,6 @@ authRouter.post(
   }),
 );
 
-// ---------------------------------------------------------------------------
-// POST /api/v1/auth/refresh
-// ---------------------------------------------------------------------------
 authRouter.post(
   "/refresh",
   asyncHandler(async (req, res) => {
@@ -180,9 +161,6 @@ authRouter.post(
   }),
 );
 
-// ---------------------------------------------------------------------------
-// POST /api/v1/auth/logout
-// ---------------------------------------------------------------------------
 authRouter.post(
   "/logout",
   requireCsrf,
@@ -196,9 +174,6 @@ authRouter.post(
   }),
 );
 
-// ---------------------------------------------------------------------------
-// GET /api/v1/auth/me
-// ---------------------------------------------------------------------------
 authRouter.get(
   "/me",
   requireAuth,
@@ -213,9 +188,6 @@ authRouter.get(
   }),
 );
 
-// ---------------------------------------------------------------------------
-// OAuth: shared find-or-create-and-link logic
-// ---------------------------------------------------------------------------
 async function findOrCreateOAuthUser(
   provider: "GOOGLE" | "FACEBOOK",
   profile: OAuthProfile,
@@ -231,13 +203,11 @@ async function findOrCreateOAuthUser(
   }
 
   if (!profile.email) {
-    // Schema requires User.email — cannot create/link an account without one.
     return { error: "oauth_email_required" };
   }
 
   const existingUserByEmail = await prisma.user.findUnique({ where: { email: profile.email } });
   if (existingUserByEmail) {
-    // Account linking: same email, new provider identity.
     await prisma.oAuthAccount.create({
       data: {
         provider,
@@ -248,14 +218,6 @@ async function findOrCreateOAuthUser(
     return { user: existingUserByEmail };
   }
 
-  // Brand-new user. Role defaults to USER — OAuth is not (yet) an onboarding
-  // path for Collector/Recycling Company accounts in Phase 1; see
-  // docs/api-contract.md for the reasoning.
-  //
-  // accountType defaults to HOUSEHOLD: OAuth is a low-friction, one-click
-  // consumer flow with no form step to ask "Household or Business?" — a
-  // Business account holder is more likely to go through the deliberate
-  // email/phone registration form anyway. See docs/api-contract.md §4/§7.
   const user = await prisma.user.create({
     data: {
       email: profile.email,
@@ -276,12 +238,6 @@ async function completeOAuthLogin(
   provider: "GOOGLE" | "FACEBOOK",
   profile: OAuthProfile,
 ): Promise<{ redirectUrl: string; tokens?: Awaited<ReturnType<typeof issueTokenPair>> }> {
-  // This runs mid full-page-navigation (the browser landed here via the
-  // provider's redirect, not a fetch()) — an uncaught throw would fall
-  // through to the global error handler and show the user a raw JSON body
-  // instead of a graceful redirect back to /login. Catch anything
-  // unexpected (DB hiccup, a findOrCreateOAuthUser edge case) here so every
-  // path out of this function is a redirect.
   try {
     const result = await findOrCreateOAuthUser(provider, profile);
     if ("error" in result) {
@@ -295,9 +251,6 @@ async function completeOAuthLogin(
   }
 }
 
-// ---------------------------------------------------------------------------
-// GET /api/v1/auth/google — redirect to Google's consent screen
-// ---------------------------------------------------------------------------
 authRouter.get("/google", authRateLimiter, (req, res) => {
   if (!isGoogleOAuthConfigured()) {
     sendError(res, 503, "OAUTH_NOT_CONFIGURED", "Google sign-in is not available right now.");
@@ -311,9 +264,6 @@ authRouter.get("/google", authRateLimiter, (req, res) => {
   res.redirect(buildGoogleAuthorizationUrl(state));
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/v1/auth/google/callback
-// ---------------------------------------------------------------------------
 authRouter.get(
   "/google/callback",
   authRateLimiter,
@@ -345,9 +295,6 @@ authRouter.get(
   }),
 );
 
-// ---------------------------------------------------------------------------
-// GET /api/v1/auth/facebook — redirect to Facebook's consent screen
-// ---------------------------------------------------------------------------
 authRouter.get("/facebook", authRateLimiter, (req, res) => {
   if (!isFacebookOAuthConfigured()) {
     sendError(res, 503, "OAUTH_NOT_CONFIGURED", "Facebook sign-in is not available right now.");
@@ -361,9 +308,6 @@ authRouter.get("/facebook", authRateLimiter, (req, res) => {
   res.redirect(buildFacebookAuthorizationUrl(state));
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/v1/auth/facebook/callback
-// ---------------------------------------------------------------------------
 authRouter.get(
   "/facebook/callback",
   authRateLimiter,

@@ -3,7 +3,6 @@ import { Card } from "@/components/Card";
 import { NavBar } from "@/components/NavBar";
 import { PageContainer } from "@/components/PageContainer";
 
-// Site-wide 404. Role-specific route groups get their own error.tsx/not-found.tsx as they ship.
 export default function NotFound() {
   return (
     <>

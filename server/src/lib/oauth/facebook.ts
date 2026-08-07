@@ -1,5 +1,3 @@
-// Hand-rolled Facebook Login (Graph API) authorization-code flow. Same
-// rationale as google.ts — no passport strategy needed for one redirect flow.
 import { env } from "../env";
 import type { OAuthProfile } from "./types";
 
@@ -33,12 +31,6 @@ interface FacebookProfileResponse {
   email?: string;
 }
 
-/**
- * Exchanges an authorization `code` for a normalized OAuthProfile. `email`
- * may be null — Facebook only returns it if the user has a verified email on
- * their account AND grants the `email` permission; callers must handle that
- * (schema requires User.email, so a null email cannot complete signup here).
- */
 export async function exchangeFacebookCode(code: string): Promise<OAuthProfile> {
   const tokenUrl = new URL(TOKEN_ENDPOINT);
   tokenUrl.search = new URLSearchParams({

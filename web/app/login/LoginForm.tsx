@@ -1,7 +1,5 @@
 "use client";
 
-// Client Component because <form onSubmit> requires a client boundary in the App Router —
-// everything else about this page (copy, metadata, OAuth links) stays server-rendered in page.tsx.
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/Input";
@@ -10,7 +8,6 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { AuthApiError } from "@/lib/api/auth";
 
-// Never surface a raw AuthApiError.message for an unmapped code — fall back to something generic.
 const loginErrorMessages: Record<string, string> = {
   INVALID_CREDENTIALS: "That email/phone or password isn't right. Please try again.",
   OAUTH_ONLY_ACCOUNT:

@@ -1,8 +1,3 @@
-// Rendered as anchor-Buttons (not onClick/fetch) so a click is a real full-page navigation
-// that leaves the SPA and lands on the provider's actual consent screen.
-//
-// SVG brand marks use Google/Facebook's own colors, not design tokens — third-party brand
-// assets are the one exception to the no-hardcoded-colors rule.
 import { Button } from "@/components/Button";
 import { getGoogleOAuthUrl, getFacebookOAuthUrl } from "@/lib/api/auth";
 

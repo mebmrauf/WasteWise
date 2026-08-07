@@ -1,5 +1,3 @@
-// Shared page scaffold for /signup and /login. Colocated here rather than web/components/
-// since it's specific to these two pages, not a general design-system primitive.
 import * as React from "react";
 import { Card } from "@/components/Card";
 import { PageContainer } from "@/components/PageContainer";
@@ -9,11 +7,8 @@ import { OrDivider } from "./OrDivider";
 export interface AuthPageShellProps {
   title: string;
   subtitle: string;
-  /** Optional banner slot rendered between the subtitle and OAuth buttons. */
   banner?: React.ReactNode;
-  /** The credential form (SignupForm / LoginForm). */
   children: React.ReactNode;
-  /** Footer link line, e.g. "Already have an account? Log in". */
   footerNote: React.ReactNode;
 }
 

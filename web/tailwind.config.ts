@@ -10,6 +10,7 @@ import {
   contentMaxWidth,
   formMaxWidth,
   layout,
+  mapHeight,
 } from "./lib/tokens";
 
 // Wired directly to docs/design-system.md via web/lib/tokens.ts — the single source of
@@ -112,6 +113,12 @@ const config: Config = {
       margin: {
         sidebar: layout.sidebarWidth,
         rail: layout.navRailWidth,
+      },
+      // Large-media block height (currently just `Map`) — see docs/design-system.md §9.
+      // `h-map` = base/mobile/tablet height (320px), `h-map-lg` = height from `lg` up (448px).
+      height: {
+        map: mapHeight.DEFAULT,
+        "map-lg": mapHeight.lg,
       },
     },
   },

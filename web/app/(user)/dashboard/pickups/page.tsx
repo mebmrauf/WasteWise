@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import { ClipboardList } from "lucide-react";
-import { ComingSoonPage } from "@/components/ComingSoonPage";
+import { MyPickupsView } from "./MyPickupsView";
 
-// Authenticated, user-specific page — intentionally left off sitemap.ts.
 export const metadata: Metadata = {
   title: "My Pickups — WasteWise",
   description: "Review your past pickups, verified weights, and household recycling history.",
@@ -16,12 +14,5 @@ export const metadata: Metadata = {
 };
 
 export default function MyPickupsPage() {
-  return (
-    <ComingSoonPage
-      title="My Pickups"
-      icon={ClipboardList}
-      label="My Pickups"
-      description="See every past pickup, its verified weight, and your full household recycling history in one place."
-    />
-  );
+  return <MyPickupsView />;
 }

@@ -1,28 +1,5 @@
-/**
- * Button — WasteWise primitive button/link.
- *
- * Usage:
- *   <Button>Save changes</Button>
- *   <Button variant="secondary" size="sm">Cancel</Button>
- *   <Button variant="ghost">View all</Button>
- *   <Button variant="destructive">Dispute this weight</Button>
- *   <Button href="/signup">Get started</Button>   // renders an <a>, same styles
- *
- * Renders a native <button> by default. Pass `href` to render an <a> instead
- * (e.g. marketing-page CTAs linking to another route) with the exact same
- * variant/size treatment.
- *
- * Variants/sizes/colors are wired directly to docs/design-system.md §6.1 via
- * Tailwind utilities generated from web/lib/tokens.ts.
- *
- * Known token gap (flagged, not guessed): §6.1 specifies a 1.5px border for
- * the `secondary`/`destructive` outline variants. Neither tokens.ts nor
- * Tailwind's default border-width scale (0/1/2/4/8px) has a 1.5px step, and
- * arbitrary values (`border-[1.5px]`) are disallowed — this uses the
- * standard 1px `border` utility as the closest non-invented approximation.
- * If 1.5px is truly required, add a `borderWidth` scale to tokens.ts first.
- */
 import * as React from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive";
@@ -34,7 +11,6 @@ interface SharedButtonProps {
   fullWidth?: boolean;
   className?: string;
   children?: React.ReactNode;
-  /** Renders an <a> instead of a <button> when provided. */
   href?: string;
 }
 
@@ -59,14 +35,6 @@ const variantClasses: Record<ButtonVariant, string> = {
     "bg-neutral-0 text-error-500 border border-error-500 hover:bg-error-50 active:bg-error-50",
 };
 
-// Per §6.1: "Disabled: fill neutral-200, text neutral-400, no hover/active
-// change, cursor not-allowed" — applied uniformly across variants. Verified
-// against design-system.md v1.1's neutral-400-as-text restriction: this
-// specific pairing (neutral-400 #9C988C on neutral-200 #DEDCD3) computes to
-// ~2.1:1, below AA's 4.5:1, but WCAG 1.4.3 explicitly exempts text that is
-// part of an inactive/disabled UI component from contrast requirements, so
-// no change is needed here (unlike Input/Select's disabled *text content*,
-// which isn't exempt and was migrated to neutral-500).
 const disabledClasses = "bg-neutral-200 text-neutral-400 border-transparent cursor-not-allowed pointer-events-none";
 
 const baseClasses =
@@ -89,17 +57,30 @@ export const Button = React.forwardRef<HTMLButtonElement | HTMLAnchorElement, Bu
       const { disabled: _disabled, ...anchorRest } = rest as React.AnchorHTMLAttributes<HTMLAnchorElement> & {
         disabled?: boolean;
       };
+
+      if (isDisabled) {
+        return (
+          <a
+            ref={ref as React.Ref<HTMLAnchorElement>}
+            aria-disabled="true"
+            tabIndex={-1}
+            className={classes}
+            {...anchorRest}
+          >
+            {children}
+          </a>
+        );
+      }
+
       return (
-        <a
+        <Link
           ref={ref as React.Ref<HTMLAnchorElement>}
-          href={isDisabled ? undefined : href}
-          aria-disabled={isDisabled || undefined}
-          tabIndex={isDisabled ? -1 : undefined}
+          href={href}
           className={classes}
           {...anchorRest}
         >
           {children}
-        </a>
+        </Link>
       );
     }
 

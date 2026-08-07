@@ -1,19 +1,3 @@
-/**
- * Divider — general-purpose horizontal rule for separating sections within a longer
- * form/page. Distinct from app/_components/OrDivider.tsx, which is scoped to the auth
- * pages' "or continue with email" split.
- *
- * Usage:
- *   <Divider />
- *   <Divider label="Notification preferences" />
- *
- * With no `label`, renders a semantic `<hr>`. With a `label`, renders a line/label/line
- * group (role="separator") since an `<hr>` can't contain child text.
- *
- * Both rule-line segments use `border-t border-neutral-200`, never `h-px`/`w-px` — this
- * project's tailwind.config.ts fully overrides `theme.spacing`, which removes Tailwind's
- * implicit `px` key, so `h-px`/`w-px` silently resolve to nothing.
- */
 import { cn } from "@/lib/utils";
 
 export interface DividerProps {

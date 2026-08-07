@@ -1,13 +1,3 @@
-// Authentication + role-based access control middleware. Exported from
-// server/src/lib/ (not middleware/) so routes can
-// `import { requireAuth, requireRole } from "../lib/rbac"` and apply them
-// per-route, e.g.:
-//
-//   router.post("/pickups", requireAuth, requireRole("USER"), handler);
-//   router.get("/admin/verifications", requireAuth, requireRole("ADMIN"), handler);
-//
-// requireRole assumes requireAuth already ran (it reads req.user) — always
-// chain requireAuth first.
 import type { NextFunction, Request, Response } from "express";
 import type { Role } from "@prisma/client";
 import { verifyAccessToken } from "./jwt";
@@ -26,7 +16,6 @@ declare global {
   }
 }
 
-/** Verifies the access_token cookie and attaches `req.user`. 401s otherwise. */
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const token = req.cookies?.[ACCESS_TOKEN_COOKIE];
   if (!token) {
@@ -43,7 +32,6 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   }
 }
 
-/** Restricts a route to one or more roles. Must run after requireAuth. */
 export function requireRole(...allowedRoles: Role[]) {
   return function (req: Request, res: Response, next: NextFunction): void {
     if (!req.user) {

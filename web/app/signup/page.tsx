@@ -15,8 +15,6 @@ export const metadata: Metadata = {
   },
 };
 
-// Maps the `?role=` query param (e.g. `/signup?role=collector` from the landing-page CTAs)
-// onto the flat SignupRoleChoice the select uses. Unrecognized values fall back to "HOUSEHOLD".
 const roleParamToChoice: Record<string, SignupRoleChoice> = {
   HOUSEHOLD: "HOUSEHOLD",
   BUSINESS: "BUSINESS",
