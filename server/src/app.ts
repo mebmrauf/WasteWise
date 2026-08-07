@@ -11,6 +11,7 @@ import { logger } from "./lib/logger";
 import { sendError } from "./lib/apiResponse";
 import { authRouter } from "./routes/auth";
 import { usersRouter, AVATAR_UPLOAD_DIR } from "./routes/users";
+import { wasteRecognitionRouter, WASTE_PHOTO_UPLOAD_DIR } from "./routes/wasteRecognition";
 
 export function createApp() {
   const app = express();
@@ -57,6 +58,7 @@ export function createApp() {
 
   app.use("/api/v1/auth", authRouter);
   app.use("/api/v1/users", usersRouter);
+  app.use("/api/v1/waste-recognition", wasteRecognitionRouter);
   // TODO: mount further route modules here, e.g.
   // app.use("/api/v1/pickups", pickupsRouter);
 
@@ -76,6 +78,11 @@ export function createApp() {
     "/uploads/avatars",
     helmet.crossOriginResourcePolicy({ policy: "cross-origin" }),
     express.static(AVATAR_UPLOAD_DIR),
+  );
+  app.use(
+    "/uploads/waste-recognition",
+    helmet.crossOriginResourcePolicy({ policy: "cross-origin" }),
+    express.static(WASTE_PHOTO_UPLOAD_DIR),
   );
 
   // 404 fallback — kept last so it never shadows a real route.

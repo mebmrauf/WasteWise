@@ -55,6 +55,8 @@ export const envSchema = z.object({
 
   // --- Google Maps (server-side geocoding, optional — feature disabled if blank) ---
   GOOGLE_MAPS_SERVER_API_KEY: z.string().optional().default(""),
+  // --- AI Vision (Waste Recognition, optional — feature disabled if blank) ---
+  GOOGLE_VISION_API_KEY: z.string().optional().default(""),
 
   // --- Email (forgot-password verification codes) — optional, naming is not
   // yet finalized between SMTP_* (server.env.example) and EMAIL_* (server/.env

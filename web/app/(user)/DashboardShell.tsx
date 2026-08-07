@@ -9,7 +9,7 @@
 // and `md:pl-rail lg:pl-sidebar` clears the rail/sidebar at wider breakpoints (same
 // sidebarWidth/navRailWidth tokens DashboardNav itself uses).
 import * as React from "react";
-import { ClipboardList, Megaphone, MapPin, Truck, User } from "lucide-react";
+import { ClipboardList, Megaphone, MapPin, Truck, User, Camera } from "lucide-react";
 import { DashboardNav, type DashboardNavItem } from "@/components/DashboardNav";
 import { PageContainer } from "@/components/PageContainer";
 import { useRequireRole } from "@/lib/auth/AuthContext";
@@ -19,6 +19,7 @@ const dashboardNavItems: DashboardNavItem[] = [
   { label: "Smart Pickup Request", href: "/dashboard/pickups/new", icon: Truck },
   { label: "My Pickups", href: "/dashboard/pickups", icon: ClipboardList },
   { label: "Track Pickup", href: "/dashboard/pickups/track", icon: MapPin },
+  { label: "Waste Recognition", href: "/waste-recognition", icon: Camera },
   { label: "Complaints", href: "/dashboard/complaints", icon: Megaphone },
 ];
 
