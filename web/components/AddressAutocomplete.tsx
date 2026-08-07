@@ -171,7 +171,10 @@ export function AddressAutocomplete({
                     id={`${listboxId}-option-${index}`}
                     role="option"
                     aria-selected={isHighlighted}
-                    onClick={() => handleSelect(suggestion)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSelect(suggestion);
+                    }}
                     onMouseEnter={() => setHighlightedIndex(index)}
                     className={cn(
                       "cursor-pointer px-3 py-2 text-body-sm text-neutral-900",
