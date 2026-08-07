@@ -5,6 +5,7 @@ import { AlertTriangle } from "lucide-react";
 import { publicEnv } from "@/lib/env";
 import { Icon } from "@/components/Icon";
 import { cn } from "@/lib/utils";
+import { uberLikeMapStyle } from "./mapStyle";
 
 export interface MapMarker {
   lat: number;
@@ -19,6 +20,7 @@ export interface MapProps {
   className?: string;
   routeOrigin?: { lat: number; lng: number };
   routeDestination?: { lat: number; lng: number };
+  onRouteCalculated?: (info: { distance: string; duration: string } | null) => void;
 }
 
 type LoadState = "loading" | "ready" | "error";
@@ -76,13 +78,15 @@ function loadGoogleMapsApi(apiKey: string): Promise<typeof google.maps> {
   return mapsApiPromise;
 }
 
-export function Map({ center, marker, zoom = 14, className, routeOrigin, routeDestination }: MapProps) {
+export function Map({ center, marker, zoom = 14, className, routeOrigin, routeDestination, onRouteCalculated }: MapProps) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const mapsApiRef = React.useRef<typeof google.maps | null>(null);
   const mapRef = React.useRef<google.maps.Map | null>(null);
   const markerRef = React.useRef<google.maps.Marker | null>(null);
   const directionsServiceRef = React.useRef<google.maps.DirectionsService | null>(null);
-  const directionsRendererRef = React.useRef<google.maps.DirectionsRenderer | null>(null);
+  const routePolylineRef = React.useRef<google.maps.Polyline | null>(null);
+  const routeOriginMarkerRef = React.useRef<google.maps.Marker | null>(null);
+  const routeDestinationMarkerRef = React.useRef<google.maps.Marker | null>(null);
   const [loadState, setLoadState] = React.useState<LoadState>("loading");
 
   const apiKey = publicEnv.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -104,6 +108,9 @@ export function Map({ center, marker, zoom = 14, className, routeOrigin, routeDe
           zoom,
           streetViewControl: false,
           mapTypeControl: false,
+          fullscreenControl: false,
+          zoomControl: false,
+          styles: uberLikeMapStyle,
         });
         setLoadState("ready");
       })
@@ -156,8 +163,8 @@ export function Map({ center, marker, zoom = 14, className, routeOrigin, routeDe
     if (loadState !== "ready" || !mapRef.current || !mapsApiRef.current) return;
 
     if (!routeOrigin || !routeDestination) {
-      if (directionsRendererRef.current) {
-        directionsRendererRef.current.setDirections({ routes: [] } as unknown as google.maps.DirectionsResult);
+      if (routePolylineRef.current) {
+        routePolylineRef.current.setPath([]);
       }
       return;
     }
@@ -165,16 +172,46 @@ export function Map({ center, marker, zoom = 14, className, routeOrigin, routeDe
     if (!directionsServiceRef.current) {
       directionsServiceRef.current = new mapsApiRef.current.DirectionsService();
     }
-    if (!directionsRendererRef.current) {
-      directionsRendererRef.current = new mapsApiRef.current.DirectionsRenderer({
+    if (!routePolylineRef.current) {
+      routePolylineRef.current = new mapsApiRef.current.Polyline({
         map: mapRef.current,
-        suppressMarkers: true,
-        polylineOptions: {
-          strokeColor: "#059669", // primary-600
-          strokeWeight: 4,
-        },
+        strokeColor: "#059669", // primary-600
+        strokeWeight: 4,
       });
     }
+
+    if (!routeOriginMarkerRef.current) {
+      routeOriginMarkerRef.current = new mapsApiRef.current.Marker({
+        map: mapRef.current,
+        icon: {
+          path: mapsApiRef.current.SymbolPath.CIRCLE,
+          fillColor: "#2563eb",
+          fillOpacity: 1,
+          strokeWeight: 2,
+          strokeColor: "#ffffff",
+          scale: 8,
+        },
+        zIndex: 2,
+      });
+    }
+    if (!routeDestinationMarkerRef.current) {
+      routeDestinationMarkerRef.current = new mapsApiRef.current.Marker({
+        map: mapRef.current,
+        icon: {
+          path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
+          fillColor: "#000000",
+          fillOpacity: 1,
+          strokeWeight: 1,
+          strokeColor: "#ffffff",
+          scale: 1.5,
+          anchor: new mapsApiRef.current.Point(12, 24),
+        },
+        zIndex: 1,
+      });
+    }
+
+    routeOriginMarkerRef.current.setPosition(routeOrigin);
+    routeDestinationMarkerRef.current.setPosition(routeDestination);
 
     directionsServiceRef.current.route(
       {
@@ -183,8 +220,22 @@ export function Map({ center, marker, zoom = 14, className, routeOrigin, routeDe
         travelMode: mapsApiRef.current.TravelMode.DRIVING,
       },
       (result, status) => {
-        if (status === mapsApiRef.current!.DirectionsStatus.OK && result) {
-          directionsRendererRef.current?.setDirections(result);
+        if (status === mapsApiRef.current!.DirectionsStatus.OK && result && result.routes[0]) {
+          routePolylineRef.current?.setPath(result.routes[0].overview_path);
+          
+          const leg = result.routes[0].legs[0];
+          if (leg && onRouteCalculated) {
+            onRouteCalculated({
+              distance: leg.distance?.text || "",
+              duration: leg.duration?.text || "",
+            });
+          }
+
+          // Compute padded bounds
+          const bounds = new mapsApiRef.current!.LatLngBounds();
+          bounds.extend(routeOrigin);
+          bounds.extend(routeDestination);
+          mapRef.current?.fitBounds(bounds, { top: 60, bottom: 60, left: 60, right: 60 });
         }
       }
     );
