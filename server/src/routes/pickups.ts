@@ -72,42 +72,48 @@ pickupsRouter.post(
       sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    const { items, timeSlotStart, timeSlotEnd, placeId } = parsed.data;
+    const { items, timeSlotStart, timeSlotEnd, placeId, formattedAddress, latitude, longitude } = parsed.data;
 
-    if (!isGeocodingConfigured()) {
-      sendError(
-        res,
-        503,
-        "GEOCODING_NOT_CONFIGURED",
-        "Address lookup is currently unavailable. Please try again later.",
-      );
-      return;
-    }
+    let resolvedAddress: { formattedAddress: string; latitude: number | null; longitude: number | null };
 
-    let resolvedAddress: { formattedAddress: string; latitude: number; longitude: number };
-    try {
-      resolvedAddress = await resolveAddressFromPlaceId(placeId);
-    } catch (err) {
-      if (err instanceof GeocodingResolutionError) {
-        if (err.details.type === "not_found") {
-          sendError(
-            res,
-            400,
-            "VALIDATION_ERROR",
-            "That address could not be found — try selecting a suggestion from the list again.",
-          );
-          return;
-        }
-        logger.error({ err: err.details }, "Geocoding upstream failure");
+    if (formattedAddress && latitude !== undefined && longitude !== undefined) {
+      resolvedAddress = { formattedAddress, latitude, longitude };
+    } else {
+      // Fallback
+      if (!isGeocodingConfigured()) {
         sendError(
           res,
-          502,
-          "GEOCODING_FAILED",
-          "We couldn't verify that address right now. Please try again shortly.",
+          503,
+          "GEOCODING_NOT_CONFIGURED",
+          "Address lookup is currently unavailable. Please try again later.",
         );
         return;
       }
-      throw err;
+
+      try {
+        resolvedAddress = await resolveAddressFromPlaceId(placeId);
+      } catch (err) {
+        if (err instanceof GeocodingResolutionError) {
+          if (err.details.type === "not_found") {
+            sendError(
+              res,
+              400,
+              "VALIDATION_ERROR",
+              "That address could not be found — try selecting a suggestion from the list again.",
+            );
+            return;
+          }
+          logger.error({ err: err.details }, "Geocoding upstream failure during pickup request");
+          sendError(
+            res,
+            502,
+            "GEOCODING_FAILED",
+            "We couldn't verify that address right now. Please try again shortly.",
+          );
+          return;
+        }
+        throw err;
+      }
     }
 
     const { minKg, maxKg } = items.reduce(

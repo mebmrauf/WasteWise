@@ -17,7 +17,7 @@ import { TimeSlotPicker, type TimeSlot } from "@/components/TimeSlotPicker";
 import { WasteCategoryQuantityPicker } from "@/components/WasteCategoryQuantityPicker";
 import { WasteCategorySelector, type WasteCategory } from "@/components/WasteCategorySelector";
 import { AuthApiError } from "@/lib/api/auth";
-import { fetchAddressSuggestions, PlacesConfigError } from "@/lib/api/places";
+import { fetchAddressSuggestions, fetchPlaceDetails, PlacesConfigError } from "@/lib/api/places";
 import { getMyProfile, type UserProfile } from "@/lib/api/users";
 import {
   createPickupRequest,
@@ -297,6 +297,21 @@ export function NewPickupRequestView() {
     setSubmitError(null);
     setIsSubmitting(true);
     try {
+      let formattedAddress: string | undefined;
+      let latitude: number | undefined;
+      let longitude: number | undefined;
+
+      if (addressMode === "saved" && profile && profile.formattedAddress && profile.latitude !== null && profile.longitude !== null) {
+        formattedAddress = profile.formattedAddress;
+        latitude = profile.latitude;
+        longitude = profile.longitude;
+      } else if (addressMode === "custom" && selectedCustomPlace) {
+        const details = await fetchPlaceDetails(selectedCustomPlace.placeId);
+        formattedAddress = details.formattedAddress;
+        latitude = details.latitude;
+        longitude = details.longitude;
+      }
+
       await createPickupRequest({
         items: categories.map((category) => ({
           category,
@@ -305,6 +320,9 @@ export function NewPickupRequestView() {
         timeSlotStart: buildTimeSlotIso(date, selectedWindow.startHour),
         timeSlotEnd: buildTimeSlotIso(date, selectedWindow.endHour),
         placeId: resolvedPlaceId,
+        formattedAddress,
+        latitude,
+        longitude,
       });
       router.push("/dashboard/pickups");
     } catch (err) {

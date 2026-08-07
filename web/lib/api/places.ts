@@ -60,3 +60,41 @@ export async function fetchAddressSuggestions(
   }
   return suggestions;
 }
+
+const PLACES_DETAILS_URL = "https://places.googleapis.com/v1/places/";
+
+export interface PlaceDetails {
+  placeId: string;
+  formattedAddress: string;
+  latitude: number;
+  longitude: number;
+}
+
+export async function fetchPlaceDetails(placeId: string): Promise<PlaceDetails> {
+  const apiKey = publicEnv.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    throw new PlacesConfigError("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not configured.");
+  }
+
+  const res = await fetch(`${PLACES_DETAILS_URL}${placeId}?fields=location,formattedAddress`, {
+    headers: {
+      "X-Goog-Api-Key": apiKey,
+    },
+  });
+
+  if (!res.ok) {
+    throw new PlacesApiError(`Places Details request failed with status ${res.status}`);
+  }
+
+  const body = await res.json();
+  if (!body.formattedAddress || !body.location?.latitude || !body.location?.longitude) {
+    throw new PlacesApiError("Places Details returned incomplete location data.");
+  }
+
+  return {
+    placeId,
+    formattedAddress: body.formattedAddress,
+    latitude: body.location.latitude,
+    longitude: body.location.longitude,
+  };
+}

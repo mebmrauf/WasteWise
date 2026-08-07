@@ -106,6 +106,9 @@ export interface CreatePickupRequestInput {
   timeSlotStart: string;
   timeSlotEnd: string;
   placeId: string;
+  formattedAddress?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export function createPickupRequest(input: CreatePickupRequestInput): Promise<{ pickup: PickupRequestDetail }> {

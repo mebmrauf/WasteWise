@@ -8,6 +8,9 @@ export const updateProfileSchema = z
     fullName: z.string().trim().min(1, "Full name is required").max(120).optional(),
     phone: z.string().trim().regex(phoneRegex, "Enter a valid phone number").nullable().optional(),
     placeId: z.string().trim().min(1, "placeId cannot be empty").max(300).optional(),
+    formattedAddress: z.string().optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
     emailNotificationsEnabled: z.boolean().optional(),
     smsNotificationsEnabled: z.boolean().optional(),
   })

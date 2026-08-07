@@ -12,7 +12,7 @@ import { FieldDisplayRow } from "@/components/FieldDisplayRow";
 import { PageContainer } from "@/components/PageContainer";
 import { useRequireRole } from "@/lib/auth/AuthContext";
 import { AuthApiError } from "@/lib/api/auth";
-import { fetchAddressSuggestions, PlacesConfigError } from "@/lib/api/places";
+import { fetchAddressSuggestions, fetchPlaceDetails, PlacesConfigError } from "@/lib/api/places";
 import {
   getMyProfile,
   updateMyProfile,
@@ -228,7 +228,13 @@ export function ProfileView() {
     setAddressSuggestionsError(null);
     setAddressSave({ isSaving: true, error: null });
     try {
-      const { user: updated } = await updateMyProfile({ placeId: suggestion.placeId });
+      const details = await fetchPlaceDetails(suggestion.placeId);
+      const { user: updated } = await updateMyProfile({
+        placeId: details.placeId,
+        formattedAddress: details.formattedAddress,
+        latitude: details.latitude,
+        longitude: details.longitude,
+      });
       setExtras((prev) =>
         prev
           ? {

@@ -25,6 +25,9 @@ export const createPickupRequestSchema = z
     timeSlotStart: isoDateTimeSchema,
     timeSlotEnd: isoDateTimeSchema,
     placeId: placeIdSchema,
+    formattedAddress: z.string().optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
   })
   .strict()
   .superRefine((data, ctx) => {
