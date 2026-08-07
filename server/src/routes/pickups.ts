@@ -359,6 +359,10 @@ pickupsRouter.get(
     sendData(res, 200, {
       pickupRequestId: access.pickup.id,
       status: access.pickup.status,
+      pickupLocation: {
+        lat: access.pickup.latitude,
+        lng: access.pickup.longitude,
+      },
       collectorLocation,
       collector,
     });

@@ -17,6 +17,8 @@ export interface MapProps {
   marker?: MapMarker;
   zoom?: number;
   className?: string;
+  routeOrigin?: { lat: number; lng: number };
+  routeDestination?: { lat: number; lng: number };
 }
 
 type LoadState = "loading" | "ready" | "error";
@@ -74,11 +76,13 @@ function loadGoogleMapsApi(apiKey: string): Promise<typeof google.maps> {
   return mapsApiPromise;
 }
 
-export function Map({ center, marker, zoom = 14, className }: MapProps) {
+export function Map({ center, marker, zoom = 14, className, routeOrigin, routeDestination }: MapProps) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const mapsApiRef = React.useRef<typeof google.maps | null>(null);
   const mapRef = React.useRef<google.maps.Map | null>(null);
   const markerRef = React.useRef<google.maps.Marker | null>(null);
+  const directionsServiceRef = React.useRef<google.maps.DirectionsService | null>(null);
+  const directionsRendererRef = React.useRef<google.maps.DirectionsRenderer | null>(null);
   const [loadState, setLoadState] = React.useState<LoadState>("loading");
 
   const apiKey = publicEnv.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -147,6 +151,45 @@ export function Map({ center, marker, zoom = 14, className }: MapProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: track marker's primitive fields, not object identity, for the same reason as the center/zoom effect above.
   }, [loadState, marker?.lat, marker?.lng, marker?.label]);
+
+  React.useEffect(() => {
+    if (loadState !== "ready" || !mapRef.current || !mapsApiRef.current) return;
+
+    if (!routeOrigin || !routeDestination) {
+      if (directionsRendererRef.current) {
+        directionsRendererRef.current.setDirections({ routes: [] } as unknown as google.maps.DirectionsResult);
+      }
+      return;
+    }
+
+    if (!directionsServiceRef.current) {
+      directionsServiceRef.current = new mapsApiRef.current.DirectionsService();
+    }
+    if (!directionsRendererRef.current) {
+      directionsRendererRef.current = new mapsApiRef.current.DirectionsRenderer({
+        map: mapRef.current,
+        suppressMarkers: true,
+        polylineOptions: {
+          strokeColor: "#059669", // primary-600
+          strokeWeight: 4,
+        },
+      });
+    }
+
+    directionsServiceRef.current.route(
+      {
+        origin: routeOrigin,
+        destination: routeDestination,
+        travelMode: mapsApiRef.current.TravelMode.DRIVING,
+      },
+      (result, status) => {
+        if (status === mapsApiRef.current!.DirectionsStatus.OK && result) {
+          directionsRendererRef.current?.setDirections(result);
+        }
+      }
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional track primitive fields
+  }, [loadState, routeOrigin?.lat, routeOrigin?.lng, routeDestination?.lat, routeDestination?.lng]);
 
   return (
     <div className={cn("relative overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50", className)}>

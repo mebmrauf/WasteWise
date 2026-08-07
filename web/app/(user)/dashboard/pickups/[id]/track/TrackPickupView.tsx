@@ -63,6 +63,7 @@ export function TrackPickupView({ pickupId }: { pickupId: string }) {
 
   const [status, setStatus] = React.useState<PickupStatus | null>(null);
   const [collectorLocation, setCollectorLocation] = React.useState<CollectorLocation | null>(null);
+  const [pickupLocation, setPickupLocation] = React.useState<{ lat: number; lng: number } | null>(null);
   const [collector, setCollector] = React.useState<TrackedCollector | null>(null);
 
   React.useEffect(() => {
@@ -75,6 +76,7 @@ export function TrackPickupView({ pickupId }: { pickupId: string }) {
         if (cancelled) return;
         setStatus(tracking.status);
         setCollectorLocation(tracking.collectorLocation);
+        setPickupLocation(tracking.pickupLocation);
         setCollector(tracking.collector);
         setLoadState("ready");
       })
@@ -205,6 +207,8 @@ export function TrackPickupView({ pickupId }: { pickupId: string }) {
           <Map
             center={collectorLocation ?? DHAKA_FALLBACK_CENTER}
             marker={collectorLocation ? { ...collectorLocation, label: "Collector" } : undefined}
+            routeOrigin={collectorLocation ?? undefined}
+            routeDestination={pickupLocation ?? undefined}
             className="h-map lg:h-map-lg"
           />
         </div>

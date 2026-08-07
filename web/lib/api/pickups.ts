@@ -48,6 +48,7 @@ export interface TrackedCollector {
 export interface PickupTracking {
   pickupRequestId: string;
   status: PickupStatus;
+  pickupLocation: { lat: number; lng: number };
   collectorLocation: CollectorLocation | null;
   collector: TrackedCollector | null;
 }
