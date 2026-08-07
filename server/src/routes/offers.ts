@@ -7,7 +7,7 @@ import { asyncHandler } from "../lib/asyncHandler";
 import { sendData, sendError } from "../lib/apiResponse";
 import { prisma } from "../lib/prisma";
 import { logger } from "../lib/logger";
-import { emitToRoom } from "../realtime/emitToRoom";
+import { getIO, pickupRoomName } from "../realtime/socket";
 import { PICKUP_STATUS_EVENT } from "../realtime/pickupEvents";
 import { submitOfferSchema } from "./offers.schemas";
 
@@ -169,7 +169,7 @@ offersRouter.post(
     }
 
     try {
-      emitToRoom(offer.pickupRequestId, PICKUP_STATUS_EVENT, {
+      getIO().to(pickupRoomName(offer.pickupRequestId)).emit(PICKUP_STATUS_EVENT, {
         pickupRequestId: offer.pickupRequestId,
         status: result.pickup.status,
         createdAt: result.pickup.updatedAt,

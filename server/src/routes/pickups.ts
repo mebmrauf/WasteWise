@@ -14,7 +14,7 @@ import {
   resolveAddressFromPlaceId,
 } from "../lib/geocoding";
 import { getLoadSizeKgRange } from "../lib/loadSize";
-import { emitToRoom } from "../realtime/emitToRoom";
+import { getIO, pickupRoomName } from "../realtime/socket";
 import { PICKUP_STATUS_EVENT } from "../realtime/pickupEvents";
 import { createPickupRequestSchema } from "./pickups.schemas";
 
@@ -283,7 +283,7 @@ pickupsRouter.post(
     ]);
 
     try {
-      emitToRoom(id, PICKUP_STATUS_EVENT, {
+      getIO().to(pickupRoomName(id)).emit(PICKUP_STATUS_EVENT, {
         pickupRequestId: id,
         status: updatedPickup.status,
         createdAt: updatedPickup.updatedAt,
