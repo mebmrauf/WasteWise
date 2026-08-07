@@ -8,7 +8,7 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import type { RoleAccent } from "@/components/NavBar";
 
 const ACCEPTED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
-const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
 export interface AvatarUploadProps {
   name: string;
@@ -27,7 +27,7 @@ function validateFile(file: File): string | null {
     return "Please upload a JPEG, PNG, or WEBP image.";
   }
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    return "Image must be smaller than 2MB.";
+    return "Image must be smaller than 10MB.";
   }
   return null;
 }
@@ -111,7 +111,7 @@ export function AvatarUpload({
         {isUploading ? "Uploading…" : (triggerLabel ?? (hasImage ? "Change photo" : "Upload photo"))}
       </Button>
 
-      <p className="text-caption text-neutral-500">JPEG, PNG, or WEBP. Max 2MB.</p>
+      <p className="text-caption text-neutral-500">JPEG, PNG, or WEBP. Max 10MB.</p>
 
       {displayError && <ErrorBanner>{displayError}</ErrorBanner>}
     </div>
