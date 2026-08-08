@@ -12,6 +12,9 @@ import { Input } from "@/components/Input";
 import { PageContainer } from "@/components/PageContainer";
 import { Select } from "@/components/Select";
 import { StatusPill } from "@/components/StatusPill";
+import { AddressAutocomplete, type AddressSuggestion } from "@/components/AddressAutocomplete";
+import { Map } from "@/components/Map";
+import { fetchAddressSuggestions, fetchPlaceDetails, PlacesConfigError } from "@/lib/api/places";
 import { useRequireRole } from "@/lib/auth/AuthContext";
 import { AuthApiError } from "@/lib/api/auth";
 import {
@@ -61,6 +64,7 @@ const idleSaveState: FieldSaveState = { isSaving: false, error: null };
 
 interface CollectorDetailsDraft {
   vehicleType: VehicleType;
+  vehicleNumber: string;
   licenseNumber: string;
   serviceArea: string;
 }
@@ -68,6 +72,7 @@ interface CollectorDetailsDraft {
 function draftFromProfile(profile: CollectorProfileSummary | null): CollectorDetailsDraft {
   return {
     vehicleType: profile?.vehicleType ?? DEFAULT_VEHICLE_TYPE,
+    vehicleNumber: profile?.vehicleNumber ?? "",
     licenseNumber: profile?.licenseNumber ?? "",
     serviceArea: profile?.serviceArea ?? "",
   };
@@ -124,12 +129,111 @@ export function CollectorProfileView() {
     error: string | null;
   }>({ isUploading: false, error: null });
 
+  const [addressSuggestions, setAddressSuggestions] = React.useState<AddressSuggestion[]>([]);
+  const [isLoadingAddressSuggestions, setIsLoadingAddressSuggestions] = React.useState(false);
+  const [addressSuggestionsError, setAddressSuggestionsError] = React.useState<string | null>(null);
+  const [mapCenter, setMapCenter] = React.useState<{ lat: number; lng: number } | null>(null);
+  const addressSessionTokenRef = React.useRef<string | null>(null);
+  const addressDebounceTimerRef = React.useRef<number | null>(null);
+  const addressRequestSeqRef = React.useRef(0);
+
+  React.useEffect(() => {
+    return () => {
+      if (addressDebounceTimerRef.current !== null) {
+        window.clearTimeout(addressDebounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  function ensureAddressSessionToken(): string {
+    if (!addressSessionTokenRef.current) {
+      addressSessionTokenRef.current = crypto.randomUUID();
+    }
+    return addressSessionTokenRef.current;
+  }
+
+  function rotateAddressSessionToken() {
+    addressSessionTokenRef.current = crypto.randomUUID();
+  }
+
+  function clearPendingAddressDebounce() {
+    if (addressDebounceTimerRef.current !== null) {
+      window.clearTimeout(addressDebounceTimerRef.current);
+      addressDebounceTimerRef.current = null;
+    }
+  }
+
+  async function runAddressSuggestionsFetch(query: string) {
+    const seq = ++addressRequestSeqRef.current;
+    setIsLoadingAddressSuggestions(true);
+    setAddressSuggestionsError(null);
+    try {
+      const token = ensureAddressSessionToken();
+      const results = await fetchAddressSuggestions(query, token);
+      if (seq !== addressRequestSeqRef.current) return;
+      setAddressSuggestions(results);
+      setIsLoadingAddressSuggestions(false);
+    } catch (err) {
+      if (seq !== addressRequestSeqRef.current) return;
+      setAddressSuggestions([]);
+      setIsLoadingAddressSuggestions(false);
+      setAddressSuggestionsError(
+        err instanceof PlacesConfigError
+          ? "Address search isn't available right now."
+          : "Couldn't load address suggestions. Try again.",
+      );
+    }
+  }
+
+  function handleAddressQueryChange(nextQuery: string) {
+    setDetails((prev) => ({ ...prev, serviceArea: nextQuery }));
+    clearPendingAddressDebounce();
+
+    const trimmed = nextQuery.trim();
+    if (trimmed.length < 3) {
+      addressRequestSeqRef.current += 1;
+      setAddressSuggestions([]);
+      setIsLoadingAddressSuggestions(false);
+      setAddressSuggestionsError(null);
+      return;
+    }
+
+    addressDebounceTimerRef.current = window.setTimeout(() => {
+      void runAddressSuggestionsFetch(trimmed);
+    }, 400);
+  }
+
+  async function handleSelectAddressSuggestion(suggestion: AddressSuggestion) {
+    clearPendingAddressDebounce();
+    addressRequestSeqRef.current += 1;
+    rotateAddressSessionToken();
+    setDetails((prev) => ({ ...prev, serviceArea: suggestion.description }));
+    setAddressSuggestions([]);
+    setIsLoadingAddressSuggestions(false);
+    setAddressSuggestionsError(null);
+    
+    try {
+      const details = await fetchPlaceDetails(suggestion.placeId);
+      if (details.latitude && details.longitude) {
+        setMapCenter({ lat: details.latitude, lng: details.longitude });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   const [detailsSave, setDetailsSave] = React.useState<FieldSaveState>(idleSaveState);
   const savedDetails = draftFromProfile(extras?.collectorProfile ?? null);
   const detailsChanged =
     details.vehicleType !== savedDetails.vehicleType ||
+    details.vehicleNumber !== savedDetails.vehicleNumber ||
     details.licenseNumber !== savedDetails.licenseNumber ||
     details.serviceArea !== savedDetails.serviceArea;
+
+  const hasRequiredDetails =
+    details.vehicleNumber.trim().length > 0 &&
+    details.licenseNumber.trim().length > 0 &&
+    details.serviceArea.trim().length > 0;
 
   async function handleSaveFullName(newValue: string) {
     setFullNameSave({ isSaving: true, error: null });
@@ -179,6 +283,7 @@ export function CollectorProfileView() {
     try {
       const { collectorProfile: updated } = await updateCollectorProfile({
         vehicleType: details.vehicleType,
+        vehicleNumber: details.vehicleNumber,
         licenseNumber: details.licenseNumber,
         serviceArea: details.serviceArea,
       });
@@ -269,10 +374,14 @@ export function CollectorProfileView() {
               </span>
             )}
           </div>
-          {extras && !extras.collectorProfile && (
+          {extras && !extras.collectorProfile ? (
             <p className="-mt-2 text-caption text-neutral-500">
               Save your vehicle details below to complete your collector profile — an admin
               reviews it before you can browse available jobs.
+            </p>
+          ) : (
+            <p className="-mt-2 text-caption text-warning-600 bg-warning-50 p-3 rounded-lg border border-warning-200">
+              <strong>Note:</strong> Updating your vehicle or license details will instantly lock your account and require an admin to re-verify you.
             </p>
           )}
 
@@ -286,27 +395,47 @@ export function CollectorProfileView() {
             options={vehicleTypeOptions}
           />
           <Input
-            label="License number (optional)"
+            label="Vehicle number"
+            value={details.vehicleNumber}
+            placeholder="e.g. DHK-1234"
+            disabled={!extras || detailsSave.isSaving}
+            onChange={(event) => setDetails((prev) => ({ ...prev, vehicleNumber: event.target.value }))}
+          />
+          <Input
+            label="License number"
             value={details.licenseNumber}
-            placeholder="Not set"
+            placeholder="e.g. LIC-987654321"
             disabled={!extras || detailsSave.isSaving}
             onChange={(event) => setDetails((prev) => ({ ...prev, licenseNumber: event.target.value }))}
           />
-          <Input
-            label="Service area (optional)"
-            value={details.serviceArea}
-            placeholder="e.g. Gulshan, Dhaka"
-            helperText="The area you collect from — shown to help match you with nearby pickup requests."
-            disabled={!extras || detailsSave.isSaving}
-            onChange={(event) => setDetails((prev) => ({ ...prev, serviceArea: event.target.value }))}
-          />
+          <div>
+            <AddressAutocomplete
+              label="Service area"
+              value={details.serviceArea}
+              placeholder="e.g. Gulshan, Dhaka"
+              onChange={handleAddressQueryChange}
+              suggestions={addressSuggestions}
+              onSelectSuggestion={handleSelectAddressSuggestion}
+              isLoading={isLoadingAddressSuggestions}
+              error={addressSuggestionsError}
+              disabled={!extras || detailsSave.isSaving}
+            />
+            <p className="mt-1 text-label text-neutral-500">
+              The area you collect from — shown to help match you with nearby pickup requests.
+            </p>
+            {mapCenter && (
+              <div className="mt-4 h-48 w-full overflow-hidden rounded-lg sm:h-64 border border-neutral-200 shadow-inner">
+                <Map center={mapCenter} zoom={14} marker={mapCenter} />
+              </div>
+            )}
+          </div>
 
           {detailsSave.error && <ErrorBanner>{detailsSave.error}</ErrorBanner>}
 
           <div>
             <Button
               size="sm"
-              disabled={!extras || !detailsChanged || detailsSave.isSaving}
+              disabled={!extras || !detailsChanged || !hasRequiredDetails || detailsSave.isSaving}
               onClick={() => void handleSaveDetails()}
             >
               {detailsSave.isSaving ? "Saving…" : "Save collector details"}

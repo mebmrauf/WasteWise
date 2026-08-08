@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Gift, HandCoins, MapPin, Megaphone, Truck, User, Camera } from "lucide-react";
+import { ClipboardList, Gift, HandCoins, MapPin, Megaphone, Truck, User, Camera, LayoutDashboard } from "lucide-react";
 import { DashboardNav, type DashboardNavItem } from "@/components/DashboardNav";
 import { PageContainer } from "@/components/PageContainer";
 import { useRequireRole } from "@/lib/auth/AuthContext";
@@ -26,19 +26,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         label: "My Pickups",
         href: "/dashboard/pickups",
         icon: ClipboardList,
-        active: onTrackDetail || onOffersDetail ? false : undefined,
-      },
-      {
-        label: "Offers",
-        href: "/dashboard/pickups/offers",
-        icon: HandCoins,
-        active: onOffersDetail ? true : undefined,
-      },
-      {
-        label: "Track Pickup",
-        href: "/dashboard/pickups/track",
-        icon: MapPin,
-        active: onTrackDetail ? true : undefined,
+        active: onTrackDetail || onOffersDetail ? true : undefined,
       },
       { label: "Waste Recognition", href: "/waste-recognition", icon: Camera },
       { label: "Complaints", href: "/dashboard/complaints", icon: Megaphone },

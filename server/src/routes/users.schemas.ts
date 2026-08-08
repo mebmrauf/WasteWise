@@ -20,8 +20,9 @@ type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export const updateCollectorProfileSchema = z
   .object({
     vehicleType: z.nativeEnum(VehicleType),
-    licenseNumber: z.string().trim().max(60, "License number is too long").optional(),
-    serviceArea: z.string().trim().max(120, "Service area is too long").optional(),
+    vehicleNumber: z.string().trim().min(1, "Vehicle number is required").max(60, "Vehicle number is too long"),
+    licenseNumber: z.string().trim().min(1, "License number is required").max(60, "License number is too long"),
+    serviceArea: z.string().trim().min(1, "Service area is required").max(120, "Service area is too long"),
   })
   .strict();
 type UpdateCollectorProfileInput = z.infer<typeof updateCollectorProfileSchema>;

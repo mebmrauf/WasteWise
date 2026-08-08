@@ -102,6 +102,8 @@ export default async function Home() {
         const payload = JSON.parse(Buffer.from(payloadBase64, "base64").toString());
         if (payload.role === "COLLECTOR") {
           redirect("/collector");
+        } else if (payload.role === "ADMIN") {
+          redirect("/admin");
         } else {
           redirect("/dashboard");
         }

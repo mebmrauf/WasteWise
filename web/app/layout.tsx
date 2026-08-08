@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Inter, IBM_Plex_Mono } from "next/font/google";
+import { Space_Grotesk, Inter, IBM_Plex_Mono, Righteous } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import { publicEnv } from "@/lib/env";
@@ -25,6 +25,13 @@ const ibmPlexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
+const righteous = Righteous({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-brand",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   metadataBase: new URL(publicEnv.NEXT_PUBLIC_APP_URL),
   title: "WasteWise",
@@ -35,7 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${inter.variable} ${ibmPlexMono.variable}`}
+      className={`${spaceGrotesk.variable} ${inter.variable} ${ibmPlexMono.variable} ${righteous.variable}`}
     >
       <body>
         <AuthProvider>{children}</AuthProvider>

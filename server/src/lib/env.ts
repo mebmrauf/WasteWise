@@ -54,6 +54,9 @@ const envSchema = z.object({
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
+
+  ADMIN_EMAIL: z.string().email("must be a valid email for the admin user").default("admin@wastewise.com"),
+  ADMIN_PASSWORD: z.string().min(8, "admin password must be at least 8 characters").default("Admin123!"),
 });
 
 export type Env = z.infer<typeof envSchema>;

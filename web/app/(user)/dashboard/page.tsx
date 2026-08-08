@@ -1,1 +1,5 @@
-export { DashboardHome as default } from "./DashboardHome";
+import { redirect } from "next/navigation";
+
+export default function UserDashboardPage() {
+  redirect("/dashboard/pickups");
+}

@@ -101,16 +101,11 @@ export function RedeemRechargeWizard({ currentBalance, onComplete, onExit }: Red
 
   return (
     <div>
-      <div className="flex items-start justify-between gap-4">
-        <h2 className="text-h2 text-neutral-900">Mobile Recharge</h2>
-        <Button variant="ghost" size="sm" onClick={onExit} disabled={isSubmitting}>
-          Cancel
-        </Button>
-      </div>
-
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
+      <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
         <div>
-          <Card className="flex flex-col gap-8">
+          <Card className="flex flex-col gap-8 bg-white/50 backdrop-blur-md shadow-xl border border-white/60 p-8 rounded-3xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary-100/40 rounded-full blur-3xl -z-10 transform translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-yellow-100/40 rounded-full blur-3xl -z-10 transform -translate-x-1/2 translate-y-1/2" />
             <div>
               <h3 className="text-h3 text-neutral-900 mb-5">Choose your mobile operator</h3>
               <OperatorSelector value={operator} onChange={setOperator} />
@@ -142,6 +137,7 @@ export function RedeemRechargeWizard({ currentBalance, onComplete, onExit }: Red
 
         <SummaryPanel
           title="Recharge summary"
+          className="bg-neutral-50/80 backdrop-blur-md border-neutral-200/60 shadow-lg rounded-3xl p-8 sticky top-8 h-fit"
           footer={
             <Button fullWidth disabled={!canSubmit} onClick={() => void handleConfirmRecharge()}>
               {isSubmitting ? "Redeeming…" : "Confirm & redeem"}

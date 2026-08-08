@@ -175,6 +175,7 @@ export const iconSize = {
   sm: "16px",
   md: "20px",
   lg: "24px",
+  xl: "32px",
 } as const;
 
 export const iconStrokeWidth = 1.75;

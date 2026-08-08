@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { ArrowRight, Truck, Package, Clock, MapPin, Home, Navigation, Search } from "lucide-react";
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/AddressAutocomplete";
+import { Icon } from "@/components/Icon";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { CategoryQuantityRow } from "@/components/CategoryQuantityRow";
@@ -19,6 +21,7 @@ import { WasteCategorySelector, type WasteCategory } from "@/components/WasteCat
 import { AuthApiError } from "@/lib/api/auth";
 import { fetchAddressSuggestions, fetchPlaceDetails, PlacesConfigError, fetchReverseGeocode, type PlaceDetails } from "@/lib/api/places";
 import { getMyProfile, type UserProfile } from "@/lib/api/users";
+import { cn } from "@/lib/utils";
 import {
   createPickupRequest,
   LOAD_SIZE_KG_RANGES,
@@ -27,7 +30,7 @@ import {
   type LoadSize,
 } from "@/lib/api/pickups";
 
-const STEP_LABELS = ["Category", "Quantity & time", "Confirm"];
+// Flattened form: all steps are now displayed simultaneously.
 
 const submitPickupErrorMessages: Record<string, string> = {
   VALIDATION_ERROR:
@@ -88,9 +91,6 @@ function formatWindowSummary(dateStr: string, window: TimeWindow): string {
 
 export function NewPickupRequestView() {
   const router = useRouter();
-  const [step, setStep] = React.useState(0);
-  const stepHeadingRef = React.useRef<HTMLHeadingElement | null>(null);
-  const isInitialStepRender = React.useRef(true);
   const [validationMessage, setValidationMessage] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
@@ -151,13 +151,7 @@ export function NewPickupRequestView() {
     };
   }, []);
 
-  React.useEffect(() => {
-    if (isInitialStepRender.current) {
-      isInitialStepRender.current = false;
-      return;
-    }
-    stepHeadingRef.current?.focus();
-  }, [step]);
+
 
   function ensureAddressSessionToken(): string {
     if (!addressSessionTokenRef.current) {
@@ -273,9 +267,7 @@ export function NewPickupRequestView() {
   const hasQuantityForEveryCategory =
     categories.length > 0 && categories.every((category) => quantities[category] !== undefined);
 
-  const isLastStep = step === STEP_LABELS.length - 1;
   const canSubmit =
-    isLastStep &&
     !isSubmitting &&
     hasQuantityForEveryCategory &&
     date !== "" &&
@@ -299,39 +291,7 @@ export function NewPickupRequestView() {
     });
   }
 
-  function handleNext() {
-    if (step === 0) {
-      if (categories.length === 0) {
-        setValidationMessage("Select at least one category to continue.");
-        return;
-      }
-    }
-    if (step === 1) {
-      if (!hasQuantityForEveryCategory) {
-        setValidationMessage("Choose an estimated quantity for every selected category.");
-        return;
-      }
-      if (!date) {
-        setValidationMessage("Choose a pickup date.");
-        return;
-      }
-      if (!selectedWindow) {
-        setValidationMessage("Choose a time slot.");
-        return;
-      }
-      if (isSlotInPast) {
-        setValidationMessage("That time slot has already passed — pick a later date or slot.");
-        return;
-      }
-    }
-    setValidationMessage(null);
-    setStep((current) => Math.min(current + 1, STEP_LABELS.length - 1));
-  }
 
-  function handleBack() {
-    setValidationMessage(null);
-    setStep((current) => Math.max(current - 1, 0));
-  }
 
   async function handleSubmitPickupRequest() {
     if (!date || !selectedWindow || !resolvedPlaceId || !hasQuantityForEveryCategory) return;
@@ -379,170 +339,247 @@ export function NewPickupRequestView() {
 
   return (
     <PageContainer className="py-8 lg:py-12">
-      <h1 className="text-h1 text-neutral-900">Schedule a pickup</h1>
-      <p className="mt-2 text-body-lg text-neutral-500">
-        Tell us what you&apos;re recycling and when — we&apos;ll match you with a nearby collector.
-      </p>
+      <div className="flex items-center gap-4 animate-slide-up">
+        <div className="inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-primary-100 to-emerald-100 text-primary-600 shadow-sm border border-primary-100/50">
+          <Icon icon={Truck} size="xl" />
+        </div>
+        <div>
+          <h1 className="font-heading text-h1 text-neutral-900 tracking-tight">Schedule a pickup</h1>
+          <p className="mt-2 text-body-lg text-neutral-500 max-w-xl">
+            Tell us what you&apos;re recycling and when — we&apos;ll match you with a nearby collector.
+          </p>
+        </div>
+      </div>
 
       {profileError && <ErrorBanner className="mt-4 max-w-form">{profileError}</ErrorBanner>}
 
-      <StepProgress steps={STEP_LABELS} currentIndex={step} aria-label="Pickup request progress" className="mt-8" />
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] animate-slide-up">
+        <div className="flex flex-col gap-6">
+          
+          {/* Section 1: Categories */}
+          <Card className="glass-panel border-0 shadow-xl rounded-[2rem] p-8 relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="flex items-center gap-5 mb-8">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner">
+                <Icon icon={Package} size="lg" />
+              </div>
+              <div>
+                <h2 className="font-heading text-h3 text-neutral-900">What are you selling?</h2>
+                <p className="mt-1 text-body-sm text-neutral-500">Select every category that applies to this pickup.</p>
+              </div>
+            </div>
+            <WasteCategorySelector
+              value={categories}
+              onChange={handleCategoriesChange}
+              aria-label="What are you selling?"
+              className="mt-5"
+            />
+          </Card>
 
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
-        <div>
-          <Card>
-            {step === 0 && (
-              <>
-                <h2
-                  ref={stepHeadingRef}
-                  tabIndex={-1}
-                  className="text-h3 text-neutral-900 rounded-sm focus:outline-none focus:shadow-focus"
-                >
-                  What are you selling?
-                </h2>
-                <p className="mt-1 text-body-sm text-neutral-500">
-                  Select every category that applies to this pickup.
-                </p>
-                <WasteCategorySelector
-                  value={categories}
-                  onChange={handleCategoriesChange}
-                  aria-label="What are you selling?"
-                  className="mt-5"
+          {/* Section 2: Quantity & Time */}
+          <Card className="glass-panel border-0 shadow-xl rounded-[2rem] p-8 relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="flex items-center gap-5 mb-8">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner">
+                <Icon icon={Clock} size="lg" />
+              </div>
+              <div>
+                <h2 className="font-heading text-h3 text-neutral-900">Quantity & time</h2>
+                <p className="mt-1 text-body-sm text-neutral-500">Estimate how much you have of each category, and pick a pickup window.</p>
+              </div>
+            </div>
+            <div className="mt-8 flex flex-col gap-6">
+              <div className="flex flex-col gap-3">
+                <p className="text-body font-semibold text-neutral-900">Estimated quantity</p>
+                <WasteCategoryQuantityPicker
+                  categories={categories}
+                  value={quantities}
+                  onChange={handleQuantityChange}
+                  loadSizeOptions={LOAD_SIZE_OPTIONS}
                 />
-              </>
-            )}
+              </div>
 
-            {step === 1 && (
-              <>
-                <h2
-                  ref={stepHeadingRef}
-                  tabIndex={-1}
-                  className="text-h3 text-neutral-900 rounded-sm focus:outline-none focus:shadow-focus"
-                >
-                  Quantity & time
-                </h2>
-                <p className="mt-1 text-body-sm text-neutral-500">
-                  Estimate how much you have of each category, and pick a pickup window.
-                </p>
-                <div className="mt-5 flex flex-col gap-5">
-                  <div>
-                    <p className="text-label text-neutral-800">Estimated quantity</p>
-                    <WasteCategoryQuantityPicker
-                      categories={categories}
-                      value={quantities}
-                      onChange={handleQuantityChange}
-                      loadSizeOptions={LOAD_SIZE_OPTIONS}
-                      className="mt-2"
-                    />
-                  </div>
+              <div className="h-px w-full bg-neutral-100" />
+
+              <div className="flex flex-col gap-3">
+                <p className="text-body font-semibold text-neutral-900">When should we come?</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-neutral-50/50 border border-neutral-100 rounded-xl p-5">
                   <Input
                     label="Pickup date"
                     type="date"
                     min={todayIsoDate()}
                     value={date}
                     onChange={(event) => setDate(event.target.value)}
+                    className="bg-white"
                   />
                   <div>
-                    <p className="text-label text-neutral-800">Time slot</p>
+                    <p className="text-label text-neutral-800 mb-2">Time slot</p>
                     <TimeSlotPicker
                       slots={TIME_WINDOWS}
                       value={timeWindowId}
                       onChange={setTimeWindowId}
                       aria-label="Time slot"
-                      className="mt-2"
                     />
                   </div>
                 </div>
-              </>
-            )}
+              </div>
+            </div>
+          </Card>
+        </div>
 
-            {step === 2 && (
-              <>
-                <h2
-                  ref={stepHeadingRef}
-                  tabIndex={-1}
-                  className="text-h3 text-neutral-900 rounded-sm focus:outline-none focus:shadow-focus"
-                >
-                  Pickup address
-                </h2>
-                <p className="mt-1 text-body-sm text-neutral-500">Where should the collector pick this up?</p>
+        <div className="flex flex-col gap-6 sticky top-24 h-fit">
+          {/* Section 3: Address */}
+          <Card className="glass-panel border-0 shadow-xl rounded-[2rem] p-8 relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="flex items-center gap-4 mb-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner">
+                <Icon icon={MapPin} size="md" />
+              </div>
+              <div>
+                <h2 className="font-heading text-h3 text-neutral-900 leading-tight">Pickup address</h2>
+              </div>
+            </div>
 
-                <PillRadioGroup
-                  options={[
-                    { id: "saved", label: "Use my saved address", disabled: Boolean(profile) && !profile?.placeId },
-                    { id: "current", label: "Use current location" },
-                    { id: "custom", label: "Enter a different address" },
-                  ]}
-                  value={addressMode}
-                  onChange={handleAddressModeChange}
-                  aria-label="Pickup address option"
-                  className="mt-4"
-                />
+            <div className="flex flex-col gap-3">
+              {/* Option: Saved Address */}
+              <button
+                type="button"
+                disabled={Boolean(profile) && !profile?.placeId}
+                onClick={() => handleAddressModeChange("saved")}
+                className={cn(
+                  "flex items-center gap-4 w-full p-4 rounded-xl border text-left transition-all",
+                  "focus-visible:outline-none focus-visible:shadow-focus",
+                  Boolean(profile) && !profile?.placeId
+                    ? "opacity-50 cursor-not-allowed border-neutral-100 bg-neutral-50"
+                    : addressMode === "saved"
+                    ? "border-primary-500 bg-primary-50/50 shadow-sm"
+                    : "border-neutral-200 bg-white hover:border-primary-300 hover:bg-primary-50/20"
+                )}
+              >
+                <div className={cn(
+                  "flex items-center justify-center w-10 h-10 rounded-full",
+                  addressMode === "saved" ? "bg-primary-100 text-primary-600" : "bg-neutral-100 text-neutral-500"
+                )}>
+                  <Icon icon={Home} size="sm" />
+                </div>
+                <div>
+                  <p className={cn("text-body font-semibold", addressMode === "saved" ? "text-primary-900" : "text-neutral-900")}>
+                    Saved Address
+                  </p>
+                  <p className="text-label text-neutral-500">
+                    Use the address from your profile
+                  </p>
+                </div>
+              </button>
 
-                <div className="mt-4">
-                  {addressMode === "saved" ? (
-                    !profile ? (
-                      <p className="text-body-sm text-neutral-500">Loading your saved address…</p>
-                    ) : profile.placeId ? (
-                      <p className="text-body-sm text-neutral-900">{profile.formattedAddress}</p>
-                    ) : (
-                      <p className="text-body-sm text-neutral-500">
-                        You don&apos;t have a saved address yet — add one from your profile, or enter one below.
-                      </p>
-                    )
-                  ) : addressMode === "current" ? (
-                    <div className="flex flex-col gap-3">
-                      {currentLocationError && <ErrorBanner>{currentLocationError}</ErrorBanner>}
-                      {!currentLocationPlace ? (
-                        <div className="flex flex-col items-start gap-2">
-                          <p className="text-body-sm text-neutral-500">We&apos;ll use your device&apos;s GPS to find your address.</p>
-                          {isLoadingCurrentLocation && (
-                            <p className="text-body-sm text-neutral-500">Detecting location…</p>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-start gap-2">
-                          <p className="text-body-sm text-neutral-900">{currentLocationPlace.formattedAddress}</p>
-                        </div>
+              {/* Option: Current Location */}
+              <button
+                type="button"
+                onClick={() => handleAddressModeChange("current")}
+                className={cn(
+                  "flex items-center gap-4 w-full p-4 rounded-xl border text-left transition-all",
+                  "focus-visible:outline-none focus-visible:shadow-focus",
+                  addressMode === "current"
+                    ? "border-primary-500 bg-primary-50/50 shadow-sm"
+                    : "border-neutral-200 bg-white hover:border-primary-300 hover:bg-primary-50/20"
+                )}
+              >
+                <div className={cn(
+                  "flex items-center justify-center w-10 h-10 rounded-full",
+                  addressMode === "current" ? "bg-primary-100 text-primary-600" : "bg-neutral-100 text-neutral-500"
+                )}>
+                  <Icon icon={Navigation} size="sm" />
+                </div>
+                <div>
+                  <p className={cn("text-body font-semibold", addressMode === "current" ? "text-primary-900" : "text-neutral-900")}>
+                    Current Location
+                  </p>
+                  <p className="text-label text-neutral-500">
+                    Use your device&apos;s GPS
+                  </p>
+                </div>
+              </button>
+
+              {/* Option: Custom Address */}
+              <button
+                type="button"
+                onClick={() => handleAddressModeChange("custom")}
+                className={cn(
+                  "flex items-center gap-4 w-full p-4 rounded-xl border text-left transition-all",
+                  "focus-visible:outline-none focus-visible:shadow-focus",
+                  addressMode === "custom"
+                    ? "border-primary-500 bg-primary-50/50 shadow-sm"
+                    : "border-neutral-200 bg-white hover:border-primary-300 hover:bg-primary-50/20"
+                )}
+              >
+                <div className={cn(
+                  "flex items-center justify-center w-10 h-10 rounded-full",
+                  addressMode === "custom" ? "bg-primary-100 text-primary-600" : "bg-neutral-100 text-neutral-500"
+                )}>
+                  <Icon icon={Search} size="sm" />
+                </div>
+                <div>
+                  <p className={cn("text-body font-semibold", addressMode === "custom" ? "text-primary-900" : "text-neutral-900")}>
+                    Different Address
+                  </p>
+                  <p className="text-label text-neutral-500">
+                    Search for a new location
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-neutral-100">
+              {addressMode === "saved" ? (
+                !profile ? (
+                  <p className="text-body-sm text-neutral-500">Loading your saved address…</p>
+                ) : profile.placeId ? (
+                  <p className="text-body-sm text-neutral-900">{profile.formattedAddress}</p>
+                ) : (
+                  <p className="text-body-sm text-neutral-500">
+                    You don&apos;t have a saved address yet. Add one from your profile, or enter a different one below.
+                  </p>
+                )
+              ) : addressMode === "current" ? (
+                <div className="flex flex-col gap-3">
+                  {currentLocationError && <ErrorBanner>{currentLocationError}</ErrorBanner>}
+                  {!currentLocationPlace ? (
+                    <div className="flex flex-col items-start gap-2">
+                      <p className="text-body-sm text-neutral-500">We&apos;ll use your device&apos;s GPS to find your address.</p>
+                      {isLoadingCurrentLocation && (
+                        <p className="text-body-sm text-neutral-500">Detecting location…</p>
                       )}
                     </div>
                   ) : (
-                    <AddressAutocomplete
-                      label="Address"
-                      placeholder="Start typing your address…"
-                      value={customAddressQuery}
-                      onChange={handleCustomAddressQueryChange}
-                      suggestions={customAddressSuggestions}
-                      onSelectSuggestion={handleSelectCustomAddress}
-                      isLoading={isLoadingAddressSuggestions}
-                      error={addressSuggestionsError}
-                    />
+                    <div className="flex flex-col items-start gap-2">
+                      <p className="text-body-sm text-neutral-900">{currentLocationPlace.formattedAddress}</p>
+                    </div>
                   )}
                 </div>
-              </>
-            )}
-
+              ) : (
+                <AddressAutocomplete
+                  label="Address"
+                  placeholder="Start typing your address…"
+                  value={customAddressQuery}
+                  onChange={handleCustomAddressQueryChange}
+                  suggestions={customAddressSuggestions}
+                  onSelectSuggestion={handleSelectCustomAddress}
+                  isLoading={isLoadingAddressSuggestions}
+                  error={addressSuggestionsError}
+                />
+              )}
+            </div>
+            
             {validationMessage && <ErrorBanner className="mt-4">{validationMessage}</ErrorBanner>}
           </Card>
 
-          <div className="mt-6 flex items-center justify-between">
-            <Button variant="secondary" onClick={handleBack} disabled={step === 0}>
-              Back
-            </Button>
-            {!isLastStep ? (
-              <Button onClick={handleNext}>Next</Button>
-            ) : (
-              <p className="text-body-sm text-neutral-500">Review your request, then post it from the summary.</p>
-            )}
-          </div>
-        </div>
-
-        <SummaryPanel
-          title="Request summary"
-          footer={
+          <SummaryPanel
+            title="Request summary"
+            className="glass-panel border-0 shadow-2xl rounded-[2rem] bg-gradient-to-b from-white to-primary-50/20"
+            footer={
             <div className="flex flex-col gap-3">
               {submitError && <ErrorBanner>{submitError}</ErrorBanner>}
-              <Button fullWidth disabled={!canSubmit} onClick={() => void handleSubmitPickupRequest()}>
+              <Button fullWidth disabled={!canSubmit} onClick={() => void handleSubmitPickupRequest()} className="rounded-full h-12 shadow-md hover:shadow-lg transition-all text-body font-bold">
                 {isSubmitting ? "Posting request…" : "Post pickup request"}
               </Button>
             </div>
@@ -577,6 +614,7 @@ export function NewPickupRequestView() {
           />
           <SummaryRow label="Address" value={resolvedAddressLabel ?? "Not selected yet"} />
         </SummaryPanel>
+      </div>
       </div>
     </PageContainer>
   );

@@ -9,7 +9,7 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { formatTimeSlot } from "@/components/AvailableJobListItem";
 import { Icon } from "@/components/Icon";
 import { Input } from "@/components/Input";
-import { PageContainer } from "@/components/PageContainer";
+
 import { StatusPill } from "@/components/StatusPill";
 import { StatusTimeline, type PickupTrackingStatus } from "@/components/StatusTimeline";
 import { SummaryRow } from "@/components/SummaryPanel";
@@ -49,7 +49,7 @@ function resolveLoadErrorMessage(err: unknown): string {
   return "Something went wrong loading your active job. Try refreshing the page.";
 }
 
-export function ActiveJobView() {
+export function ActiveJobTracker() {
   const [loadState, setLoadState] = React.useState<LoadState>("loading");
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [jobs, setJobs] = React.useState<PickupRequestSummary[]>([]);
@@ -93,11 +93,11 @@ export function ActiveJobView() {
   }, []);
 
   return (
-    <PageContainer className="py-8 lg:py-12">
-      <h1 className="text-h1 text-neutral-900">Active Job</h1>
-      <p className="mt-2 text-body-lg text-neutral-500">
-        Track your current assignment, share your live location, and update its status.
-      </p>
+    <div className="w-full mb-12">
+      <div className="mb-6">
+        <h2 className="text-h2 text-neutral-900">Active Job</h2>
+        <p className="mt-1 text-body text-neutral-500">Track your current assignment and share live location.</p>
+      </div>
 
       {loadState === "loading" && (
         <Card className="mt-8 text-center">
@@ -134,7 +134,7 @@ export function ActiveJobView() {
           ))}
         </div>
       )}
-    </PageContainer>
+    </div>
   );
 }
 
@@ -208,6 +208,16 @@ function ActiveJobCard({
   const [statusError, setStatusError] = React.useState<string | null>(null);
 
   const [geoError, setGeoError] = React.useState<string | null>(null);
+
+  const [canMarkEnRoute, setCanMarkEnRoute] = React.useState(true);
+
+  React.useEffect(() => {
+    const pickupDate = new Date(job.timeSlotStart);
+    const today = new Date();
+    const pickupDay = new Date(pickupDate.getFullYear(), pickupDate.getMonth(), pickupDate.getDate());
+    const currentDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    setCanMarkEnRoute(currentDay.getTime() >= pickupDay.getTime());
+  }, [job.timeSlotStart]);
 
   const watchIdRef = React.useRef<number | null>(null);
   const lastEmitRef = React.useRef<{ at: number; lat: number; lng: number } | null>(null);
@@ -406,8 +416,17 @@ function ActiveJobCard({
             <p className="text-body-sm text-neutral-500 italic">Driving to destination... Location is updating automatically. Status will change to Arrived once you are within 50 meters.</p>
           </div>
         ) : (
-          <div className="flex justify-end">
-            <Button size="sm" disabled={!nextStatus || advancing} onClick={handleAdvanceStatus}>
+          <div className="flex flex-col items-end gap-2">
+            {nextStatus === "EN_ROUTE" && !canMarkEnRoute && (
+              <p className="text-body-sm text-neutral-500 text-right">
+                You can only start this job on the scheduled pickup date ({new Date(job.timeSlotStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}).
+              </p>
+            )}
+            <Button 
+              size="sm" 
+              disabled={!nextStatus || advancing || (nextStatus === "EN_ROUTE" && !canMarkEnRoute)} 
+              onClick={handleAdvanceStatus}
+            >
               {advancing ? "Updating…" : nextStatus ? `Mark as ${PICKUP_STATUS_LABEL[nextStatus]}` : "Job completed"}
             </Button>
           </div>

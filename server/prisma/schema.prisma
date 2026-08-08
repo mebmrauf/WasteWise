@@ -229,9 +229,10 @@ model CollectorProfile {
   user   User   @relation("CollectorProfileUser", fields: [userId], references: [id], onDelete: Cascade)
 
   vehicleType   VehicleType
-  licenseNumber String?
+  vehicleNumber String @default("")
+  licenseNumber String @default("")
 
-  serviceArea String?
+  serviceArea String @default("")
 
   verificationStatus            VerificationStatus @default(PENDING)
   verificationDocumentUrl       String?
