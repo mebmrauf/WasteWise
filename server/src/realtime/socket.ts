@@ -78,7 +78,7 @@ export function createSocketServer(httpServer: HttpServer): Server {
   io.use(authenticateSocket);
 
   io.on("connection", (socket) => {
-    logger.info(
+    logger.debug(
       { userId: socket.data.user.id, role: socket.data.user.role, socketId: socket.id },
       "Socket connected",
     );
@@ -87,7 +87,7 @@ export function createSocketServer(httpServer: HttpServer): Server {
     void socket.join(userRoomName(socket.data.user.id));
 
     socket.on("disconnect", (reason) => {
-      logger.info(
+      logger.debug(
         { userId: socket.data.user.id, socketId: socket.id, reason },
         "Socket disconnected",
       );
