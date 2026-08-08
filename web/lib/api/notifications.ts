@@ -1,5 +1,11 @@
 import { authFetch } from "./auth";
-import type { NotificationType } from "@prisma/client";
+export type NotificationType =
+  | "PICKUP_STATUS_UPDATE"
+  | "OFFER_RECEIVED"
+  | "REMINDER"
+  | "VERIFICATION_UPDATE"
+  | "COMPLAINT_UPDATE"
+  | "GENERIC";
 
 export interface Notification {
   id: string;
