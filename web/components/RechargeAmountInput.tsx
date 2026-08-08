@@ -62,11 +62,11 @@ export const RechargeAmountInput = React.forwardRef<HTMLInputElement, RechargeAm
 
         <div
           className={cn(
-            "flex items-center justify-between gap-3 rounded-md border px-3 py-2",
-            exceedsBalance ? "border-error-500 bg-error-50" : "border-neutral-200 bg-neutral-50"
+            "flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors shadow-sm",
+            exceedsBalance ? "border-error-200 bg-error-50/50" : "border-primary-100 bg-primary-50/30"
           )}
         >
-          <span className={cn("text-body-sm", exceedsBalance ? "text-error-700" : "text-neutral-600")}>
+          <span className={cn("text-body-sm font-medium", exceedsBalance ? "text-error-700" : "text-primary-700")}>
             Points cost
           </span>
           <span

@@ -8,7 +8,7 @@ import { Card } from "@/components/Card";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
 import { Input } from "@/components/Input";
-import { PageContainer } from "@/components/PageContainer";
+
 import { AuthApiError } from "@/lib/api/auth";
 import { submitOffer } from "@/lib/api/offers";
 import {
@@ -49,7 +49,7 @@ function resolveBidErrorMessage(err: unknown): string {
 
 type LoadState = "loading" | "ready" | "error" | "unverified";
 
-export function AvailableJobsView() {
+export function AvailableJobsBoard() {
   const [loadState, setLoadState] = React.useState<LoadState>("loading");
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [jobs, setJobs] = React.useState<PickupRequestSummary[]>([]);
@@ -98,8 +98,8 @@ export function AvailableJobsView() {
     for (const item of job.items) {
       const raw = bids[item.category] ?? "";
       const num = Number(raw);
-      if (!raw.trim() || !Number.isFinite(num) || num <= 0) {
-        setBidErrors((prev) => ({ ...prev, [pickupId]: `Enter a valid bid for ${item.category}.` }));
+      if (!raw.trim() || !Number.isFinite(num) || num <= 0 || !Number.isInteger(num)) {
+        setBidErrors((prev) => ({ ...prev, [pickupId]: `Enter a valid whole number for ${item.category} bid.` }));
         return;
       }
       bidAmountsPerKg[item.category] = num;
@@ -137,11 +137,11 @@ export function AvailableJobsView() {
   }
 
   return (
-    <PageContainer className="py-8 lg:py-12">
-      <h1 className="text-h1 text-neutral-900">Available Jobs</h1>
-      <p className="mt-2 text-body-lg text-neutral-500">
-        Browse open pickup requests and submit a bid to claim one.
-      </p>
+    <div className="w-full">
+      <div className="mb-6">
+        <h2 className="text-h2 text-neutral-900">Available Jobs</h2>
+        <p className="mt-1 text-body text-neutral-500">Pickups requested in your service area.</p>
+      </div>
 
       {loadState === "loading" && (
         <Card className="mt-8 text-center">
@@ -221,9 +221,9 @@ export function AvailableJobsView() {
                               key={item.category}
                               label={`${item.category} Bid per KG (BDT)`}
                               type="number"
-                              inputMode="decimal"
+                              inputMode="numeric"
                               min={0}
-                              step="any"
+                              step="1"
                               value={bidAmountsByJob[job.id]?.[item.category] ?? ""}
                               onChange={(event) =>
                                 setBidAmountsByJob((prev) => ({
@@ -267,6 +267,6 @@ export function AvailableJobsView() {
           })}
         </div>
       )}
-    </PageContainer>
+    </div>
   );
 }

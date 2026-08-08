@@ -8,7 +8,7 @@ export default function UserLayout({ children }: { children: ReactNode }) {
     <>
       <NavBar
         brand={
-          <a href="/" className="font-heading text-h4 text-neutral-900">
+          <a href="/" className="font-brand text-2xl font-bold tracking-wide text-primary-700 md:hidden">
             WasteWise
           </a>
         }

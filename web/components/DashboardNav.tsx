@@ -28,10 +28,10 @@ export interface DashboardNavProps {
 }
 
 const sidebarFillClasses: Record<RoleAccent, string> = {
-  user: "bg-role-user-900",
-  collector: "bg-role-collector-900",
-  recyclingCompany: "bg-role-recycler-900",
-  admin: "bg-role-admin-900",
+  user: "bg-role-user-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
+  collector: "bg-role-collector-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
+  recyclingCompany: "bg-role-recycler-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
+  admin: "bg-role-admin-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
 };
 
 const activePillFillClasses: Record<RoleAccent, string> = {
@@ -100,11 +100,16 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
       <nav
         aria-label="Primary"
         className={cn(
-          "fixed top-16 bottom-0 left-0 hidden w-sidebar shrink-0 flex-col overflow-y-auto overflow-x-hidden overscroll-contain lg:flex",
+          "fixed top-0 bottom-0 left-0 z-50 hidden w-sidebar shrink-0 flex-col overflow-y-auto overflow-x-hidden overscroll-contain lg:flex",
           sidebarFillClasses[accent],
           className
         )}
       >
+        <div className="flex h-16 shrink-0 items-center px-6 border-b border-white/10">
+          <Link href="/" className="font-brand text-3xl font-bold tracking-wide text-white drop-shadow-md">
+            WasteWise
+          </Link>
+        </div>
         <div className="flex flex-col gap-1 px-4 pb-4 pt-6">
           <span className="text-overline text-neutral-0/70">{roleLabel}</span>
         </div>
@@ -171,10 +176,15 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
       <nav
         aria-label="Primary (compact)"
         className={cn(
-          "fixed top-16 bottom-0 left-0 hidden w-rail shrink-0 flex-col items-center overflow-y-auto overflow-x-hidden overscroll-contain lg:hidden md:flex",
+          "fixed top-0 bottom-0 left-0 z-50 hidden w-rail shrink-0 flex-col items-center overflow-y-auto overflow-x-hidden overscroll-contain lg:hidden md:flex",
           sidebarFillClasses[accent]
         )}
       >
+        <div className="flex h-16 w-full shrink-0 items-center justify-center border-b border-white/10">
+          <Link href="/" className="font-brand text-3xl font-bold text-white drop-shadow-md" aria-label="WasteWise Home">
+            W
+          </Link>
+        </div>
         <ul className="flex flex-col items-center gap-1 pt-6">
           {items.map((item, index) => {
             const isActive = activeStates[index];
@@ -238,16 +248,17 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
       </nav>
 
       {/* Mobile — bottom tab bar (below md, §6.4) */}
-      <nav
-        aria-label="Primary (mobile)"
-        className={cn(
-          "fixed inset-x-0 bottom-0 z-10 flex h-16 items-stretch border-t border-neutral-200 bg-neutral-0 md:hidden",
-          mobileScrollable && "overflow-x-auto"
-        )}
-      >
-        <ul className="flex w-full items-stretch">
-          {mobileItems.map((item, index) => {
-            const isActive = activeStates[index];
+      <div className="fixed inset-x-4 bottom-4 z-50 md:hidden">
+        <nav
+          aria-label="Primary (mobile)"
+          className={cn(
+            "flex h-16 items-stretch rounded-2xl glass-panel-dark shadow-lg border border-white/10 overflow-hidden",
+            mobileScrollable && "overflow-x-auto"
+          )}
+        >
+          <ul className="flex w-full items-stretch">
+            {mobileItems.map((item, index) => {
+              const isActive = activeStates[index];
             return (
               <li key={item.href} className={mobileScrollable ? "min-w-16 shrink-0" : "flex-1"}>
                 <Link
@@ -262,7 +273,7 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
                   className={cn(
                     "flex h-full flex-col items-center justify-center gap-1 text-caption transition-colors",
                     lightSurfaceFocusRing,
-                    isActive ? mobileActiveTextClasses[accent] : "text-neutral-500"
+                    isActive ? "text-white bg-white/10" : "text-white/60 hover:text-white hover:bg-white/5"
                   )}
                 >
                   <Icon icon={item.icon} size="md" />
@@ -272,7 +283,8 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
             );
           })}
         </ul>
-      </nav>
+        </nav>
+      </div>
     </>
   );
 }

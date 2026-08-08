@@ -13,6 +13,7 @@ export interface PillRadioGroupProps {
   onChange: (id: string) => void;
   "aria-label": string;
   className?: string;
+  layout?: "wrap" | "stacked";
 }
 
 export function PillRadioGroup({
@@ -21,6 +22,7 @@ export function PillRadioGroup({
   onChange,
   "aria-label": ariaLabel,
   className,
+  layout = "wrap",
 }: PillRadioGroupProps) {
   const enabledIndexes = options.reduce<number[]>((acc, option, index) => {
     if (!option.disabled) acc.push(index);
@@ -78,7 +80,15 @@ export function PillRadioGroup({
   }
 
   return (
-    <div role="radiogroup" aria-label={ariaLabel} className={cn("flex flex-wrap gap-2", className)}>
+    <div
+      role="radiogroup"
+      aria-label={ariaLabel}
+      className={cn(
+        "flex gap-2",
+        layout === "wrap" ? "flex-wrap" : "flex-col items-stretch w-fit",
+        className
+      )}
+    >
       {options.map((option, index) => {
         const isSelected = option.id === value;
         return (
@@ -93,13 +103,14 @@ export function PillRadioGroup({
             onClick={() => onChange(option.id)}
             onKeyDown={(event) => handleKeyDown(event, index)}
             className={cn(
-              "rounded-full border px-3 py-1 text-label transition-colors",
-              "focus-visible:outline-none focus-visible:shadow-focus",
+              "rounded-full border px-5 py-2.5 text-label-lg transition-all font-medium",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500",
               option.disabled
-                ? "cursor-not-allowed border-neutral-200 bg-neutral-100 text-neutral-500"
+                ? "cursor-not-allowed border-neutral-100 bg-neutral-50 text-neutral-400"
                 : isSelected
-                ? "border-primary-500 bg-primary-50 text-primary-700"
-                : "border-neutral-300 bg-neutral-0 text-neutral-800 hover:border-neutral-400"
+                ? "border-primary-500 bg-primary-500 text-white shadow-md scale-[1.02]"
+                : "border-neutral-200 bg-white text-neutral-600 hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700",
+              layout === "stacked" && "w-full text-center"
             )}
           >
             {option.label}

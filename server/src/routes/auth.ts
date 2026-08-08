@@ -75,7 +75,23 @@ authRouter.post(
     let user: User;
     try {
       user = await prisma.user.create({
-        data: { email, phone, passwordHash, fullName, role, accountType },
+        data: { 
+          email, 
+          phone, 
+          passwordHash, 
+          fullName, 
+          role, 
+          accountType,
+          collectorProfile: role === "COLLECTOR" ? {
+            create: {
+              vehicleType: "BICYCLE_VAN",
+              vehicleNumber: "",
+              licenseNumber: "",
+              serviceArea: "",
+              verificationStatus: "PENDING",
+            }
+          } : undefined
+        },
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {

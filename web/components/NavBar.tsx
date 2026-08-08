@@ -48,7 +48,7 @@ export function NavBar({ brand, links = [], actions, accent = "user", className 
   const hasLinks = links.length > 0;
 
   return (
-    <header className={cn("h-16 w-full border-b border-neutral-200 bg-neutral-0", className)}>
+    <header className={cn("sticky top-0 z-50 h-16 w-full border-b border-neutral-200 bg-neutral-0/80 backdrop-blur-md", className)}>
       <div className="flex h-full w-full items-center justify-between px-4 md:px-8 lg:px-12">
         <div className="flex items-center">{brand}</div>
 

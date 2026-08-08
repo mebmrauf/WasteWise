@@ -12,6 +12,7 @@ import { NotificationsPanel } from "@/components/NotificationsPanel";
 
 const DASHBOARD_HOME_BY_ROLE: Partial<Record<Role, string>> = {
   COLLECTOR: "/collector",
+  ADMIN: "/admin",
 };
 
 export function NavAuthActions() {
@@ -55,7 +56,7 @@ export function NavAuthActions() {
   if (user) {
     const shortName = user.fullName.trim().split(/\s+/)[0] ?? user.fullName;
     const dashboardHomeHref = DASHBOARD_HOME_BY_ROLE[user.role] ?? "/dashboard";
-    const isInDashboardShell = pathname?.startsWith(dashboardHomeHref) ?? false;
+    const isInDashboardShell = pathname?.startsWith(dashboardHomeHref) || pathname?.startsWith("/profile") || pathname?.startsWith("/waste-recognition") || false;
 
     return (
       <div className="flex items-center gap-1 sm:gap-3">

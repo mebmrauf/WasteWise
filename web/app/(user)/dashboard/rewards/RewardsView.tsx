@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ClipboardList, Gift, Sparkles } from "lucide-react";
+import { ClipboardList, Gift, Sparkles, ArrowDownRight, ArrowUpRight, Smartphone } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { ErrorBanner } from "@/components/ErrorBanner";
@@ -18,7 +18,7 @@ import {
   type SubmitRechargeResult,
 } from "@/lib/api/rewards";
 import { RECHARGE_STATUS_LABEL, RECHARGE_STATUS_TONE } from "@/lib/rechargeStatus";
-import { formatBdt } from "@/lib/utils";
+import { formatBdt, cn } from "@/lib/utils";
 import { RedeemRechargeWizard } from "./RedeemRechargeWizard";
 
 type LoadState = "loading" | "ready" | "error";
@@ -91,24 +91,44 @@ export function RewardsView() {
 
       {loadState === "error" && <ErrorBanner className="mt-8">{loadError}</ErrorBanner>}
 
-      {loadState === "ready" && mode === "redeem" && (
-        <div className="mt-8">
-          <RedeemRechargeWizard
-            currentBalance={balance}
-            onComplete={handleWizardComplete}
-            onExit={() => setMode("overview")}
-          />
-        </div>
-      )}
-
-      {loadState === "ready" && mode === "overview" && (
+      {loadState === "ready" && (
         <div className="mt-8 flex flex-col gap-8">
-          <Card className="flex flex-col items-center gap-3 py-8 text-center">
-            <Icon icon={Gift} size="lg" className="text-primary-600" aria-hidden />
-            <p className="text-body-sm text-neutral-500">Green Points balance</p>
-            <p className="font-data text-data-xl text-neutral-900">{balance.toLocaleString()} pts</p>
-            <Button onClick={() => setMode("redeem")}>Redeem — Mobile Recharge</Button>
-          </Card>
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-600 to-primary-900 p-8 shadow-xl text-center animate-slide-up">
+            <div className="absolute -top-24 -left-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
+            <div className="absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
+            
+            <div className="relative z-10 flex flex-col items-center gap-4">
+              <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white/20 backdrop-blur-md shadow-inner">
+                <Icon icon={Gift} size="xl" className="text-white" aria-hidden />
+              </div>
+              <div>
+                <p className="text-body-sm text-primary-100 uppercase tracking-widest font-semibold mb-2">Available Balance</p>
+                <div className="flex items-baseline justify-center gap-2">
+                  <p className="font-data text-display text-white">{balance.toLocaleString()}</p>
+                  <p className="font-data text-data-lg text-primary-200">pts</p>
+                </div>
+              </div>
+              {mode === "overview" ? (
+                <Button onClick={() => setMode("redeem")} variant="secondary" className="mt-4 px-8 py-6 rounded-full shadow-lg hover:scale-105 transition-transform bg-white text-primary-800 hover:bg-neutral-50 border-0">
+                  Redeem Mobile Recharge
+                </Button>
+              ) : (
+                <Button onClick={() => setMode("overview")} variant="ghost" className="mt-4 text-white hover:bg-white/10 hover:text-white rounded-full">
+                  Cancel Redemption
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {mode === "redeem" && (
+            <div className="animate-slide-up">
+              <RedeemRechargeWizard
+                currentBalance={balance}
+                onComplete={handleWizardComplete}
+                onExit={() => setMode("overview")}
+              />
+            </div>
+          )}
 
           <div>
             <h2 className="text-h3 text-neutral-900">Points activity</h2>
@@ -125,19 +145,26 @@ export function RewardsView() {
                 </div>
               </Card>
             ) : (
-              <div className="mt-8 flex flex-col gap-4">
+              <div className="mt-6 flex flex-col gap-3">
                 {greenPointsTransactions.map((transaction) => (
-                  <Card key={transaction.id} className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-body-sm text-neutral-900">{transaction.description}</p>
-                      <p className="mt-1 text-caption text-neutral-500">{formatDateTime(transaction.createdAt)}</p>
+                  <Card key={transaction.id} className="flex items-center justify-between gap-4 p-5 rounded-2xl hover:shadow-md transition-all border-neutral-100 bg-white/60 backdrop-blur-sm">
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "flex items-center justify-center h-10 w-10 rounded-full",
+                        transaction.type === "EARNED" ? "bg-success-100 text-success-600" : "bg-neutral-100 text-neutral-600"
+                      )}>
+                        <Icon icon={transaction.type === "EARNED" ? ArrowDownRight : ArrowUpRight} size="sm" />
+                      </div>
+                      <div>
+                        <p className="text-body font-medium text-neutral-900">{transaction.description}</p>
+                        <p className="mt-0.5 text-caption text-neutral-500">{formatDateTime(transaction.createdAt)}</p>
+                      </div>
                     </div>
                     <span
-                      className={
-                        transaction.type === "EARNED"
-                          ? "font-data text-data-base text-success-700"
-                          : "font-data text-data-base text-neutral-900"
-                      }
+                      className={cn(
+                        "font-data text-data-lg",
+                        transaction.type === "EARNED" ? "text-success-700" : "text-neutral-900"
+                      )}
                     >
                       {transaction.type === "EARNED" ? "+" : "-"}
                       {transaction.points.toLocaleString()} pts
@@ -165,26 +192,35 @@ export function RewardsView() {
                 </div>
               </Card>
             ) : (
-              <div className="mt-8 flex flex-col gap-4">
+              <div className="mt-6 flex flex-col gap-3">
                 {mobileRechargeTransactions.map((recharge) => (
-                  <Card key={recharge.id} className="flex flex-col gap-3">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-body-sm text-neutral-900">
-                          {MOBILE_OPERATOR_LABELS[recharge.operator]} · {recharge.phoneNumber}
-                        </p>
-                        <p className="mt-1 text-caption text-neutral-500">{formatDateTime(recharge.createdAt)}</p>
+                  <Card key={recharge.id} className="flex flex-col gap-4 p-5 rounded-2xl hover:shadow-md transition-all border-neutral-100 bg-white/60 backdrop-blur-sm">
+                    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-neutral-100 pb-4">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary-100 text-primary-600">
+                          <Icon icon={Smartphone} size="sm" />
+                        </div>
+                        <div>
+                          <p className="text-body font-medium text-neutral-900">
+                            {MOBILE_OPERATOR_LABELS[recharge.operator]} Recharge
+                          </p>
+                          <p className="mt-0.5 text-caption text-neutral-500">{recharge.phoneNumber} · {formatDateTime(recharge.createdAt)}</p>
+                        </div>
                       </div>
                       <StatusPill tone={RECHARGE_STATUS_TONE[recharge.status]}>
                         {RECHARGE_STATUS_LABEL[recharge.status]}
                       </StatusPill>
                     </div>
-                    <div className="flex flex-wrap items-center gap-4">
-                      <span className="font-data text-data-base text-neutral-900">{formatBdt(recharge.amountTaka)}</span>
-                      <span className="text-body-sm text-neutral-500">
-                        {recharge.status === "FAILED"
-                          ? `Would have cost ${recharge.pointsSpent.toLocaleString()} pts — no points deducted`
-                          : `${recharge.pointsSpent.toLocaleString()} pts spent`}
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-body-sm text-neutral-500">Amount:</span>
+                        <span className="font-data text-data-lg text-neutral-900">{formatBdt(recharge.amountTaka)}</span>
+                      </div>
+                      <span className={cn(
+                        "text-body-sm font-medium",
+                        recharge.status === "FAILED" ? "text-neutral-500 line-through" : "text-neutral-700"
+                      )}>
+                        {recharge.pointsSpent.toLocaleString()} pts spent
                       </span>
                     </div>
                   </Card>

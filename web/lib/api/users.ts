@@ -6,9 +6,11 @@ export type VerificationStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface CollectorProfileSummary {
   vehicleType: VehicleType;
-  licenseNumber: string | null;
-  serviceArea: string | null;
+  vehicleNumber: string;
+  licenseNumber: string;
+  serviceArea: string;
   verificationStatus: VerificationStatus;
+  verificationRejectionReason: string | null;
   averageRating: number | null;
   totalRatings: number;
 }
@@ -75,8 +77,9 @@ export function resolveAvatarUrl(avatarUrl: string | null): string | null {
 
 export interface UpdateCollectorProfileInput {
   vehicleType: VehicleType;
-  licenseNumber?: string;
-  serviceArea?: string;
+  vehicleNumber: string;
+  licenseNumber: string;
+  serviceArea: string;
 }
 
 export function updateCollectorProfile(

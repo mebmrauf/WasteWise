@@ -22,24 +22,33 @@ export function WasteCategoryQuantityPicker({
   className,
 }: WasteCategoryQuantityPickerProps) {
   return (
-    <div className={cn("grid grid-cols-[auto_1fr] items-center gap-4", className)}>
+    <div className={cn("flex flex-col gap-3", className)}>
+      {categories.length === 0 && (
+        <div className="text-body-sm text-neutral-400 italic px-2 py-4 bg-neutral-50 rounded-xl border border-dashed border-neutral-200 text-center">
+          Please select at least one category first.
+        </div>
+      )}
       {categories.map((category) => {
         const meta = WASTE_CATEGORIES.find((candidate) => candidate.value === category);
         if (!meta) return null;
 
         return (
-          <React.Fragment key={category}>
-            <div className="flex items-center gap-2">
-              <Icon icon={meta.icon} size="md" className="text-neutral-700" />
-              <span className="text-label text-neutral-800">{meta.label}</span>
+          <div key={category} className="flex flex-col sm:flex-row sm:items-center gap-4 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4 transition-colors hover:bg-neutral-50">
+            <div className="flex items-center gap-3 sm:min-w-[160px]">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white shadow-sm text-primary-600">
+                <Icon icon={meta.icon} size="sm" />
+              </div>
+              <span className="font-heading text-body font-semibold text-neutral-900">{meta.label}</span>
             </div>
-            <Select
-              aria-label={`${meta.label} quantity`}
-              value={value[category] ?? ""}
-              onChange={(event) => onChange(category, event.target.value as LoadSize)}
-              options={loadSizeOptions}
-            />
-          </React.Fragment>
+            <div className="flex-1 w-full">
+              <Select
+                aria-label={`${meta.label} quantity`}
+                value={value[category] ?? ""}
+                onChange={(event) => onChange(category, event.target.value as LoadSize)}
+                options={loadSizeOptions}
+              />
+            </div>
+          </div>
         );
       })}
     </div>

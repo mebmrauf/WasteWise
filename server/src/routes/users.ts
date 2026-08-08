@@ -18,9 +18,10 @@ import { updateProfileSchema, updateCollectorProfileSchema } from "./users.schem
 
 export const usersRouter = Router();
 
-function toPublicCollectorProfile(profile: CollectorProfile) {
+export function toPublicCollectorProfile(profile: CollectorProfile) {
   return {
     vehicleType: profile.vehicleType,
+    vehicleNumber: profile.vehicleNumber,
     licenseNumber: profile.licenseNumber,
     serviceArea: profile.serviceArea,
     verificationStatus: profile.verificationStatus,
@@ -134,22 +135,24 @@ usersRouter.patch(
       sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    const { vehicleType, licenseNumber, serviceArea } = parsed.data;
-    const normalizedLicenseNumber = licenseNumber ? licenseNumber : null;
-    const normalizedServiceArea = serviceArea ? serviceArea : null;
+    const { vehicleType, vehicleNumber, licenseNumber, serviceArea } = parsed.data;
 
     const collectorProfile = await prisma.collectorProfile.upsert({
       where: { userId: req.user!.id },
       create: {
         userId: req.user!.id,
         vehicleType,
-        licenseNumber: normalizedLicenseNumber,
-        serviceArea: normalizedServiceArea,
+        vehicleNumber,
+        licenseNumber,
+        serviceArea,
+        verificationStatus: "PENDING",
       },
       update: {
         vehicleType,
-        licenseNumber: normalizedLicenseNumber,
-        serviceArea: normalizedServiceArea,
+        vehicleNumber,
+        licenseNumber,
+        serviceArea,
+        verificationStatus: "PENDING",
       },
     });
 
