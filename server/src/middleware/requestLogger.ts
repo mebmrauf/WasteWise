@@ -15,8 +15,4 @@ export const requestLogger = pinoHttp({
     if (res.statusCode >= 400) return "warn";
     return "info";
   },
-  redact: {
-    paths: ["req.headers.cookie", "req.headers.authorization", 'res.headers["set-cookie"]'],
-    censor: "[REDACTED]",
-  },
 });

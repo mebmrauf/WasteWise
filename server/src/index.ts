@@ -25,7 +25,7 @@ async function ensureAdminUser() {
       isEmailVerified: true,
     },
   });
-  logger.info({ email }, "Admin user seeded/verified");
+  logger.info("Admin user seeded/verified");
 }
 const io = createSocketServer(httpServer);
 registerPickupTrackingHandlers(io);
