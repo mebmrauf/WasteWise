@@ -27,12 +27,13 @@ function resolveOAuthErrorMessage(errorParam: string | string[] | undefined): st
   return oauthErrorMessages[code] ?? "Something went wrong signing you in. Please try again.";
 }
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string | string[] };
+  searchParams: Promise<{ error?: string | string[] }>;
 }) {
-  const errorMessage = resolveOAuthErrorMessage(searchParams.error);
+  const searchParamsValue = await searchParams;
+  const errorMessage = resolveOAuthErrorMessage(searchParamsValue.error);
 
   return (
     <AuthPageShell

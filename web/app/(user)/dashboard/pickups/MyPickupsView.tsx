@@ -9,6 +9,7 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
 import { InlineConfirm } from "@/components/InlineConfirm";
 import { PageContainer } from "@/components/PageContainer";
+import { ReceiptModal } from "@/components/ReceiptModal";
 import { StatusPill } from "@/components/StatusPill";
 import { SummaryRow } from "@/components/SummaryPanel";
 import { AuthApiError } from "@/lib/api/auth";
@@ -54,6 +55,7 @@ export function MyPickupsView() {
   const [cancellingId, setCancellingId] = React.useState<string | null>(null);
   const [cancelErrors, setCancelErrors] = React.useState<Record<string, string>>({});
   const [confirmingId, setConfirmingId] = React.useState<string | null>(null);
+  const [receiptModalPickupId, setReceiptModalPickupId] = React.useState<string | null>(null);
   const cancelTriggerRefs = React.useRef<Map<string, React.RefObject<HTMLButtonElement | HTMLAnchorElement>>>(
     new Map(),
   );
@@ -144,82 +146,119 @@ export function MyPickupsView() {
       )}
 
       {loadState === "ready" && pickups.length > 0 && (
-        <div className="mt-8 flex flex-col gap-4">
-          {pickups.map((pickup) => (
-            <Card key={pickup.id} className="flex flex-col gap-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <p className="text-body-sm text-neutral-500">Items</p>
-                <StatusPill tone={PICKUP_STATUS_TONE[pickup.status]}>
-                  {PICKUP_STATUS_LABEL[pickup.status]}
-                </StatusPill>
-              </div>
+        <div className="mt-8 flex flex-col gap-12">
+          {(() => {
+            const activePickups = pickups.filter((p) => p.status !== "COMPLETED" && p.status !== "CANCELLED");
+            const historyPickups = pickups.filter((p) => p.status === "COMPLETED" || p.status === "CANCELLED");
 
-              <div className="flex flex-col gap-2">
-                {pickup.items.map((item) => (
-                  <CategoryQuantityRow
-                    key={item.id}
-                    category={item.category}
-                    quantityLabel={`${LOAD_SIZE_LABELS[item.loadSize]} (${formatKgRange(item.loadSize)})`}
-                  />
-                ))}
-              </div>
-
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <SummaryRow label="Window" value={formatPickupWindow(pickup.timeSlotStart, pickup.timeSlotEnd)} />
-                <SummaryRow label="Address" value={pickup.pickupFormattedAddress} />
-              </div>
-
-              {(pickup.status === "ASSIGNED" || pickup.status === "EN_ROUTE" || pickup.status === "ARRIVED") && (
-                <div className="flex justify-end">
-                  {/* Once a collector is assigned, offers are already resolved — there's live
-                      location/status to follow instead. See docs/api-contract.md "Real-Time
-                      Pickup Tracking" and app/(user)/dashboard/pickups/[id]/track. */}
-                  <Button href={`/dashboard/pickups/${pickup.id}/track`} variant="secondary" size="sm">
-                    Track pickup
-                  </Button>
+            const renderPickupCard = (pickup: PickupRequestSummary) => (
+              <Card key={pickup.id} className="flex flex-col gap-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <p className="text-body-sm text-neutral-500">Items</p>
+                  <StatusPill tone={PICKUP_STATUS_TONE[pickup.status]}>
+                    {PICKUP_STATUS_LABEL[pickup.status]}
+                  </StatusPill>
                 </div>
-              )}
 
-              {pickup.status === "PENDING" && (
                 <div className="flex flex-col gap-2">
-                  {cancelErrors[pickup.id] && <ErrorBanner>{cancelErrors[pickup.id]}</ErrorBanner>}
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    {/* Only a still-PENDING request can have live offers worth viewing — once it
-                        moves past PENDING, offers are already resolved (see docs/api-contract.md
-                        "Collector Offer/Bidding System" §4's requester-only rule). */}
-                    <Button href={`/dashboard/pickups/${pickup.id}/offers`} variant="secondary" size="sm">
-                      View offers
-                    </Button>
-                    <InlineConfirm
-                      confirming={confirmingId === pickup.id}
-                      triggerRef={getCancelTriggerRef(pickup.id)}
-                      trigger={
-                        <Button
-                          ref={getCancelTriggerRef(pickup.id)}
-                          variant="destructive"
-                          size="sm"
-                          disabled={cancellingId === pickup.id}
-                          onClick={() => setConfirmingId(pickup.id)}
-                        >
-                          {cancellingId === pickup.id ? "Cancelling…" : "Cancel request"}
-                        </Button>
-                      }
-                      message="Cancel this pickup request? This can't be undone."
-                      confirmLabel={cancellingId === pickup.id ? "Cancelling…" : "Yes, cancel"}
-                      cancelLabel="Never mind"
-                      isConfirmPending={cancellingId === pickup.id}
-                      onConfirm={() => {
-                        setConfirmingId(null);
-                        void handleCancelPickup(pickup.id);
-                      }}
-                      onCancel={() => setConfirmingId(null)}
+                  {pickup.items.map((item) => (
+                    <CategoryQuantityRow
+                      key={item.id}
+                      category={item.category}
+                      quantityLabel={`${LOAD_SIZE_LABELS[item.loadSize]} (${formatKgRange(item.loadSize)})`}
                     />
-                  </div>
+                  ))}
                 </div>
-              )}
-            </Card>
-          ))}
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <SummaryRow label="Window" value={formatPickupWindow(pickup.timeSlotStart, pickup.timeSlotEnd)} />
+                  <SummaryRow label="Address" value={pickup.pickupFormattedAddress} />
+                </div>
+
+                {(pickup.status === "ASSIGNED" || pickup.status === "EN_ROUTE" || pickup.status === "ARRIVED" || pickup.status === "VERIFYING_WEIGHTS" || pickup.status === "COMPLETED") && (
+                  <div className="flex justify-end">
+                    {pickup.status === "COMPLETED" ? (
+                      <Button
+                        onClick={() => setReceiptModalPickupId(pickup.id)}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        View receipt
+                      </Button>
+                    ) : (
+                      <Button href={`/dashboard/pickups/${pickup.id}/track`} variant="secondary" size="sm">
+                        Track pickup
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {pickup.status === "PENDING" && (
+                  <div className="flex flex-col gap-2">
+                    {cancelErrors[pickup.id] && <ErrorBanner>{cancelErrors[pickup.id]}</ErrorBanner>}
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <Button href={`/dashboard/pickups/${pickup.id}/offers`} variant="secondary" size="sm">
+                        View offers
+                      </Button>
+                      <InlineConfirm
+                        confirming={confirmingId === pickup.id}
+                        triggerRef={getCancelTriggerRef(pickup.id)}
+                        trigger={
+                          <Button
+                            ref={getCancelTriggerRef(pickup.id)}
+                            variant="destructive"
+                            size="sm"
+                            disabled={cancellingId === pickup.id}
+                            onClick={() => setConfirmingId(pickup.id)}
+                          >
+                            {cancellingId === pickup.id ? "Cancelling…" : "Cancel request"}
+                          </Button>
+                        }
+                        message="Cancel this pickup request? This can't be undone."
+                        confirmLabel={cancellingId === pickup.id ? "Cancelling…" : "Yes, cancel"}
+                        cancelLabel="Never mind"
+                        isConfirmPending={cancellingId === pickup.id}
+                        onConfirm={() => {
+                          setConfirmingId(null);
+                          void handleCancelPickup(pickup.id);
+                        }}
+                        onCancel={() => setConfirmingId(null)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </Card>
+            );
+
+            return (
+              <>
+                {activePickups.length > 0 && (
+                  <div>
+                    <h2 className="text-h3 text-neutral-900 mb-4">Active Pickups</h2>
+                    <div className="flex flex-col gap-4">
+                      {activePickups.map(renderPickupCard)}
+                    </div>
+                  </div>
+                )}
+                {historyPickups.length > 0 && (
+                  <div>
+                    <h2 className="text-h3 text-neutral-900 mb-4">Completed History</h2>
+                    <div className="flex flex-col gap-4">
+                      {historyPickups.map(renderPickupCard)}
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
+      )}
+
+      {receiptModalPickupId && (
+        <ReceiptModal 
+          pickupId={receiptModalPickupId} 
+          onClose={() => setReceiptModalPickupId(null)} 
+        />
       )}
     </PageContainer>
   );

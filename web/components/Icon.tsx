@@ -3,7 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import { iconSize, iconStrokeWidth } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
 
-export type IconSize = keyof typeof iconSize;
+type IconSize = keyof typeof iconSize;
 
 export interface IconProps {
   icon: LucideIcon;

@@ -93,7 +93,7 @@ export function useAuth(): AuthContextValue {
   return ctx;
 }
 
-export function useRequireAuth(redirectTo = "/login"): AuthContextValue {
+function useRequireAuth(redirectTo = "/login"): AuthContextValue {
   const auth = useAuth();
   const router = useRouter();
 
@@ -124,6 +124,6 @@ export function useRequireRole(
   return auth;
 }
 
-export async function trySilentRefresh(): Promise<boolean> {
+async function trySilentRefresh(): Promise<boolean> {
   return refreshSession();
 }

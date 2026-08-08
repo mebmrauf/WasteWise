@@ -22,7 +22,8 @@ export const pickupsRouter = Router();
 
 const PICKUP_LIST_LIMIT = 50;
 
-function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[] }) {
+function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[] }) {
+  const acceptedOffer = pickup.offers?.find(o => o.status === "ACCEPTED");
   return {
     id: pickup.id,
     requesterId: pickup.requesterId,
@@ -31,6 +32,7 @@ function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[] })
       id: item.id,
       category: item.category,
       loadSize: item.loadSize,
+      exactWeightKg: item.exactWeightKg,
     })),
     timeSlotStart: pickup.timeSlotStart,
     timeSlotEnd: pickup.timeSlotEnd,
@@ -39,13 +41,14 @@ function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[] })
     pickupFormattedAddress: pickup.pickupFormattedAddress,
     latitude: pickup.latitude,
     longitude: pickup.longitude,
+    bidAmountsPerKg: acceptedOffer?.bidAmountsPerKg ?? null,
     createdAt: pickup.createdAt,
     updatedAt: pickup.updatedAt,
   };
 }
 
 function toPickupDetail(
-  pickup: PickupRequest & { items: PickupRequestItem[] },
+  pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[] },
   weightRecord: WeightRecord | null,
 ) {
   return {
@@ -143,7 +146,7 @@ pickupsRouter.post(
           },
         },
       },
-      include: { items: true, weightRecord: true },
+      include: { items: true, weightRecord: true, offers: { where: { status: OfferStatus.ACCEPTED } } },
     });
 
     sendData(res, 201, { pickup: toPickupDetail(pickup, pickup.weightRecord) });
@@ -158,7 +161,7 @@ pickupsRouter.get(
       where: { requesterId: req.user!.id },
       orderBy: { createdAt: "desc" },
       take: PICKUP_LIST_LIMIT,
-      include: { items: true },
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } } },
     });
 
     sendData(res, 200, { pickups: pickups.map(toPickupSummary) });
@@ -187,7 +190,7 @@ pickupsRouter.get(
       where: { status: PickupStatus.PENDING },
       orderBy: { createdAt: "desc" },
       take: PICKUP_LIST_LIMIT,
-      include: { items: true },
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } } },
     });
 
     sendData(res, 200, { pickups: pickups.map(toPickupSummary) });
@@ -202,11 +205,11 @@ pickupsRouter.get(
     const pickups = await prisma.pickupRequest.findMany({
       where: {
         assignedCollectorId: req.user!.id,
-        status: { in: [PickupStatus.ASSIGNED, PickupStatus.EN_ROUTE, PickupStatus.ARRIVED] },
+        status: { in: [PickupStatus.ASSIGNED, PickupStatus.EN_ROUTE, PickupStatus.ARRIVED, PickupStatus.VERIFYING_WEIGHTS] },
       },
       orderBy: { createdAt: "desc" },
       take: PICKUP_LIST_LIMIT,
-      include: { items: true },
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } } },
     });
 
     sendData(res, 200, { pickups: pickups.map(toPickupSummary) });
@@ -229,7 +232,7 @@ pickupsRouter.get(
       return;
     }
 
-    const [items, weightRecord] = await Promise.all([
+    const [items, weightRecord, offers] = await Promise.all([
       prisma.pickupRequestItem.findMany({
         where: { pickupRequestId: access.pickup.id },
         orderBy: { createdAt: "asc" },
@@ -237,9 +240,12 @@ pickupsRouter.get(
       prisma.weightRecord.findUnique({
         where: { pickupRequestId: access.pickup.id },
       }),
+      prisma.offer.findMany({
+        where: { pickupRequestId: access.pickup.id, status: OfferStatus.ACCEPTED },
+      }),
     ]);
 
-    sendData(res, 200, { pickup: toPickupDetail({ ...access.pickup, items }, weightRecord) });
+    sendData(res, 200, { pickup: toPickupDetail({ ...access.pickup, items, offers }, weightRecord) });
   }),
 );
 
@@ -277,7 +283,7 @@ pickupsRouter.post(
       prisma.pickupRequest.update({
         where: { id },
         data: { status: PickupStatus.CANCELLED },
-        include: { items: true },
+        include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } } },
       }),
       prisma.pickupTrackingEvent.create({
         data: { pickupRequestId: id, status: PickupStatus.CANCELLED },
@@ -397,6 +403,7 @@ pickupsRouter.get(
         id: offer.id,
         pickupRequestId: offer.pickupRequestId,
         bidAmount: offer.bidAmount,
+        bidAmountsPerKg: offer.bidAmountsPerKg as Record<string, number> | null,
         message: offer.message,
         status: offer.status,
         createdAt: offer.createdAt,

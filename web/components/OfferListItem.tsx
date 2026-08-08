@@ -8,9 +8,10 @@ import { InlineConfirm } from "@/components/InlineConfirm";
 import { StatusPill } from "@/components/StatusPill";
 import { OFFER_STATUS_TONE, OFFER_STATUS_LABEL, type OfferStatus } from "@/lib/offerStatus";
 import { VEHICLE_TYPE_LABELS, type VehicleType } from "@/lib/vehicleType";
+import { type PickupRequestSummary, LOAD_SIZE_KG_RANGES, formatKgRange, type LoadSize } from "@/lib/api/pickups";
 import { cn, formatBdt } from "@/lib/utils";
 
-export interface OfferListItemCollector {
+interface OfferListItemCollector {
   id: string;
   fullName: string;
   vehicleType: VehicleType | null;
@@ -19,9 +20,10 @@ export interface OfferListItemCollector {
   avatarUrl?: string | null;
 }
 
-export interface OfferListItemOffer {
+interface OfferListItemOffer {
   id: string;
   bidAmount: number;
+  bidAmountsPerKg?: Record<string, number> | null;
   message?: string | null;
   status: OfferStatus;
   collector: OfferListItemCollector;
@@ -29,6 +31,8 @@ export interface OfferListItemOffer {
 
 export interface OfferListItemProps {
   offer: OfferListItemOffer;
+  pickupItems?: PickupRequestSummary["items"];
+  estimatedTotalBidRange?: { min: number; max: number };
   isPickupOpen: boolean;
   onAccept: (offerId: string) => void;
   isAccepting?: boolean;
@@ -37,6 +41,8 @@ export interface OfferListItemProps {
 
 export function OfferListItem({
   offer,
+  pickupItems,
+  estimatedTotalBidRange,
   isPickupOpen,
   onAccept,
   isAccepting = false,
@@ -66,7 +72,37 @@ export function OfferListItem({
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <span className="font-data text-data-lg text-neutral-900">{formatBdt(offer.bidAmount)}</span>
+          {offer.bidAmountsPerKg && pickupItems ? (
+            <div className="flex flex-col items-end gap-3 text-right">
+              {pickupItems.map((item) => {
+                const amount = offer.bidAmountsPerKg?.[item.category] ?? 0;
+                const range = LOAD_SIZE_KG_RANGES[item.loadSize as LoadSize];
+                const totalMin = amount * range.minKg;
+                const totalMax = amount * range.maxKg;
+                return (
+                  <div key={item.id} className="flex flex-col items-end border-b border-neutral-100 pb-2 last:border-0 last:pb-0">
+                    <span className="text-body-sm font-medium text-neutral-900">{item.category}</span>
+                    <span className="text-caption text-neutral-500">
+                      {formatKgRange(item.loadSize)} @ {formatBdt(amount)}/kg
+                    </span>
+                    <span className="font-data text-body-sm text-neutral-900 mt-1">
+                      Total: {formatBdt(totalMin)} - {formatBdt(totalMax)}
+                    </span>
+                  </div>
+                );
+              })}
+              {estimatedTotalBidRange && (
+                <div className="mt-1 text-body-sm text-neutral-900 font-bold border-t border-neutral-200 pt-3">
+                  Est. Grand Total: {formatBdt(estimatedTotalBidRange.min)} - {formatBdt(estimatedTotalBidRange.max)}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-baseline gap-1">
+              <span className="font-data text-data-lg text-neutral-900">{formatBdt(offer.bidAmount)}</span>
+              <span className="text-body-sm text-neutral-500">/ kg</span>
+            </div>
+          )}
           <StatusPill tone={OFFER_STATUS_TONE[offer.status]}>{OFFER_STATUS_LABEL[offer.status]}</StatusPill>
         </div>
       </div>
@@ -97,7 +133,7 @@ export function OfferListItem({
             }
             message={`Accept ${offer.collector.fullName}'s offer of ${formatBdt(
               offer.bidAmount
-            )}? This will reject every other pending offer on this request.`}
+            )} per kg? This will reject every other pending offer on this request.`}
             confirmLabel={isAccepting ? "Accepting…" : "Yes, accept"}
             cancelLabel="Never mind"
             isConfirmPending={isAccepting}

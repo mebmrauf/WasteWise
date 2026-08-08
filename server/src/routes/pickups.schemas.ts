@@ -50,26 +50,25 @@ export const createPickupRequestSchema = z
       });
     }
   });
-export type CreatePickupRequestInput = z.infer<typeof createPickupRequestSchema>;
+type CreatePickupRequestInput = z.infer<typeof createPickupRequestSchema>;
 
-export const pickupIdSchema = z.string().trim().min(1, "pickupRequestId is required");
+const pickupIdSchema = z.string().trim().min(1, "pickupRequestId is required");
 
 export const joinPickupRoomSchema = z.object({
   pickupRequestId: pickupIdSchema,
 });
-export type JoinPickupRoomInput = z.infer<typeof joinPickupRoomSchema>;
+type JoinPickupRoomInput = z.infer<typeof joinPickupRoomSchema>;
 
 export const locationUpdateSchema = z.object({
   pickupRequestId: pickupIdSchema,
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
 });
-export type LocationUpdateInput = z.infer<typeof locationUpdateSchema>;
+type LocationUpdateInput = z.infer<typeof locationUpdateSchema>;
 
-export const STATUS_UPDATE_TARGETS = [
+const STATUS_UPDATE_TARGETS = [
   PickupStatus.EN_ROUTE,
   PickupStatus.ARRIVED,
-  PickupStatus.COMPLETED,
   PickupStatus.CANCELLED,
 ] as const;
 
@@ -79,4 +78,20 @@ export const statusUpdateSchema = z.object({
     STATUS_UPDATE_TARGETS as unknown as [PickupStatus, ...PickupStatus[]],
   ),
 });
-export type StatusUpdateInput = z.infer<typeof statusUpdateSchema>;
+type StatusUpdateInput = z.infer<typeof statusUpdateSchema>;
+
+export const submitWeightsSchema = z.object({
+  pickupRequestId: pickupIdSchema,
+  weights: z.record(z.string(), z.number().positive()),
+});
+type SubmitWeightsInput = z.infer<typeof submitWeightsSchema>;
+
+export const acceptWeightsSchema = z.object({
+  pickupRequestId: pickupIdSchema,
+});
+type AcceptWeightsInput = z.infer<typeof acceptWeightsSchema>;
+
+export const rejectWeightsSchema = z.object({
+  pickupRequestId: pickupIdSchema,
+});
+type RejectWeightsInput = z.infer<typeof rejectWeightsSchema>;

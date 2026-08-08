@@ -3,7 +3,12 @@ import type { OfferStatus } from "@/lib/offerStatus";
 import type { VehicleType } from "@/lib/vehicleType";
 import type { WasteCategory } from "@/components/WasteCategorySelector";
 
-export type PickupStatus = "PENDING" | "ASSIGNED" | "EN_ROUTE" | "ARRIVED" | "COMPLETED" | "CANCELLED";
+export type PickupStatus = "PENDING"  | "ASSIGNED"
+  | "EN_ROUTE"
+  | "ARRIVED"
+  | "VERIFYING_WEIGHTS"
+  | "COMPLETED"
+  | "CANCELLED";
 
 export type LoadSize = "SMALL" | "MEDIUM" | "LARGE" | "EXTRA_LARGE";
 
@@ -59,10 +64,11 @@ export function getPickupTracking(pickupRequestId: string): Promise<PickupTracki
   });
 }
 
-export interface PickupRequestItem {
+interface PickupRequestItem {
   id: string;
   category: WasteCategory;
   loadSize: LoadSize;
+  exactWeightKg: number | null;
 }
 
 export interface PickupRequestSummary {
@@ -77,6 +83,7 @@ export interface PickupRequestSummary {
   pickupFormattedAddress: string;
   latitude: number;
   longitude: number;
+  bidAmountsPerKg?: Record<string, number> | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -85,7 +92,7 @@ export function listPickups(): Promise<{ pickups: PickupRequestSummary[] }> {
   return authFetch<{ pickups: PickupRequestSummary[] }>("/pickups", { method: "GET" });
 }
 
-export interface WeightRecordSnapshot {
+interface WeightRecordSnapshot {
   estimatedMinKg: number;
   estimatedMaxKg: number;
   exactWeightKg: number | null;
@@ -139,6 +146,7 @@ export interface PickupOffer {
   id: string;
   pickupRequestId: string;
   bidAmount: number;
+  bidAmountsPerKg?: Record<string, number> | null;
   message: string | null;
   status: OfferStatus;
   createdAt: string;

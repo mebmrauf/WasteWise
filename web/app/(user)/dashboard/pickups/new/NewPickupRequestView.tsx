@@ -17,7 +17,7 @@ import { TimeSlotPicker, type TimeSlot } from "@/components/TimeSlotPicker";
 import { WasteCategoryQuantityPicker } from "@/components/WasteCategoryQuantityPicker";
 import { WasteCategorySelector, type WasteCategory } from "@/components/WasteCategorySelector";
 import { AuthApiError } from "@/lib/api/auth";
-import { fetchAddressSuggestions, fetchPlaceDetails, PlacesConfigError } from "@/lib/api/places";
+import { fetchAddressSuggestions, fetchPlaceDetails, PlacesConfigError, fetchReverseGeocode, type PlaceDetails } from "@/lib/api/places";
 import { getMyProfile, type UserProfile } from "@/lib/api/users";
 import {
   createPickupRequest,
@@ -103,13 +103,17 @@ export function NewPickupRequestView() {
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
   const [profileError, setProfileError] = React.useState<string | null>(null);
 
-  const [addressMode, setAddressMode] = React.useState<"saved" | "custom">("saved");
+  const [addressMode, setAddressMode] = React.useState<"saved" | "custom" | "current">("saved");
   const [addressModeTouched, setAddressModeTouched] = React.useState(false);
   const [customAddressQuery, setCustomAddressQuery] = React.useState("");
   const [customAddressSuggestions, setCustomAddressSuggestions] = React.useState<AddressSuggestion[]>([]);
   const [isLoadingAddressSuggestions, setIsLoadingAddressSuggestions] = React.useState(false);
   const [addressSuggestionsError, setAddressSuggestionsError] = React.useState<string | null>(null);
   const [selectedCustomPlace, setSelectedCustomPlace] = React.useState<AddressSuggestion | null>(null);
+
+  const [currentLocationPlace, setCurrentLocationPlace] = React.useState<PlaceDetails | null>(null);
+  const [isLoadingCurrentLocation, setIsLoadingCurrentLocation] = React.useState(false);
+  const [currentLocationError, setCurrentLocationError] = React.useState<string | null>(null);
 
   const addressSessionTokenRef = React.useRef<string | null>(null);
   const addressDebounceTimerRef = React.useRef<number | null>(null);
@@ -186,8 +190,41 @@ export function NewPickupRequestView() {
 
   function handleAddressModeChange(id: string) {
     setAddressModeTouched(true);
-    setAddressMode(id as "saved" | "custom");
+    setAddressMode(id as "saved" | "custom" | "current");
   }
+
+  const handleDetectLocation = React.useCallback(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setCurrentLocationError("Geolocation isn't supported by this browser.");
+      return;
+    }
+    setIsLoadingCurrentLocation(true);
+    setCurrentLocationError(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        fetchReverseGeocode(position.coords.latitude, position.coords.longitude)
+          .then((place) => {
+            setCurrentLocationPlace(place);
+            setIsLoadingCurrentLocation(false);
+          })
+          .catch((err: unknown) => {
+            setCurrentLocationError(err instanceof Error ? err.message : "Couldn't detect your address.");
+            setIsLoadingCurrentLocation(false);
+          });
+      },
+      (err) => {
+        setCurrentLocationError(`Couldn't get your location (${err.message}). Make sure permissions are granted.`);
+        setIsLoadingCurrentLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  }, []);
+
+  React.useEffect(() => {
+    if (addressMode === "current" && !currentLocationPlace && !isLoadingCurrentLocation && !currentLocationError) {
+      handleDetectLocation();
+    }
+  }, [addressMode, currentLocationPlace, isLoadingCurrentLocation, currentLocationError, handleDetectLocation]);
 
   function handleCustomAddressQueryChange(nextQuery: string) {
     setCustomAddressQuery(nextQuery);
@@ -224,9 +261,14 @@ export function NewPickupRequestView() {
   const timeSlotStart = date && selectedWindow ? buildTimeSlotIso(date, selectedWindow.startHour) : null;
   const isSlotInPast = timeSlotStart !== null && new Date(timeSlotStart) < new Date();
 
-  const resolvedPlaceId = addressMode === "saved" ? profile?.placeId ?? null : selectedCustomPlace?.placeId ?? null;
+  const resolvedPlaceId = 
+    addressMode === "saved" ? (profile?.placeId ?? null) 
+    : addressMode === "current" ? (currentLocationPlace?.placeId ?? null) 
+    : (selectedCustomPlace?.placeId ?? null);
   const resolvedAddressLabel =
-    addressMode === "saved" ? profile?.formattedAddress ?? null : selectedCustomPlace?.description ?? null;
+    addressMode === "saved" ? (profile?.formattedAddress ?? null) 
+    : addressMode === "current" ? (currentLocationPlace?.formattedAddress ?? null) 
+    : (selectedCustomPlace?.description ?? null);
 
   const hasQuantityForEveryCategory =
     categories.length > 0 && categories.every((category) => quantities[category] !== undefined);
@@ -305,6 +347,10 @@ export function NewPickupRequestView() {
         formattedAddress = profile.formattedAddress;
         latitude = profile.latitude;
         longitude = profile.longitude;
+      } else if (addressMode === "current" && currentLocationPlace) {
+        formattedAddress = currentLocationPlace.formattedAddress;
+        latitude = currentLocationPlace.latitude;
+        longitude = currentLocationPlace.longitude;
       } else if (addressMode === "custom" && selectedCustomPlace) {
         const details = await fetchPlaceDetails(selectedCustomPlace.placeId);
         formattedAddress = details.formattedAddress;
@@ -424,6 +470,7 @@ export function NewPickupRequestView() {
                 <PillRadioGroup
                   options={[
                     { id: "saved", label: "Use my saved address", disabled: Boolean(profile) && !profile?.placeId },
+                    { id: "current", label: "Use current location" },
                     { id: "custom", label: "Enter a different address" },
                   ]}
                   value={addressMode}
@@ -443,6 +490,22 @@ export function NewPickupRequestView() {
                         You don&apos;t have a saved address yet — add one from your profile, or enter one below.
                       </p>
                     )
+                  ) : addressMode === "current" ? (
+                    <div className="flex flex-col gap-3">
+                      {currentLocationError && <ErrorBanner>{currentLocationError}</ErrorBanner>}
+                      {!currentLocationPlace ? (
+                        <div className="flex flex-col items-start gap-2">
+                          <p className="text-body-sm text-neutral-500">We&apos;ll use your device&apos;s GPS to find your address.</p>
+                          {isLoadingCurrentLocation && (
+                            <p className="text-body-sm text-neutral-500">Detecting location…</p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-start gap-2">
+                          <p className="text-body-sm text-neutral-900">{currentLocationPlace.formattedAddress}</p>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <AddressAutocomplete
                       label="Address"

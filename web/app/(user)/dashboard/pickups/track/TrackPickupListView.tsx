@@ -5,16 +5,17 @@ import { useRouter } from "next/navigation";
 import { MapPin } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { CategoryQuantityRow } from "@/components/CategoryQuantityRow";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
 import { PageContainer } from "@/components/PageContainer";
 import { StatusPill } from "@/components/StatusPill";
 import { SummaryRow } from "@/components/SummaryPanel";
 import { AuthApiError } from "@/lib/api/auth";
-import { listPickups, type PickupRequestSummary } from "@/lib/api/pickups";
+import { listPickups, type PickupRequestSummary, LOAD_SIZE_LABELS, formatKgRange } from "@/lib/api/pickups";
 import { PICKUP_STATUS_TONE, PICKUP_STATUS_LABEL } from "@/lib/pickupStatus";
 
-const ACTIVE_STATUSES: readonly PickupRequestSummary["status"][] = ["ASSIGNED", "EN_ROUTE", "ARRIVED"];
+const ACTIVE_STATUSES: readonly PickupRequestSummary["status"][] = ["ASSIGNED", "EN_ROUTE", "ARRIVED", "VERIFYING_WEIGHTS"];
 
 type LoadState = "loading" | "ready" | "error";
 
@@ -85,10 +86,28 @@ export function TrackPickupListView() {
           {activePickups.map((pickup) => (
             <Card key={pickup.id} className="flex flex-col gap-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <SummaryRow label="Address" value={pickup.pickupFormattedAddress} />
+                <p className="text-body-sm text-neutral-500">Items</p>
                 <StatusPill tone={PICKUP_STATUS_TONE[pickup.status]}>
                   {PICKUP_STATUS_LABEL[pickup.status]}
                 </StatusPill>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {pickup.items.map((item) => (
+                  <CategoryQuantityRow
+                    key={item.id}
+                    category={item.category}
+                    quantityLabel={
+                      pickup.status === "COMPLETED" && item.exactWeightKg != null
+                        ? `${item.exactWeightKg}kg @ ৳${(pickup.bidAmountsPerKg?.[item.category] || 0).toLocaleString("en-US")}/kg`
+                        : `${LOAD_SIZE_LABELS[item.loadSize]} (${formatKgRange(item.loadSize)})`
+                    }
+                  />
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 mt-2 border-t border-neutral-100 pt-4">
+                <SummaryRow label="Address" value={pickup.pickupFormattedAddress} />
               </div>
               <div className="flex justify-end">
                 <Button href={`/dashboard/pickups/${pickup.id}/track`} size="sm">

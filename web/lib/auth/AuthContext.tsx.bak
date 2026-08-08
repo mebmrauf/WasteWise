@@ -1,0 +1,129 @@
+"use client";
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { useRouter } from "next/navigation";
+import {
+  getCurrentUser,
+  login as apiLogin,
+  logout as apiLogout,
+  signup as apiSignup,
+  refreshSession,
+  type AuthUser,
+  type LoginInput,
+  type SignupInput,
+  type Role,
+} from "../api/auth";
+
+interface AuthContextValue {
+  user: AuthUser | null;
+  isLoading: boolean;
+  login: (input: LoginInput) => Promise<AuthUser>;
+  signup: (input: SignupInput) => Promise<AuthUser>;
+  logout: () => Promise<void>;
+  refetchUser: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const restoreSession = useCallback(async () => {
+    try {
+      const current = await getCurrentUser();
+      setUser(current);
+    } catch {
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void restoreSession();
+  }, [restoreSession]);
+
+  const login = useCallback(async (input: LoginInput) => {
+    const { user: loggedInUser } = await apiLogin(input);
+    setUser(loggedInUser);
+    return loggedInUser;
+  }, []);
+
+  const signup = useCallback(async (input: SignupInput) => {
+    const { user: newUser } = await apiSignup(input);
+    setUser(newUser);
+    return newUser;
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await apiLogout();
+    } finally {
+      setUser(null);
+    }
+  }, []);
+
+  const refetchUser = useCallback(async () => {
+    const current = await getCurrentUser();
+    setUser(current);
+  }, []);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({ user, isLoading, login, signup, logout, refetchUser }),
+    [user, isLoading, login, signup, logout, refetchUser],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error("useAuth() must be called within an <AuthProvider>");
+  }
+  return ctx;
+}
+
+function useRequireAuth(redirectTo = "/login"): AuthContextValue {
+  const auth = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!auth.isLoading && !auth.user) {
+      router.replace(redirectTo);
+    }
+  }, [auth.isLoading, auth.user, redirectTo, router]);
+
+  return auth;
+}
+
+export function useRequireRole(
+  allowedRoles: Role[],
+  options?: { loginRedirectTo?: string; forbiddenRedirectTo?: string },
+): AuthContextValue {
+  const auth = useRequireAuth(options?.loginRedirectTo ?? "/login");
+  const router = useRouter();
+  const forbiddenRedirectTo = options?.forbiddenRedirectTo ?? "/";
+
+  useEffect(() => {
+    if (!auth.isLoading && auth.user && !allowedRoles.includes(auth.user.role)) {
+      router.replace(forbiddenRedirectTo);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.isLoading, auth.user, forbiddenRedirectTo, router]);
+
+  return auth;
+}
+
+export async function trySilentRefresh(): Promise<boolean> {
+  return refreshSession();
+}

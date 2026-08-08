@@ -55,7 +55,7 @@ export function AvailableJobsView() {
   const [jobs, setJobs] = React.useState<PickupRequestSummary[]>([]);
 
   const [expandedJobId, setExpandedJobId] = React.useState<string | null>(null);
-  const [bidAmountByJob, setBidAmountByJob] = React.useState<Record<string, string>>({});
+  const [bidAmountsByJob, setBidAmountsByJob] = React.useState<Record<string, Record<string, string>>>({});
   const [messageByJob, setMessageByJob] = React.useState<Record<string, string>>({});
   const [submittingJobId, setSubmittingJobId] = React.useState<string | null>(null);
   const [bidErrors, setBidErrors] = React.useState<Record<string, string>>({});
@@ -88,11 +88,23 @@ export function AvailableJobsView() {
   }, [fetchJobs]);
 
   async function handleSubmitBid(pickupId: string) {
-    const rawAmount = bidAmountByJob[pickupId] ?? "";
-    const bidAmount = Number(rawAmount);
-    if (!rawAmount.trim() || !Number.isFinite(bidAmount) || bidAmount <= 0) {
-      setBidErrors((prev) => ({ ...prev, [pickupId]: "Enter a bid amount greater than 0." }));
-      return;
+    const job = jobs.find((j) => j.id === pickupId);
+    if (!job) return;
+
+    const bids = bidAmountsByJob[pickupId] || {};
+    const bidAmountsPerKg: Record<string, number> = {};
+    let totalEstimatedBid = 0;
+
+    for (const item of job.items) {
+      const raw = bids[item.category] ?? "";
+      const num = Number(raw);
+      if (!raw.trim() || !Number.isFinite(num) || num <= 0) {
+        setBidErrors((prev) => ({ ...prev, [pickupId]: `Enter a valid bid for ${item.category}.` }));
+        return;
+      }
+      bidAmountsPerKg[item.category] = num;
+      const range = LOAD_SIZE_KG_RANGES[item.loadSize];
+      totalEstimatedBid += num * range.maxKg;
     }
 
     setBidErrors((prev) => {
@@ -105,7 +117,8 @@ export function AvailableJobsView() {
       const trimmedMessage = (messageByJob[pickupId] ?? "").trim();
       await submitOffer({
         pickupRequestId: pickupId,
-        bidAmount,
+        bidAmount: totalEstimatedBid,
+        bidAmountsPerKg,
         message: trimmedMessage || undefined,
       });
       setSubmittingJobId(null);
@@ -203,17 +216,26 @@ export function AvailableJobsView() {
                         <h2 className="text-h4 text-neutral-900">Place a bid</h2>
                         {bidErrors[job.id] && <ErrorBanner>{bidErrors[job.id]}</ErrorBanner>}
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          <Input
-                            label="Your bid (BDT)"
-                            type="number"
-                            inputMode="decimal"
-                            min={0}
-                            step="any"
-                            value={bidAmountByJob[job.id] ?? ""}
-                            onChange={(event) =>
-                              setBidAmountByJob((prev) => ({ ...prev, [job.id]: event.target.value }))
-                            }
-                          />
+                          {job.items.map((item) => (
+                            <Input
+                              key={item.category}
+                              label={`${item.category} Bid per KG (BDT)`}
+                              type="number"
+                              inputMode="decimal"
+                              min={0}
+                              step="any"
+                              value={bidAmountsByJob[job.id]?.[item.category] ?? ""}
+                              onChange={(event) =>
+                                setBidAmountsByJob((prev) => ({
+                                  ...prev,
+                                  [job.id]: {
+                                    ...(prev[job.id] || {}),
+                                    [item.category]: event.target.value,
+                                  },
+                                }))
+                              }
+                            />
+                          ))}
                           <Input
                             label="Message (optional)"
                             placeholder="e.g. Can pick up at 3pm"

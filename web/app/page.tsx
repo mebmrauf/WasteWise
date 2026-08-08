@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { NavBar } from "@/components/NavBar";
@@ -90,7 +92,25 @@ const roleCards = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("access_token")?.value;
+  if (token) {
+    try {
+      const payloadBase64 = token.split(".")[1];
+      if (payloadBase64) {
+        const payload = JSON.parse(Buffer.from(payloadBase64, "base64").toString());
+        if (payload.role === "COLLECTOR") {
+          redirect("/collector");
+        } else {
+          redirect("/dashboard");
+        }
+      }
+    } catch {
+      // Ignore parse errors, just show the landing page
+    }
+  }
+
   return (
     <>
       <NavBar

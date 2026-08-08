@@ -1,9 +1,12 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { Button } from "@/components/Button";
+import { Icon } from "@/components/Icon";
 import { useAuth } from "@/lib/auth/AuthContext";
 import type { Role } from "@/lib/api/auth";
+import { NotificationsPanel } from "@/components/NotificationsPanel";
 
 const DASHBOARD_HOME_BY_ROLE: Partial<Record<Role, string>> = {
   COLLECTOR: "/collector",
@@ -24,16 +27,19 @@ export function NavAuthActions() {
     const isInDashboardShell = pathname?.startsWith(dashboardHomeHref) ?? false;
 
     return (
-      <div className="flex items-center gap-3">
-        <span className="text-body-sm text-neutral-600">Hi, {shortName}</span>
+      <div className="flex items-center gap-1 sm:gap-3">
+        <NotificationsPanel />
+        <span className="hidden sm:inline text-body-sm text-neutral-600">Hi, {shortName}</span>
         {!isInDashboardShell && (
-          <Button variant="ghost" size="sm" href={dashboardHomeHref}>
+          <Button variant="ghost" size="sm" href={dashboardHomeHref} className="hidden sm:inline-flex">
             Dashboard
           </Button>
         )}
         <Button
           variant="ghost"
           size="sm"
+          className="px-2 sm:px-3 text-neutral-500 hover:text-error-600"
+          title="Log out"
           onClick={() => {
             void logout()
               .catch(() => undefined)
@@ -42,7 +48,8 @@ export function NavAuthActions() {
               });
           }}
         >
-          Log out
+          <span className="hidden sm:inline">Log out</span>
+          <Icon icon={LogOut} size="sm" className="sm:hidden" />
         </Button>
       </div>
     );

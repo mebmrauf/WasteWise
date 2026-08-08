@@ -8,7 +8,7 @@ export interface TokenPair {
   refreshToken: string;
 }
 
-export function hashRefreshToken(rawToken: string): string {
+function hashRefreshToken(rawToken: string): string {
   return createHash("sha256").update(rawToken).digest("hex");
 }
 

@@ -34,7 +34,7 @@ export class AuthApiError extends Error {
   }
 }
 
-export const API_BASE_URL = publicEnv.NEXT_PUBLIC_API_URL;
+const API_BASE_URL = publicEnv.NEXT_PUBLIC_API_URL;
 
 const SKIP_REFRESH_RETRY_PATHS = new Set(["/auth/refresh", "/auth/login", "/auth/register"]);
 

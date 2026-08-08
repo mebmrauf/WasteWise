@@ -8,6 +8,7 @@ import { CategoryQuantityRow } from "@/components/CategoryQuantityRow";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { formatTimeSlot } from "@/components/AvailableJobListItem";
 import { Icon } from "@/components/Icon";
+import { Input } from "@/components/Input";
 import { PageContainer } from "@/components/PageContainer";
 import { StatusPill } from "@/components/StatusPill";
 import { StatusTimeline, type PickupTrackingStatus } from "@/components/StatusTimeline";
@@ -29,6 +30,7 @@ import {
   PICKUP_LOCATION_UPDATE_EVENT,
   PICKUP_STATUS_EVENT,
   PICKUP_STATUS_UPDATE_EVENT,
+  PICKUP_SUBMIT_WEIGHTS_EVENT,
   type PickupErrorPayload,
   type PickupLocationPayload,
   type PickupStatusPayload,
@@ -136,7 +138,7 @@ export function ActiveJobView() {
   );
 }
 
-const STATUS_SEQUENCE: PickupStatus[] = ["ASSIGNED", "EN_ROUTE", "ARRIVED", "COMPLETED"];
+const STATUS_SEQUENCE: PickupStatus[] = ["ASSIGNED", "EN_ROUTE"];
 
 function nextStatusInSequence(current: PickupStatus): PickupStatus | null {
   const index = STATUS_SEQUENCE.indexOf(current);
@@ -145,11 +147,11 @@ function nextStatusInSequence(current: PickupStatus): PickupStatus | null {
 }
 
 function isTimelineStatus(status: PickupStatus): status is PickupTrackingStatus {
-  return status === "ASSIGNED" || status === "EN_ROUTE" || status === "ARRIVED" || status === "COMPLETED";
+  return status === "ASSIGNED" || status === "EN_ROUTE" || status === "ARRIVED" || status === "VERIFYING_WEIGHTS" || status === "COMPLETED";
 }
 
-const MIN_EMIT_INTERVAL_MS = 5000;
-const MIN_EMIT_DISTANCE_METERS = 25;
+const MIN_EMIT_INTERVAL_MS = 2000;
+const MIN_EMIT_DISTANCE_METERS = 5;
 
 function haversineDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const EARTH_RADIUS_METERS = 6371000;
@@ -195,12 +197,17 @@ function ActiveJobCard({
   onCompleted: (pickupId: string) => void;
 }) {
   const [status, setStatus] = React.useState<PickupStatus>(job.status);
+  const statusRef = React.useRef<PickupStatus>(job.status);
+  React.useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
   const [advancing, setAdvancing] = React.useState(false);
+  const [submittingWeights, setSubmittingWeights] = React.useState(false);
+  const [exactWeights, setExactWeights] = React.useState<Record<string, string>>({});
   const [statusError, setStatusError] = React.useState<string | null>(null);
 
-  const [sharing, setSharing] = React.useState(false);
   const [geoError, setGeoError] = React.useState<string | null>(null);
-  const [lastSharedAt, setLastSharedAt] = React.useState<string | null>(null);
 
   const watchIdRef = React.useRef<number | null>(null);
   const lastEmitRef = React.useRef<{ at: number; lat: number; lng: number } | null>(null);
@@ -210,7 +217,6 @@ function ActiveJobCard({
       navigator.geolocation.clearWatch(watchIdRef.current);
     }
     watchIdRef.current = null;
-    setSharing(false);
   }, []);
 
   const startSharing = React.useCallback(() => {
@@ -222,6 +228,14 @@ function ActiveJobCard({
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
+        
+        if (statusRef.current === "EN_ROUTE") {
+          const distanceToUser = haversineDistanceMeters(latitude, longitude, job.latitude, job.longitude);
+          if (distanceToUser <= 50) {
+            getTrackingSocket().emit(PICKUP_STATUS_UPDATE_EVENT, { pickupRequestId: job.id, status: "ARRIVED" });
+          }
+        }
+
         const now = Date.now();
         const last = lastEmitRef.current;
         const shouldEmit =
@@ -238,14 +252,17 @@ function ActiveJobCard({
         });
       },
       (err) => {
+        if (err.code === err.TIMEOUT) {
+          setGeoError("Still trying to determine your precise location (GPS signal weak)...");
+          return;
+        }
         setGeoError(geolocationErrorMessage(err));
         stopSharing();
       },
       { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 },
     );
     watchIdRef.current = watchId;
-    setSharing(true);
-  }, [job.id, stopSharing]);
+  }, [job.id, job.latitude, job.longitude, stopSharing]);
 
   React.useEffect(() => {
     const socket = getTrackingSocket();
@@ -254,21 +271,17 @@ function ActiveJobCard({
       if (payload.pickupRequestId !== job.id) return;
       setStatus(payload.status);
       setAdvancing(false);
+      setSubmittingWeights(false);
       if (payload.status === "COMPLETED") {
-        stopSharing();
         onCompleted(job.id);
       }
     }
 
-    function handleLocation(payload: PickupLocationPayload) {
-      if (payload.pickupRequestId !== job.id) return;
-      setLastSharedAt(payload.updatedAt);
-    }
-
     function handleError(payload: PickupErrorPayload) {
       if (payload.pickupRequestId && payload.pickupRequestId !== job.id) return;
-      if (payload.event === PICKUP_STATUS_UPDATE_EVENT) {
+      if (payload.event === PICKUP_STATUS_UPDATE_EVENT || payload.event === PICKUP_SUBMIT_WEIGHTS_EVENT) {
         setAdvancing(false);
+        setSubmittingWeights(false);
         setStatusError(resolveSocketErrorMessage(payload.error.code));
       } else if (payload.event === PICKUP_LOCATION_UPDATE_EVENT) {
         setGeoError(resolveSocketErrorMessage(payload.error.code));
@@ -276,24 +289,25 @@ function ActiveJobCard({
     }
 
     socket.on(PICKUP_STATUS_EVENT, handleStatus);
-    socket.on(PICKUP_LOCATION_EVENT, handleLocation);
     socket.on(PICKUP_ERROR_EVENT, handleError);
     socket.emit(PICKUP_JOIN_EVENT, { pickupRequestId: job.id });
 
     return () => {
       socket.off(PICKUP_STATUS_EVENT, handleStatus);
-      socket.off(PICKUP_LOCATION_EVENT, handleLocation);
       socket.off(PICKUP_ERROR_EVENT, handleError);
     };
-  }, [job.id, onCompleted, stopSharing]);
+  }, [job.id, onCompleted]);
 
   React.useEffect(() => {
+    if (status === "EN_ROUTE") {
+      startSharing();
+    } else {
+      stopSharing();
+    }
     return () => {
-      if (watchIdRef.current != null && typeof navigator !== "undefined" && navigator.geolocation) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-      }
+      stopSharing();
     };
-  }, []);
+  }, [status, startSharing, stopSharing]);
 
   function handleAdvanceStatus() {
     const next = nextStatusInSequence(status);
@@ -301,6 +315,22 @@ function ActiveJobCard({
     setStatusError(null);
     setAdvancing(true);
     getTrackingSocket().emit(PICKUP_STATUS_UPDATE_EVENT, { pickupRequestId: job.id, status: next });
+  }
+
+  function handleSubmitWeights() {
+    const weights: Record<string, number> = {};
+    for (const item of job.items) {
+      const raw = exactWeights[item.category] ?? "";
+      const num = Number(raw);
+      if (!raw.trim() || !Number.isFinite(num) || num <= 0) {
+        setStatusError(`Enter a valid weight for ${item.category}.`);
+        return;
+      }
+      weights[item.category] = num;
+    }
+    setStatusError(null);
+    setSubmittingWeights(true);
+    getTrackingSocket().emit(PICKUP_SUBMIT_WEIGHTS_EVENT, { pickupRequestId: job.id, weights });
   }
 
   const nextStatus = nextStatusInSequence(status);
@@ -336,36 +366,52 @@ function ActiveJobCard({
 
       <SummaryRow label="Window" value={formatTimeSlot(job.timeSlotStart, job.timeSlotEnd)} />
 
-      <div className="flex flex-col gap-3 border-t border-neutral-200 pt-4">
-        <h2 className="text-h4 text-neutral-900">Live location sharing</h2>
-        {geoError && <ErrorBanner>{geoError}</ErrorBanner>}
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant={sharing ? "secondary" : "primary"}
-            size="sm"
-            onClick={() => (sharing ? stopSharing() : startSharing())}
-          >
-            <Icon icon={Navigation} size="sm" aria-hidden />
-            {sharing ? "Stop sharing location" : "Start sharing location"}
-          </Button>
-          {sharing && (
-            <p className="text-caption text-neutral-500">
-              {lastSharedAt
-                ? `Last shared ${new Date(lastSharedAt).toLocaleTimeString()}`
-                : "Waiting for your first location update…"}
-            </p>
-          )}
+      {geoError && (
+        <div className="flex flex-col gap-3 border-t border-neutral-200 pt-4">
+          <ErrorBanner>{geoError}</ErrorBanner>
         </div>
-      </div>
+      )}
 
       <div className="flex flex-col gap-3 border-t border-neutral-200 pt-4">
         <h2 className="text-h4 text-neutral-900">Update status</h2>
         {statusError && <ErrorBanner>{statusError}</ErrorBanner>}
-        <div className="flex justify-end">
-          <Button size="sm" disabled={!nextStatus || advancing} onClick={handleAdvanceStatus}>
-            {advancing ? "Updating…" : nextStatus ? `Mark as ${PICKUP_STATUS_LABEL[nextStatus]}` : "Job completed"}
-          </Button>
-        </div>
+        
+        {status === "VERIFYING_WEIGHTS" ? (
+          <p className="text-body-sm text-neutral-500 italic text-center py-4">Waiting for household to verify weights...</p>
+        ) : status === "ARRIVED" ? (
+          <div className="flex flex-col gap-4 mt-2">
+            <p className="text-body-sm text-neutral-600">Enter the exact weight of each item collected.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {job.items.map((item) => (
+                <Input
+                  key={item.category}
+                  label={`${item.category} Weight (KG)`}
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  step="any"
+                  value={exactWeights[item.category] ?? ""}
+                  onChange={(e) => setExactWeights(prev => ({ ...prev, [item.category]: e.target.value }))}
+                />
+              ))}
+            </div>
+            <div className="flex justify-end">
+              <Button size="sm" disabled={submittingWeights} onClick={handleSubmitWeights}>
+                {submittingWeights ? "Submitting..." : "Submit exact weights"}
+              </Button>
+            </div>
+          </div>
+        ) : status === "EN_ROUTE" ? (
+          <div className="flex justify-center text-center py-4">
+            <p className="text-body-sm text-neutral-500 italic">Driving to destination... Location is updating automatically. Status will change to Arrived once you are within 50 meters.</p>
+          </div>
+        ) : (
+          <div className="flex justify-end">
+            <Button size="sm" disabled={!nextStatus || advancing} onClick={handleAdvanceStatus}>
+              {advancing ? "Updating…" : nextStatus ? `Mark as ${PICKUP_STATUS_LABEL[nextStatus]}` : "Job completed"}
+            </Button>
+          </div>
+        )}
       </div>
     </Card>
   );

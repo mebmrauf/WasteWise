@@ -7,7 +7,7 @@ import { Icon } from "@/components/Icon";
 import { cn } from "@/lib/utils";
 import { uberLikeMapStyle } from "./mapStyle";
 
-export interface MapMarker {
+interface MapMarker {
   lat: number;
   lng: number;
   label?: string;

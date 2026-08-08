@@ -10,7 +10,7 @@ const originList = z
       .filter(Boolean),
   );
 
-export const envSchema = z.object({
+const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(4000),
   CLIENT_ORIGIN: originList,
@@ -58,7 +58,7 @@ export const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
-export function parseEnv(source: NodeJS.ProcessEnv = process.env): Env {
+function parseEnv(source: NodeJS.ProcessEnv = process.env): Env {
   const result = envSchema.safeParse(source);
   if (!result.success) {
     const issues = result.error.issues

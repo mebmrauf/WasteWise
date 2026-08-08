@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import type { PickupRequest } from "@prisma/client";
 
-export type PickupAccessRole = "requester" | "collector";
+type PickupAccessRole = "requester" | "collector";
 
 export type PickupAccessResult =
   | { ok: true; pickup: PickupRequest; role: PickupAccessRole }

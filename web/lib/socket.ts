@@ -13,15 +13,21 @@ export const PICKUP_LOCATION_EVENT = "pickup:location";
 export const PICKUP_STATUS_EVENT = "pickup:status";
 export const PICKUP_ERROR_EVENT = "pickup:error";
 
-export interface PickupJoinPayload {
+export const PICKUP_SUBMIT_WEIGHTS_EVENT = "pickup:submit-weights";
+export const PICKUP_ACCEPT_WEIGHTS_EVENT = "pickup:accept-weights";
+export const PICKUP_REJECT_WEIGHTS_EVENT = "pickup:reject-weights";
+
+export const NOTIFICATION_RECEIVED_EVENT = "notification:received";
+
+interface PickupJoinPayload {
   pickupRequestId: string;
 }
-export interface PickupLocationUpdatePayload {
+interface PickupLocationUpdatePayload {
   pickupRequestId: string;
   lat: number;
   lng: number;
 }
-export interface PickupStatusUpdatePayload {
+interface PickupStatusUpdatePayload {
   pickupRequestId: string;
   status: PickupStatus;
 }

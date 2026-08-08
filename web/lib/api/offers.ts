@@ -6,6 +6,7 @@ export interface OfferSummary {
   pickupRequestId: string;
   collectorId: string;
   bidAmount: number;
+  bidAmountsPerKg: Record<string, number> | null;
   message: string | null;
   status: OfferStatus;
   createdAt: string;
@@ -14,7 +15,8 @@ export interface OfferSummary {
 
 export interface SubmitOfferInput {
   pickupRequestId: string;
-  bidAmount: number;
+  bidAmount: number; // Will represent total estimated bid
+  bidAmountsPerKg: Record<string, number>;
   message?: string;
 }
 

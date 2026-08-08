@@ -47,6 +47,7 @@ enum WasteCategory {
   GLASS
   METAL
   ELECTRONIC
+  OTHER
 }
 
 enum LoadSize {
@@ -61,6 +62,7 @@ enum PickupStatus {
   ASSIGNED
   EN_ROUTE
   ARRIVED
+  VERIFYING_WEIGHTS
   COMPLETED
   CANCELLED
 }
@@ -314,6 +316,8 @@ model PickupRequestItem {
   category WasteCategory
   loadSize LoadSize
 
+  exactWeightKg Float?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -331,6 +335,7 @@ model Offer {
   collector   User   @relation("CollectorOffers", fields: [collectorId], references: [id])
 
   bidAmount Float
+  bidAmountsPerKg Json? // e.g. { "PLASTIC": 10, "PAPER": 5 }
   message   String?
   status    OfferStatus @default(PENDING)
 

@@ -3,7 +3,9 @@
 import * as React from "react";
 import { Ban, Clock, Navigation } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
+import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { CategoryQuantityRow } from "@/components/CategoryQuantityRow";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
 import { Map } from "@/components/Map";
@@ -11,10 +13,14 @@ import { PageContainer } from "@/components/PageContainer";
 import { StatusTimeline, type PickupTrackingStatus } from "@/components/StatusTimeline";
 import { AuthApiError } from "@/lib/api/auth";
 import {
+  getPickupDetail,
   getPickupTracking,
   type CollectorLocation,
   type PickupStatus,
   type TrackedCollector,
+  type PickupRequestDetail,
+  LOAD_SIZE_LABELS,
+  formatKgRange,
 } from "@/lib/api/pickups";
 import { resolveAvatarUrl } from "@/lib/api/users";
 import { VEHICLE_TYPE_LABELS } from "@/lib/vehicleType";
@@ -25,6 +31,8 @@ import {
   PICKUP_JOINED_EVENT,
   PICKUP_LOCATION_EVENT,
   PICKUP_STATUS_EVENT,
+  PICKUP_ACCEPT_WEIGHTS_EVENT,
+  PICKUP_REJECT_WEIGHTS_EVENT,
   type PickupErrorPayload,
   type PickupJoinedPayload,
   type PickupLocationPayload,
@@ -33,7 +41,7 @@ import {
 
 const DHAKA_FALLBACK_CENTER = { lat: 23.8103, lng: 90.4125 };
 
-const STATUSES_ON_TIMELINE: readonly PickupStatus[] = ["ASSIGNED", "EN_ROUTE", "ARRIVED", "COMPLETED"];
+const STATUSES_ON_TIMELINE: readonly PickupStatus[] = ["ASSIGNED", "EN_ROUTE", "ARRIVED", "VERIFYING_WEIGHTS", "COMPLETED"];
 
 function isTimelineStatus(status: PickupStatus): status is PickupTrackingStatus {
   return STATUSES_ON_TIMELINE.includes(status);
@@ -62,6 +70,7 @@ export function TrackPickupView({ pickupId }: { pickupId: string }) {
   const [loadError, setLoadError] = React.useState<string | null>(null);
 
   const [status, setStatus] = React.useState<PickupStatus | null>(null);
+  const [pickupDetail, setPickupDetail] = React.useState<PickupRequestDetail | null>(null);
   const [collectorLocation, setCollectorLocation] = React.useState<CollectorLocation | null>(null);
   const [pickupLocation, setPickupLocation] = React.useState<{ lat: number; lng: number } | null>(null);
   const [collector, setCollector] = React.useState<TrackedCollector | null>(null);
@@ -87,10 +96,24 @@ export function TrackPickupView({ pickupId }: { pickupId: string }) {
         setLoadState("error");
       });
 
+    getPickupDetail(pickupId)
+      .then((res) => {
+        if (!cancelled) setPickupDetail(res.pickup);
+      })
+      .catch(() => {});
+
     return () => {
       cancelled = true;
     };
   }, [pickupId]);
+
+  React.useEffect(() => {
+    if (status === "VERIFYING_WEIGHTS") {
+      getPickupDetail(pickupId)
+        .then((res) => setPickupDetail(res.pickup))
+        .catch(() => {});
+    }
+  }, [status, pickupId]);
 
   React.useEffect(() => {
     const socket = getTrackingSocket();
@@ -181,6 +204,25 @@ export function TrackPickupView({ pickupId }: { pickupId: string }) {
               </Card>
             )}
 
+            {pickupDetail && (
+              <Card className="flex flex-col gap-4">
+                <p className="text-overline text-neutral-500">Requested Items</p>
+                <div className="flex flex-col gap-2">
+                  {pickupDetail.items.map((item) => (
+                    <CategoryQuantityRow
+                      key={item.id}
+                      category={item.category}
+                      quantityLabel={`${LOAD_SIZE_LABELS[item.loadSize]} (${formatKgRange(item.loadSize)})`}
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 text-body-sm text-neutral-700 mt-2 border-t border-neutral-100 pt-4">
+                  <Icon icon={Navigation} size="sm" className="text-neutral-500" aria-hidden />
+                  <span>{pickupDetail.pickupFormattedAddress}</span>
+                </div>
+              </Card>
+            )}
+
             <Card className="flex flex-1 flex-col">
               {status === "CANCELLED" ? (
                 <div className="flex flex-col items-center gap-2 py-4 text-center">
@@ -207,6 +249,41 @@ export function TrackPickupView({ pickupId }: { pickupId: string }) {
                 </p>
               )}
             </Card>
+
+            {(status === "VERIFYING_WEIGHTS" || status === "COMPLETED") && pickupDetail && (
+              <Card className="flex flex-col gap-4 mt-2 bg-primary-50/50 border-primary-100">
+                <h3 className="text-h4 text-neutral-900">{status === "COMPLETED" ? "Final Receipt" : "Verify Final Weights"}</h3>
+                <p className="text-body-sm text-neutral-600">
+                  {status === "COMPLETED"
+                    ? "The pickup is complete. Here are the final verified weights and total."
+                    : "The collector has entered the exact weights. Please verify and accept to complete the pickup."}
+                </p>
+                <div className="flex flex-col gap-2">
+                  {pickupDetail.items.map(item => {
+                     const bid = pickupDetail.bidAmountsPerKg?.[item.category] ?? 0;
+                     const total = item.exactWeightKg ? item.exactWeightKg * bid : 0;
+                     return (
+                        <div key={item.category} className="flex justify-between text-body-sm">
+                          <span className="text-neutral-700">{item.category} ({item.exactWeightKg}kg x ৳{bid.toLocaleString("en-US")}/kg)</span>
+                          <span className="font-data text-neutral-900">৳{total.toLocaleString("en-US")}</span>
+                        </div>
+                     )
+                  })}
+                  <div className="flex justify-between text-body font-bold border-t border-primary-200 pt-2 mt-1">
+                    <span>Total</span>
+                    <span className="font-data">
+                      ৳{pickupDetail.items.reduce((sum, item) => sum + ((item.exactWeightKg || 0) * (pickupDetail.bidAmountsPerKg?.[item.category] || 0)), 0).toLocaleString("en-US")}
+                    </span>
+                  </div>
+                </div>
+                {status === "VERIFYING_WEIGHTS" && (
+                  <div className="flex justify-end gap-3 mt-2">
+                    <Button variant="secondary" onClick={() => getTrackingSocket().emit(PICKUP_REJECT_WEIGHTS_EVENT, { pickupRequestId: pickupId })}>Reject</Button>
+                    <Button variant="primary" onClick={() => getTrackingSocket().emit(PICKUP_ACCEPT_WEIGHTS_EVENT, { pickupRequestId: pickupId })}>Accept & Complete</Button>
+                  </div>
+                )}
+              </Card>
+            )}
           </div>
 
           <div className="relative overflow-hidden min-h-[400px] w-full lg:min-h-[600px] rounded-xl shadow-sm border border-neutral-200 bg-neutral-50">

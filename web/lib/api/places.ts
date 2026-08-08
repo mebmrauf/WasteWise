@@ -5,7 +5,7 @@ const PLACES_AUTOCOMPLETE_URL = "https://places.googleapis.com/v1/places:autocom
 
 export class PlacesConfigError extends Error {}
 
-export class PlacesApiError extends Error {}
+class PlacesApiError extends Error {}
 
 interface PlacesAutocompleteResponseBody {
   suggestions?: Array<{
@@ -98,3 +98,27 @@ export async function fetchPlaceDetails(placeId: string): Promise<PlaceDetails> 
     longitude: body.location.longitude,
   };
 }
+
+const GEOCODING_URL = "https://maps.googleapis.com/maps/api/geocode/json";
+
+export async function fetchReverseGeocode(lat: number, lng: number): Promise<PlaceDetails> {
+  const apiKey = publicEnv.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    throw new PlacesConfigError("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not configured.");
+  }
+  const res = await fetch(`${GEOCODING_URL}?latlng=${lat},${lng}&key=${apiKey}`);
+  if (!res.ok) throw new PlacesApiError(`Geocoding failed with status ${res.status}`);
+  const body = await res.json();
+  if (body.status !== "OK" || !body.results || body.results.length === 0) {
+    const errorMsg = body.error_message ? ` - ${body.error_message}` : "";
+    throw new PlacesApiError(`Could not determine address for your current location. (Status: ${body.status}${errorMsg})`);
+  }
+  const result = body.results[0];
+  return {
+    placeId: result.place_id,
+    formattedAddress: result.formatted_address,
+    latitude: lat,
+    longitude: lng,
+  };
+}
+

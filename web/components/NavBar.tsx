@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 export type RoleAccent = "user" | "collector" | "recyclingCompany" | "admin";
 
-export interface NavLink {
+interface NavLink {
   label: string;
   href: string;
   active?: boolean;
@@ -74,20 +74,22 @@ export function NavBar({ brand, links = [], actions, accent = "user", className 
           </nav>
         )}
 
-        <div className="hidden items-center gap-3 md:flex">{actions}</div>
+        <div className="flex items-center gap-2 sm:gap-3">
+          {actions}
 
-        {hasLinks && (
-          <button
-            type="button"
-            className="text-neutral-700 md:hidden"
-            aria-expanded={mobileOpen}
-            aria-controls={mobileMenuId}
-            aria-label={mobileOpen ? "Close menu" : "Open menu"}
-            onClick={() => setMobileOpen((open) => !open)}
-          >
-            <Icon icon={mobileOpen ? X : Menu} size="lg" />
-          </button>
-        )}
+          {hasLinks && (
+            <button
+              type="button"
+              className="text-neutral-700 md:hidden ml-2"
+              aria-expanded={mobileOpen}
+              aria-controls={mobileMenuId}
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              onClick={() => setMobileOpen((open) => !open)}
+            >
+              <Icon icon={mobileOpen ? X : Menu} size="lg" />
+            </button>
+          )}
+        </div>
       </div>
 
       {mobileOpen && hasLinks && (
@@ -108,7 +110,6 @@ export function NavBar({ brand, links = [], actions, accent = "user", className 
               </li>
             ))}
           </ul>
-          {actions && <div className="border-t border-neutral-200 px-4 py-3">{actions}</div>}
         </nav>
       )}
     </header>

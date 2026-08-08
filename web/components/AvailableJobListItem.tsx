@@ -7,13 +7,13 @@ import { Icon } from "@/components/Icon";
 import type { WasteCategory } from "@/components/WasteCategorySelector";
 import { cn } from "@/lib/utils";
 
-export interface AvailableJobItem {
+interface AvailableJobItem {
   id: string;
   category: WasteCategory;
   quantityLabel: string;
 }
 
-export interface AvailableJobListItemPickup {
+interface AvailableJobListItemPickup {
   id: string;
   pickupFormattedAddress: string;
   timeSlotStart: string;

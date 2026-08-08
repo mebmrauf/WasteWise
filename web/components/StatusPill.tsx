@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export type StatusTone = "success" | "warning" | "error" | "info";
+type StatusTone = "success" | "warning" | "error" | "info";
 
 const toneClasses: Record<StatusTone, string> = {
   success: "border-success-500 bg-success-50 text-success-700",

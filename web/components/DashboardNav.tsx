@@ -94,7 +94,7 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
       <nav
         aria-label="Primary"
         className={cn(
-          "fixed top-16 bottom-0 left-0 hidden w-sidebar shrink-0 flex-col lg:flex",
+          "fixed top-16 bottom-0 left-0 hidden w-sidebar shrink-0 flex-col overflow-y-auto overflow-x-hidden overscroll-contain lg:flex",
           sidebarFillClasses[accent],
           className
         )}
@@ -109,6 +109,12 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  onClick={(e) => {
+                    if (isActive && pathname === item.href) {
+                      e.preventDefault();
+                      window.location.reload();
+                    }
+                  }}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "flex items-center gap-4 rounded-md px-4 py-3 text-body-sm font-medium transition-colors",
@@ -132,7 +138,7 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
       <nav
         aria-label="Primary (compact)"
         className={cn(
-          "fixed top-16 bottom-0 left-0 hidden w-rail shrink-0 flex-col items-center lg:hidden md:flex",
+          "fixed top-16 bottom-0 left-0 hidden w-rail shrink-0 flex-col items-center overflow-y-auto overflow-x-hidden overscroll-contain lg:hidden md:flex",
           sidebarFillClasses[accent]
         )}
       >
@@ -145,6 +151,12 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
                   href={item.href}
                   title={item.label}
                   aria-label={item.label}
+                  onClick={(e) => {
+                    if (isActive && pathname === item.href) {
+                      e.preventDefault();
+                      window.location.reload();
+                    }
+                  }}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "flex h-12 w-12 items-center justify-center rounded-md transition-colors",
@@ -187,6 +199,12 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
               <li key={item.href} className={mobileScrollable ? "min-w-16 shrink-0" : "flex-1"}>
                 <Link
                   href={item.href}
+                  onClick={(e) => {
+                    if (isActive && pathname === item.href) {
+                      e.preventDefault();
+                      window.location.reload();
+                    }
+                  }}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "flex h-full flex-col items-center justify-center gap-1 text-caption transition-colors",

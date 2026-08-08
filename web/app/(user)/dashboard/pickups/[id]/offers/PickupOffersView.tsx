@@ -17,6 +17,7 @@ import { acceptOffer } from "@/lib/api/offers";
 import {
   getPickupDetail,
   getPickupOffers,
+  LOAD_SIZE_KG_RANGES,
   LOAD_SIZE_LABELS,
   formatKgRange,
   type PickupOffer,
@@ -103,7 +104,7 @@ export function PickupOffersView({ pickupId }: { pickupId: string }) {
     try {
       await acceptOffer(offerId);
       setAcceptingOfferId(null);
-      void fetchAll();
+      router.push("/dashboard/pickups/offers");
     } catch (err) {
       setAcceptingOfferId(null);
       setAcceptErrors((prev) => ({ ...prev, [offerId]: resolveAcceptErrorMessage(err) }));
@@ -111,7 +112,7 @@ export function PickupOffersView({ pickupId }: { pickupId: string }) {
         err instanceof AuthApiError &&
         (err.code === "PICKUP_NOT_OPEN" || err.code === "OFFER_NOT_PENDING" || err.code === "NOT_FOUND")
       ) {
-        void fetchAll();
+        router.push("/dashboard/pickups/offers");
       }
     }
   }
@@ -160,14 +161,7 @@ export function PickupOffersView({ pickupId }: { pickupId: string }) {
             </div>
           </Card>
 
-          {pickup.status !== "PENDING" && (
-            <Card className="mt-4 flex items-start gap-3 border-info-500 bg-info-50">
-              <Icon icon={Info} size="md" className="shrink-0 text-info-700" aria-hidden />
-              <p className="text-body-sm text-info-700">
-                This request has already been assigned — no further offers can be accepted.
-              </p>
-            </Card>
-          )}
+
 
           {offers.length === 0 ? (
             <Card className="mt-8 flex flex-col items-center gap-3 py-10 text-center">
@@ -181,23 +175,41 @@ export function PickupOffersView({ pickupId }: { pickupId: string }) {
             </Card>
           ) : (
             <div className="mt-8 flex flex-col gap-4">
-              {offers.map((offer) => (
-                <React.Fragment key={offer.id}>
-                  {acceptErrors[offer.id] && <ErrorBanner>{acceptErrors[offer.id]}</ErrorBanner>}
-                  <OfferListItem
-                    offer={{
-                      ...offer,
-                      collector: {
-                        ...offer.collector,
-                        avatarUrl: resolveAvatarUrl(offer.collector.avatarUrl),
+              {offers.map((offer) => {
+                const estimatedTotalBidRange = offer.bidAmountsPerKg
+                  ? pickup.items.reduce(
+                      (acc, item) => {
+                        const bid = offer.bidAmountsPerKg?.[item.category] ?? 0;
+                        const range = LOAD_SIZE_KG_RANGES[item.loadSize];
+                        return {
+                          min: acc.min + bid * range.minKg,
+                          max: acc.max + bid * range.maxKg,
+                        };
                       },
-                    }}
-                    isPickupOpen={pickup.status === "PENDING"}
-                    isAccepting={acceptingOfferId === offer.id}
-                    onAccept={(offerId) => void handleAcceptOffer(offerId)}
-                  />
-                </React.Fragment>
-              ))}
+                      { min: 0, max: 0 }
+                    )
+                  : undefined;
+
+                return (
+                  <React.Fragment key={offer.id}>
+                    {acceptErrors[offer.id] && <ErrorBanner>{acceptErrors[offer.id]}</ErrorBanner>}
+                    <OfferListItem
+                      offer={{
+                        ...offer,
+                        collector: {
+                          ...offer.collector,
+                          avatarUrl: resolveAvatarUrl(offer.collector.avatarUrl),
+                        },
+                      }}
+                      pickupItems={pickup.items}
+                      estimatedTotalBidRange={estimatedTotalBidRange}
+                      isPickupOpen={pickup.status === "PENDING"}
+                      isAccepting={acceptingOfferId === offer.id}
+                      onAccept={(offerId) => void handleAcceptOffer(offerId)}
+                    />
+                  </React.Fragment>
+                );
+              })}
             </div>
           )}
         </>

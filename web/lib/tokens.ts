@@ -95,7 +95,7 @@ interface TypeStyle {
   textTransform?: "uppercase";
 }
 
-export const typeScale = {
+const typeScale = {
   overline: { fontSize: "0.75rem", lineHeight: "16px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" } satisfies TypeStyle,
   display: { fontSize: "2.5rem", lineHeight: "48px", fontWeight: 700 } satisfies TypeStyle,
   h1: { fontSize: "2rem", lineHeight: "40px", fontWeight: 700 } satisfies TypeStyle,

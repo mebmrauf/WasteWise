@@ -4,7 +4,7 @@ import { Select, type SelectOption } from "@/components/Select";
 import { WASTE_CATEGORIES, type WasteCategory } from "@/components/WasteCategorySelector";
 import { cn } from "@/lib/utils";
 
-export type LoadSize = "SMALL" | "MEDIUM" | "LARGE" | "EXTRA_LARGE";
+type LoadSize = "SMALL" | "MEDIUM" | "LARGE" | "EXTRA_LARGE";
 
 export interface WasteCategoryQuantityPickerProps {
   categories: WasteCategory[];

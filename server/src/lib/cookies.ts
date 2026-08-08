@@ -8,7 +8,7 @@ export const REFRESH_TOKEN_COOKIE = "refresh_token";
 export const CSRF_COOKIE = "csrf_token";
 export const OAUTH_STATE_COOKIE = "oauth_state";
 
-export function parseDurationMs(duration: string): number {
+function parseDurationMs(duration: string): number {
   const match = /^(\d+)\s*(ms|s|m|h|d)?$/.exec(duration.trim());
   if (!match) {
     throw new Error(`Unrecognized duration format: "${duration}"`);

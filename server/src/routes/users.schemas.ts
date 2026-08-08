@@ -15,7 +15,7 @@ export const updateProfileSchema = z
     smsNotificationsEnabled: z.boolean().optional(),
   })
   .strict();
-export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
 export const updateCollectorProfileSchema = z
   .object({
@@ -24,4 +24,4 @@ export const updateCollectorProfileSchema = z
     serviceArea: z.string().trim().max(120, "Service area is too long").optional(),
   })
   .strict();
-export type UpdateCollectorProfileInput = z.infer<typeof updateCollectorProfileSchema>;
+type UpdateCollectorProfileInput = z.infer<typeof updateCollectorProfileSchema>;
