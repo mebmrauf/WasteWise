@@ -43,7 +43,7 @@ export function createApp() {
 
   app.use("/api/v1/auth", authRouter);
   app.use("/api/v1/users", usersRouter);
-app.use("/api/v1/waste-recognition", wasteRecognitionRouter);
+  app.use("/api/v1/waste-recognition", wasteRecognitionRouter);
   app.use("/api/v1/pickups", pickupsRouter);
   app.use("/api/v1/offers", offersRouter);
   app.use("/api/v1/rewards", rewardsRouter);
