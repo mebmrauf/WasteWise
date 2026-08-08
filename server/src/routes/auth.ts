@@ -54,6 +54,7 @@ function toPublicUser(user: User) {
     role: user.role,
     accountType: user.accountType,
     isEmailVerified: user.isEmailVerified,
+    avatarUrl: user.avatarUrl,
     createdAt: user.createdAt,
   };
 }

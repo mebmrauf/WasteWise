@@ -49,7 +49,7 @@ export function NavBar({ brand, links = [], actions, accent = "user", className 
 
   return (
     <header className={cn("h-16 w-full border-b border-neutral-200 bg-neutral-0", className)}>
-      <div className="mx-auto flex h-full w-full max-w-content items-center justify-between px-4 md:px-6 lg:px-8">
+      <div className="flex h-full w-full items-center justify-between px-4 md:px-8 lg:px-12">
         <div className="flex items-center">{brand}</div>
 
         {hasLinks && (

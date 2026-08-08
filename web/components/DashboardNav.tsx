@@ -4,7 +4,11 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { Icon } from "@/components/Icon";
+import { Avatar } from "@/components/Avatar";
+import { resolveAvatarUrl } from "@/lib/api/users";
 import type { RoleAccent } from "@/components/NavBar";
 import { cn } from "@/lib/utils";
 
@@ -84,6 +88,8 @@ function resolveActiveStates(items: DashboardNavItem[], pathname: string | null)
 
 export function DashboardNav({ items, accent, roleLabel, brand, className }: DashboardNavProps) {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
+  const shortName = user?.fullName.trim().split(/\s+/)[0] ?? user?.fullName;
   const activeStates = React.useMemo(() => resolveActiveStates(items, pathname), [items, pathname]);
   const mobileScrollable = items.length > 5;
   const mobileItems = mobileScrollable ? items : items.slice(0, 5);
@@ -132,6 +138,33 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
             );
           })}
         </ul>
+        <div className="mt-auto px-4 pb-4">
+          <div className="flex items-center justify-between pt-4 border-t border-white/10">
+            <div className="flex items-center gap-3 overflow-hidden">
+              <Avatar
+                name={user?.fullName || "User"}
+                src={resolveAvatarUrl(user?.avatarUrl ?? null)}
+                size="sm"
+                accent={accent}
+                className="shrink-0 ring-1 ring-white/20"
+              />
+              <span className="truncate text-body-sm font-medium text-white">
+                {user?.fullName || "User"}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                void logout().catch(() => undefined).finally(() => {
+                  window.location.href = "/";
+                });
+              }}
+              className="ml-2 shrink-0 text-neutral-400 transition-colors hover:text-white"
+              title="Log out"
+            >
+              <Icon icon={LogOut} size="sm" />
+            </button>
+          </div>
+        </div>
       </nav>
 
       {/* Tablet — icon-only collapsed rail (md to just under lg, §6.4) */}
@@ -182,6 +215,26 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
             );
           })}
         </ul>
+        <div className="mt-auto pb-4">
+          <button
+            onClick={() => {
+              void logout().catch(() => undefined).finally(() => {
+                window.location.href = "/";
+              });
+            }}
+            className="group relative flex h-12 w-12 items-center justify-center rounded-md text-white/80 transition-colors hover:bg-white/10 hover:text-white border border-transparent hover:border-white/5"
+            title="Log out"
+          >
+            <Icon icon={LogOut} size="md" />
+            <span
+              role="tooltip"
+              aria-hidden="true"
+              className="pointer-events-none absolute left-full top-1/2 z-10 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-neutral-800 px-3 py-1 text-caption text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+            >
+              Log out
+            </span>
+          </button>
+        </div>
       </nav>
 
       {/* Mobile — bottom tab bar (below md, §6.4) */}

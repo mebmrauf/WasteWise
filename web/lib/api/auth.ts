@@ -14,6 +14,7 @@ export interface AuthUser {
   role: Role;
   accountType: AccountType | null;
   isEmailVerified: boolean;
+  avatarUrl: string | null;
   createdAt: string;
 }
 
