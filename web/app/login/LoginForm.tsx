@@ -22,7 +22,7 @@ function resolveLoginErrorMessage(err: unknown): string {
 }
 
 export function LoginForm() {
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -40,7 +40,13 @@ export function LoginForm() {
 
         setIsSubmitting(true);
         void login({ identifier, password })
-          .then(() => {
+          .then(async (user) => {
+            if (user.role === "ADMIN") {
+              await logout();
+              setErrorMessage("That email/phone or password isn't right. Please try again.");
+              setIsSubmitting(false);
+              return;
+            }
             router.push("/");
           })
           .catch((err: unknown) => {
