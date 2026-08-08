@@ -352,7 +352,7 @@ export function NewPickupRequestView() {
                   tabIndex={-1}
                   className="text-h3 text-neutral-900 rounded-sm focus:outline-none focus:shadow-focus"
                 >
-                  What are you recycling?
+                  What are you selling?
                 </h2>
                 <p className="mt-1 text-body-sm text-neutral-500">
                   Select every category that applies to this pickup.
@@ -360,7 +360,7 @@ export function NewPickupRequestView() {
                 <WasteCategorySelector
                   value={categories}
                   onChange={handleCategoriesChange}
-                  aria-label="What are you recycling?"
+                  aria-label="What are you selling?"
                   className="mt-5"
                 />
               </>
