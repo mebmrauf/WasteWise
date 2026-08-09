@@ -475,9 +475,14 @@ model GreenPointsTransaction {
   pickupRequestId String?
   pickupRequest   PickupRequest? @relation(fields: [pickupRequestId], references: [id])
 
-  points Int
+  points Int // Keeping this as the master source of truth for total points changed in transaction for backward compatibility
   type   GreenPointsTransactionType
   description String
+
+  basePoints   Int?
+  bonusPoints  Int?
+  totalPoints  Int?
+  rewardReason Json?
 
   mobileRechargeTransaction MobileRechargeTransaction?
 
