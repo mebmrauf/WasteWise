@@ -20,6 +20,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   const dashboardNavItems: DashboardNavItem[] = React.useMemo(
     () => [
+      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { label: "Profile", href: "/profile", icon: User },
       { label: "Smart Pickup Request", href: "/dashboard/pickups/new", icon: Truck },
       {

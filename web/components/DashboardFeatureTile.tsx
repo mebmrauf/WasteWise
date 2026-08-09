@@ -33,7 +33,7 @@ export function DashboardFeatureTile({
   const isInteractive = interactive ?? Boolean(href);
 
   const content = (
-    <Card interactive={isInteractive} className={cn("flex flex-col items-start gap-3", className)}>
+    <Card interactive={isInteractive} className={cn("flex flex-col items-start gap-3 h-full", className)}>
       <Icon icon={icon} size="lg" className={iconClassName} />
       <div className="flex flex-col gap-1">
         {}
@@ -48,7 +48,7 @@ export function DashboardFeatureTile({
     return (
       <Link
         href={href}
-        className="block focus-visible:outline-none focus-visible:shadow-focus"
+        className="block h-full focus-visible:outline-none focus-visible:shadow-focus"
       >
         {content}
       </Link>

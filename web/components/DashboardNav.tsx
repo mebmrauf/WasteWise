@@ -105,10 +105,13 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
           className
         )}
       >
-        <div className="flex h-16 shrink-0 items-center px-6 border-b border-white/10">
-          <Link href="/" className="font-brand text-3xl font-bold tracking-wide text-white drop-shadow-md">
+        <div className="flex shrink-0 flex-col justify-center px-6 py-4 border-b border-white/10">
+          <Link href="/" className="font-brand text-3xl font-bold tracking-wide text-white drop-shadow-md leading-none">
             WasteWise
           </Link>
+          <span className="text-[10px] uppercase tracking-wider text-white/60 mt-1 font-medium">
+            Formalizing Waste Management
+          </span>
         </div>
         <div className="flex flex-col gap-1 px-4 pb-4 pt-6">
           <span className="text-overline text-neutral-0/70">{roleLabel}</span>
