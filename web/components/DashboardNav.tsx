@@ -260,7 +260,7 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
             {mobileItems.map((item, index) => {
               const isActive = activeStates[index];
             return (
-              <li key={item.href} className={mobileScrollable ? "min-w-16 shrink-0" : "flex-1"}>
+              <li key={item.href} className={mobileScrollable ? "min-w-[72px] shrink-0" : "flex-1 overflow-hidden"}>
                 <Link
                   href={item.href}
                   onClick={(e) => {
@@ -271,13 +271,13 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
                   }}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex h-full flex-col items-center justify-center gap-1 text-caption transition-colors",
+                    "flex h-full w-full flex-col items-center justify-center gap-1 text-caption transition-colors overflow-hidden px-1",
                     lightSurfaceFocusRing,
                     isActive ? "text-white bg-white/10" : "text-white/60 hover:text-white hover:bg-white/5"
                   )}
                 >
-                  <Icon icon={item.icon} size="md" />
-                  <span>{item.label}</span>
+                  <Icon icon={item.icon} size="md" className="shrink-0" />
+                  <span className="w-full truncate text-center text-[10px] leading-tight">{item.label}</span>
                 </Link>
               </li>
             );
