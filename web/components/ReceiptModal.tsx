@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import { format } from "date-fns";
-import { CheckCircle2, X, Receipt, Loader2 } from "lucide-react";
+import { CheckCircle2, X, Receipt, Loader2, Star } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { ErrorBanner } from "@/components/ErrorBanner";
+import { Button } from "@/components/Button";
+import { CollectorRatingModal } from "@/components/CollectorRatingModal";
 import { getPickupDetail, getPickupTracking, type PickupRequestDetail, type PickupTracking } from "@/lib/api/pickups";
 import { formatBdt } from "@/lib/utils";
 
@@ -14,6 +16,7 @@ export function ReceiptModal({ pickupId, onClose }: { pickupId: string; onClose:
   const [loadState, setLoadState] = React.useState<LoadState>("loading");
   const [pickupDetail, setPickupDetail] = React.useState<PickupRequestDetail | null>(null);
   const [tracking, setTracking] = React.useState<PickupTracking | null>(null);
+  const [isRatingModalOpen, setIsRatingModalOpen] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -152,13 +155,56 @@ export function ReceiptModal({ pickupId, onClose }: { pickupId: string; onClose:
                 </div>
               </div>
               
-              <div className="bg-neutral-50 p-4 text-center border-t border-dashed border-neutral-300">
-                <p className="text-caption text-neutral-500">Thank you for recycling with WasteWise!</p>
+              <div className="bg-neutral-50 p-4 border-t border-dashed border-neutral-300">
+                {pickupDetail.rating ? (
+                  <div className="flex flex-col items-center justify-center p-2 text-center">
+                    <p className="text-body-sm font-medium text-neutral-900 mb-2">You rated this collector</p>
+                    <div className="flex gap-1 mb-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Icon 
+                          key={star} 
+                          icon={Star} 
+                          className={`h-5 w-5 ${
+                            star <= pickupDetail.rating!.score 
+                              ? "fill-warning-400 text-warning-400" 
+                              : "fill-neutral-200 text-neutral-300"
+                          }`} 
+                        />
+                      ))}
+                    </div>
+                    {pickupDetail.rating.comment && (
+                      <p className="text-caption text-neutral-600 italic">"{pickupDetail.rating.comment}"</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <p className="text-caption text-neutral-500 mb-3">Thank you for recycling with WasteWise!</p>
+                    <Button 
+                      variant="secondary" 
+                      onClick={() => setIsRatingModalOpen(true)}
+                    >
+                      Rate this collector
+                    </Button>
+                  </div>
+                )}
               </div>
             </>
           );
         })()}
       </div>
+
+      {isRatingModalOpen && tracking?.collector && (
+        <CollectorRatingModal
+          pickupId={pickupId}
+          collectorName={tracking.collector.fullName}
+          onClose={() => setIsRatingModalOpen(false)}
+          onSuccess={() => {
+            setIsRatingModalOpen(false);
+            // Refresh detail to get the new rating
+            getPickupDetail(pickupId).then(res => setPickupDetail(res.pickup));
+          }}
+        />
+      )}
     </div>
   );
 }

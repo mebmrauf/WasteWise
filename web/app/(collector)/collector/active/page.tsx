@@ -9,15 +9,17 @@ import { getMyProfile, type UserProfile } from "@/lib/api/users";
 import { AlertCircle, CheckCircle2, UserCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ActiveJobTracker } from "@/components/ActiveJobTracker";
-import { CollectorRatingsPanel } from "@/components/CollectorRatingsPanel";
-import { CollectorStatsChart } from "@/components/CollectorStatsChart";
 import { listAssignedPickups, type PickupRequestSummary } from "@/lib/api/pickups";
 
-export default function CollectorDashboardPage() {
+export default function CollectorActiveJobsPage() {
   const { user, isLoading: isAuthLoading } = useRequireRole(["COLLECTOR"]);
   const router = useRouter();
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
   const [isProfileLoading, setIsProfileLoading] = React.useState(true);
+
+  const [activeJobs, setActiveJobs] = React.useState<PickupRequestSummary[]>([]);
+  const [isActiveJobsLoading, setIsActiveJobsLoading] = React.useState(true);
+
   const fetchProfile = React.useCallback(() => {
     setIsProfileLoading(true);
     getMyProfile()
@@ -26,15 +28,25 @@ export default function CollectorDashboardPage() {
       .finally(() => setIsProfileLoading(false));
   }, []);
 
+  const fetchActiveJobs = React.useCallback(() => {
+    setIsActiveJobsLoading(true);
+    listAssignedPickups()
+      .then(({ pickups }) => setActiveJobs(pickups))
+      .catch(() => setActiveJobs([]))
+      .finally(() => setIsActiveJobsLoading(false));
+  }, []);
+
   React.useEffect(() => {
     if (user) {
       fetchProfile();
+      fetchActiveJobs();
     } else {
       setIsProfileLoading(false);
+      setIsActiveJobsLoading(false);
     }
-  }, [user, fetchProfile]);
+  }, [user, fetchProfile, fetchActiveJobs]);
 
-  if (isAuthLoading || isProfileLoading) {
+  if (isAuthLoading || isProfileLoading || isActiveJobsLoading) {
     return (
       <PageContainer className="flex min-h-[60vh] items-center justify-center py-16">
         <p className="text-body-sm text-neutral-500">Loading…</p>
@@ -53,7 +65,7 @@ export default function CollectorDashboardPage() {
 
   return (
     <PageContainer className="py-8 lg:py-12">
-      <h1 className="text-h1 text-neutral-900 mb-8">Dashboard</h1>
+      <h1 className="text-h1 text-neutral-900 mb-8">Active Pickups</h1>
 
       {!isApproved ? (
         hasMissingInfo ? (
@@ -75,7 +87,7 @@ export default function CollectorDashboardPage() {
               <AlertCircle className="h-16 w-16 text-warning-500 mb-4" />
               <h2 className="text-h2 text-warning-900 mb-2">Verification pending</h2>
               <p className="text-body text-warning-800 mb-8 max-w-md mx-auto">
-                Your collector account needs to be verified by an admin before you can browse open pickup requests. Check back once your profile has been approved.
+                Your collector account needs to be verified by an admin before you can track active pickups.
               </p>
               <Button onClick={fetchProfile} disabled={isProfileLoading}>
                 Check again
@@ -85,18 +97,21 @@ export default function CollectorDashboardPage() {
         )
       ) : (
         <div className="flex flex-col gap-12 w-full max-w-5xl">
-
-          {/* Reputation Section */}
           <section className="w-full">
-            <CollectorRatingsPanel 
-              averageRating={profile?.collectorProfile?.averageRating ?? null}
-              totalRatings={profile?.collectorProfile?.totalRatings ?? 0}
-            />
-          </section>
-
-          {/* Stats Section */}
-          <section className="w-full">
-            <CollectorStatsChart />
+            {activeJobs.length > 0 ? (
+              <ActiveJobTracker />
+            ) : (
+              <Card className="flex flex-col items-center text-center py-12 px-6">
+                <CheckCircle2 className="h-16 w-16 text-success-500 mb-4" />
+                <h3 className="text-h3 text-neutral-900 mb-2">No active pickups</h3>
+                <p className="text-body text-neutral-600 mb-6 max-w-sm mx-auto">
+                  You don't have any ongoing pickups right now. Head over to the Find Jobs page to secure your next run!
+                </p>
+                <Button onClick={() => router.push("/collector/jobs")}>
+                  Find Jobs
+                </Button>
+              </Card>
+            )}
           </section>
         </div>
       )}

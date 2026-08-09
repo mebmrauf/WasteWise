@@ -101,11 +101,20 @@ interface WeightRecordSnapshot {
 
 export interface PickupRequestDetail extends PickupRequestSummary {
   weightRecord: WeightRecordSnapshot | null;
+  rating?: { score: number; comment: string | null; createdAt: string } | null;
 }
 
 export function getPickupDetail(pickupRequestId: string): Promise<{ pickup: PickupRequestDetail }> {
   return authFetch<{ pickup: PickupRequestDetail }>(`/pickups/${encodeURIComponent(pickupRequestId)}`, {
     method: "GET",
+  });
+}
+
+export function ratePickup(pickupRequestId: string, score: number, comment?: string): Promise<{ success: boolean }> {
+  return authFetch<{ success: boolean }>(`/pickups/${encodeURIComponent(pickupRequestId)}/rate`, {
+    method: "POST",
+    body: JSON.stringify({ score, comment }),
+    headers: { "x-csrf-token": readCsrfToken() },
   });
 }
 
