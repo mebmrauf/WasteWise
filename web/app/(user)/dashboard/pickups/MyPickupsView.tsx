@@ -9,6 +9,7 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
 import { InlineConfirm } from "@/components/InlineConfirm";
 import { PageContainer } from "@/components/PageContainer";
+import { CollectorRatingModal } from "@/components/CollectorRatingModal";
 import { ReceiptModal } from "@/components/ReceiptModal";
 import { StatusPill } from "@/components/StatusPill";
 import { SummaryRow } from "@/components/SummaryPanel";
@@ -64,6 +65,7 @@ export function MyPickupsView() {
   const [cancelErrors, setCancelErrors] = React.useState<Record<string, string>>({});
   const [confirmingId, setConfirmingId] = React.useState<string | null>(null);
   const [receiptModalPickupId, setReceiptModalPickupId] = React.useState<string | null>(null);
+  const [ratingModalPickupId, setRatingModalPickupId] = React.useState<string | null>(null);
   
   const [expandedPickupId, setExpandedPickupId] = React.useState<string | null>(null);
   const [expandedView, setExpandedView] = React.useState<"offers" | "track" | null>(null);
@@ -80,21 +82,27 @@ export function MyPickupsView() {
     return ref;
   }
 
-  const fetchPickups = React.useCallback(() => {
-    setLoadState("loading");
-    setLoadError(null);
+  const fetchPickups = React.useCallback((silent: boolean = false) => {
+    if (!silent) {
+      setLoadState("loading");
+      setLoadError(null);
+    }
     return listPickups()
       .then(({ pickups: rows }) => {
         setPickups(rows);
-        setLoadState("ready");
+        if (!silent) {
+          setLoadState("ready");
+        }
       })
       .catch((err: unknown) => {
-        setLoadError(
-          err instanceof AuthApiError
-            ? "Couldn't load your pickups. Try refreshing the page."
-            : "Something went wrong loading your pickups. Try refreshing the page.",
-        );
-        setLoadState("error");
+        if (!silent) {
+          setLoadError(
+            err instanceof AuthApiError
+              ? "Couldn't load your pickups. Try refreshing the page."
+              : "Something went wrong loading your pickups. Try refreshing the page.",
+          );
+          setLoadState("error");
+        }
       });
   }, []);
 
@@ -128,6 +136,10 @@ export function MyPickupsView() {
           setExpandedPickupId(payload.pickupRequestId);
           setExpandedView("track");
         }
+        if (changed && payload.status === "COMPLETED") {
+          setRatingModalPickupId(payload.pickupRequestId);
+        }
+        
         return changed ? next : prev;
       });
     }
@@ -326,13 +338,24 @@ export function MyPickupsView() {
                     {(pickup.status === "ASSIGNED" || pickup.status === "EN_ROUTE" || pickup.status === "ARRIVED" || pickup.status === "VERIFYING_WEIGHTS" || pickup.status === "COMPLETED") && (
                       <>
                         {pickup.status === "COMPLETED" ? (
-                          <Button
-                            onClick={() => setReceiptModalPickupId(pickup.id)}
-                            variant="secondary"
-                            size="sm"
-                          >
-                            View receipt
-                          </Button>
+                          <>
+                            {!pickup.hasRating && (
+                              <Button
+                                onClick={() => setRatingModalPickupId(pickup.id)}
+                                variant="primary"
+                                size="sm"
+                              >
+                                Rate collector
+                              </Button>
+                            )}
+                            <Button
+                              onClick={() => setReceiptModalPickupId(pickup.id)}
+                              variant="secondary"
+                              size="sm"
+                            >
+                              View receipt
+                            </Button>
+                          </>
                         ) : pickup.status === "ASSIGNED" ? (
                           <Button 
                             disabled 
@@ -418,6 +441,17 @@ export function MyPickupsView() {
         <ReceiptModal 
           pickupId={receiptModalPickupId} 
           onClose={() => setReceiptModalPickupId(null)} 
+        />
+      )}
+
+      {ratingModalPickupId && (
+        <CollectorRatingModal
+          pickupId={ratingModalPickupId}
+          onClose={() => setRatingModalPickupId(null)}
+          onSuccess={() => {
+            setRatingModalPickupId(null);
+            void fetchPickups(true); // Refresh silently to hide the rate button
+          }}
         />
       )}
     </PageContainer>

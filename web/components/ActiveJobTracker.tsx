@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Ban, Compass, MapPin, Navigation } from "lucide-react";
+import { Ban, Compass, MapPin, Navigation, Scale } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { CategoryQuantityRow } from "@/components/CategoryQuantityRow";
@@ -384,28 +384,41 @@ function ActiveJobCard({
         {status === "VERIFYING_WEIGHTS" ? (
           <p className="text-body-sm text-neutral-500 italic text-center py-4">Waiting for household to verify weights...</p>
         ) : status === "ARRIVED" ? (
-          <div className="flex flex-col gap-4 mt-2">
-            <p className="text-body-sm text-neutral-600">Enter the exact weight of each item collected.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {job.items.map((item) => (
-                <Input
-                  key={item.category}
-                  label={`${item.category} Weight (KG)`}
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  step="any"
-                  value={exactWeights[item.category] ?? ""}
-                  onChange={(e) => setExactWeights(prev => ({ ...prev, [item.category]: e.target.value }))}
-                />
-              ))}
+          <div className="flex flex-col gap-5 mt-4">
+            <div className="bg-primary-50/50 border border-primary-100 p-5 rounded-2xl flex flex-col gap-5">
+              <div className="flex items-center gap-3 border-b border-primary-100/50 pb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 text-primary-600">
+                  <Icon icon={Scale} size="sm" />
+                </div>
+                <div>
+                  <h3 className="text-body-lg font-semibold text-neutral-900 leading-tight">Weigh items</h3>
+                  <p className="text-body-sm text-neutral-600">Enter the exact weight (KG) of each item collected.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                {job.items.map((item) => (
+                  <Input
+                    key={item.category}
+                    label={`${item.category} Weight (KG)`}
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="any"
+                    placeholder="0.0"
+                    className="bg-white"
+                    value={exactWeights[item.category] ?? ""}
+                    onChange={(e) => setExactWeights(prev => ({ ...prev, [item.category]: e.target.value }))}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="flex justify-between items-center">
-              <Button variant="secondary" size="sm" onClick={() => getTrackingSocket().emit(PICKUP_STATUS_UPDATE_EVENT, { pickupRequestId: job.id, status: "EN_ROUTE" })}>
+            <div className="flex justify-between items-center mt-2">
+              <Button variant="ghost" size="sm" onClick={() => getTrackingSocket().emit(PICKUP_STATUS_UPDATE_EVENT, { pickupRequestId: job.id, status: "EN_ROUTE" })}>
                 Back to En Route
               </Button>
               <Button size="sm" disabled={submittingWeights} onClick={handleSubmitWeights}>
-                {submittingWeights ? "Submitting..." : "Submit exact weights"}
+                {submittingWeights ? "Submitting..." : "Submit weights"}
               </Button>
             </div>
           </div>
