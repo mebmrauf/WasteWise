@@ -1,18 +1,8 @@
-import type { Metadata } from "next";
+
 import { Megaphone } from "lucide-react";
 import { ComingSoonPage } from "@/components/ComingSoonPage";
 
-export const metadata: Metadata = {
-  title: "Complaints — WasteWise",
-  description: "Report an issue with a pickup and track its resolution.",
-  robots: { index: false, follow: false },
-  openGraph: {
-    title: "Complaints — WasteWise",
-    description: "Report an issue with a pickup and track its resolution.",
-    type: "website",
-    siteName: "WasteWise",
-  },
-};
+
 
 export default function ComplaintsPage() {
   return (

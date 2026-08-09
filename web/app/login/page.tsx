@@ -1,18 +1,9 @@
-import type { Metadata } from "next";
+
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { AuthPageShell } from "../_components/AuthPageShell";
 import { LoginForm } from "./LoginForm";
 
-export const metadata: Metadata = {
-  title: "Log in — WasteWise",
-  description: "Log in to your WasteWise account to manage pickups, offers, and your recycling history.",
-  openGraph: {
-    title: "Log in — WasteWise",
-    description: "Log in to your WasteWise account to manage pickups, offers, and your recycling history.",
-    type: "website",
-    siteName: "WasteWise",
-  },
-};
+
 
 const oauthErrorMessages: Record<string, string> = {
   oauth_state_mismatch: "Your sign-in attempt expired or looked suspicious. Please try again.",
