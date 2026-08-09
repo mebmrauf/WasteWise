@@ -20,6 +20,10 @@ function toGreenPointsTransactionSummary(txn: GreenPointsTransaction) {
     points: txn.points,
     type: txn.type,
     description: txn.description,
+    basePoints: txn.basePoints,
+    bonusPoints: txn.bonusPoints,
+    totalPoints: txn.totalPoints,
+    rewardReason: txn.rewardReason,
     createdAt: txn.createdAt,
   };
 }

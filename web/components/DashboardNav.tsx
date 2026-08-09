@@ -105,10 +105,13 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
           className
         )}
       >
-        <div className="flex h-16 shrink-0 items-center px-6 border-b border-white/10">
-          <Link href="/" className="font-brand text-3xl font-bold tracking-wide text-white drop-shadow-md">
+        <div className="flex shrink-0 flex-col justify-center px-6 py-4 border-b border-white/10">
+          <Link href="/" className="font-brand text-3xl font-bold tracking-wide text-white drop-shadow-md leading-none">
             WasteWise
           </Link>
+          <span className="text-[10px] uppercase tracking-wider text-white/60 mt-1 font-medium">
+            Formalizing Waste Management
+          </span>
         </div>
         <div className="flex flex-col gap-1 px-4 pb-4 pt-6">
           <span className="text-overline text-neutral-0/70">{roleLabel}</span>
@@ -260,7 +263,7 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
             {mobileItems.map((item, index) => {
               const isActive = activeStates[index];
             return (
-              <li key={item.href} className={mobileScrollable ? "min-w-16 shrink-0" : "flex-1"}>
+              <li key={item.href} className={mobileScrollable ? "min-w-[72px] shrink-0" : "flex-1 overflow-hidden"}>
                 <Link
                   href={item.href}
                   onClick={(e) => {
@@ -271,13 +274,13 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
                   }}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex h-full flex-col items-center justify-center gap-1 text-caption transition-colors",
+                    "flex h-full w-full flex-col items-center justify-center gap-1 text-caption transition-colors overflow-hidden px-1",
                     lightSurfaceFocusRing,
                     isActive ? "text-white bg-white/10" : "text-white/60 hover:text-white hover:bg-white/5"
                   )}
                 >
-                  <Icon icon={item.icon} size="md" />
-                  <span>{item.label}</span>
+                  <Icon icon={item.icon} size="md" className="shrink-0" />
+                  <span className="w-full truncate text-center text-[10px] leading-tight">{item.label}</span>
                 </Link>
               </li>
             );

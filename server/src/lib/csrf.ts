@@ -26,7 +26,7 @@ export function requireCsrf(req: Request, res: Response, next: NextFunction): vo
     return;
   }
 
-  // Fallback to Origin-based CSRF defense for cross-domain deployments (like Render)
+  // Fallback to Origin-based CSRF defense for cross-domain deployments
   // where the frontend cannot read the backend's CSRF cookie via document.cookie.
   const requestOrigin = req.headers.origin;
   if (requestOrigin && env.CLIENT_ORIGIN.includes(requestOrigin)) {

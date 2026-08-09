@@ -48,8 +48,8 @@ export function NavBar({ brand, links = [], actions, accent = "user", className 
   const hasLinks = links.length > 0;
 
   return (
-    <header className={cn("sticky top-0 z-50 h-16 w-full border-b border-neutral-200 bg-neutral-0/80 backdrop-blur-md", className)}>
-      <div className="flex h-full w-full items-center justify-between px-4 md:px-8 lg:px-12">
+    <header className={cn("sticky top-0 z-50 w-full border-b border-neutral-200 bg-neutral-0/80 backdrop-blur-md", className)}>
+      <div className="flex h-16 w-full items-center justify-between px-4 md:px-8 lg:px-12">
         <div className="flex items-center">{brand}</div>
 
         {hasLinks && (
@@ -93,15 +93,17 @@ export function NavBar({ brand, links = [], actions, accent = "user", className 
       </div>
 
       {mobileOpen && hasLinks && (
-        <nav id={mobileMenuId} aria-label="Primary" className="border-t border-neutral-200 md:hidden">
+        <nav id={mobileMenuId} aria-label="Primary" className="border-t border-neutral-200 bg-neutral-0 md:hidden absolute w-full left-0 top-16 shadow-lg">
           <ul className="flex flex-col gap-1 px-4 py-3">
             {links.map((link) => (
               <li key={link.href}>
                 <a
                   href={link.href}
                   aria-current={link.active ? "page" : undefined}
+                  onClick={() => setMobileOpen(false)}
                   className={cn(
-                    "block rounded-md px-3 py-2 text-body-sm text-neutral-600",
+                    "block rounded-md px-3 py-2 text-body-sm text-neutral-600 transition-colors",
+                    accentHoverTextClasses[accent],
                     link.active && ["bg-neutral-50", accentActiveTextClasses[accent]]
                   )}
                 >

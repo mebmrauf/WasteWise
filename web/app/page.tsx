@@ -1,84 +1,20 @@
+import Image from "next/image";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/Button";
-import { Card } from "@/components/Card";
 import { NavBar } from "@/components/NavBar";
 import { NavAuthActions } from "@/components/NavAuthActions";
 import { PageContainer } from "@/components/PageContainer";
-
-
-
-const steps = [
-  {
-    number: "01",
-    title: "Post a pickup request",
-    body: "Pick a waste category, an estimated quantity, and a time slot. WasteWise shows an estimated weight range up front, before anyone shows up.",
-  },
-  {
-    number: "02",
-    title: "Collectors make offers",
-    body: "Nearby verified collectors see your request and bid for the job. You choose who comes — not whoever happens to be walking by.",
-  },
-  {
-    number: "03",
-    title: "Track it, weigh it, keep the record",
-    body: "Follow your collector's live location on the map, confirm the exact weight logged at pickup, and it's saved to your recycling history.",
-  },
-];
-
-const trustFeatures = [
-  {
-    title: "Verified Collector Directory",
-    body: "Browse nearby collectors by distance, rating, and vehicle type. Every listed profile has passed ID/license verification before it appears.",
-  },
-  {
-    title: "Weight Verification & Estimator",
-    body: "See an estimated weight range before pickup, then the exact logged weight at collection — no more guessing what you'll be paid or charged.",
-  },
-  {
-    title: "Real-Time Pickup Tracking",
-    body: "Once an offer is accepted, follow your collector's live location on the map until they arrive at your door.",
-  },
-  {
-    title: "Complaint & Resolution Center",
-    body: "No-show, disputed weight, bad conduct — every pickup has a direct path to resolution, logged against the collector's record.",
-  },
-];
-
-const collectorFeatures = [
-  {
-    title: "Smart Pickup Requests & Offers",
-    body: "See nearby requests by category, quantity, and time slot, then bid on the jobs worth your time — instead of waiting on foot traffic.",
-  },
-  {
-    title: "Route Planner",
-    body: "Once a day's jobs are accepted, WasteWise sequences them into one optimized route — less backtracking, more pickups per shift.",
-  },
-  {
-    title: "Business Dashboard",
-    body: "Schedule, earnings, and ratings in one place — an income history a collector can finally show a bank, a landlord, or a lender.",
-  },
-];
-
-const roleCards = [
-  {
-    role: "User",
-    body: "Post a pickup, pick a verified collector, track it live, and keep a running history of what you've recycled.",
-  },
-  {
-    role: "Collector",
-    body: "Turn foot-traffic scrap collection into a schedule, an optimized route, and a provable income record.",
-  },
-  {
-    role: "Recycling Company",
-    body: "Procure verified bulk waste by district and reserve stock ahead of pickup.",
-    note: "Phase 2",
-  },
-  {
-    role: "Admin / Municipality",
-    body: "Review verification applications, resolve disputes, and see collection activity across the city.",
-  },
-];
+import {
+  Truck,
+  Camera,
+  MapPin,
+  ShieldCheck,
+  Gift,
+  Route,
+  ClipboardList,
+  CheckCircle2,
+} from "lucide-react";
 
 export default async function Home() {
   const cookieStore = await cookies();
@@ -104,166 +40,249 @@ export default async function Home() {
   return (
     <>
       <NavBar
-        brand={<span className="font-heading text-h4 text-neutral-900">WasteWise</span>}
+        brand={
+          <div className="flex flex-col">
+            <span className="font-heading text-h4 text-neutral-900 leading-none">WasteWise</span>
+          </div>
+        }
         links={[
           { label: "How it works", href: "#how-it-works" },
-          { label: "Collectors", href: "#collectors" },
+          { label: "Features", href: "#features" },
+          { label: "For Collectors", href: "#collectors" },
         ]}
         actions={<NavAuthActions />}
       />
 
-      <main>
-        {}
-        <section className="bg-primary-50">
-          <PageContainer className="py-16 lg:py-24">
-            <div className="max-w-3xl">
-              <p className="font-heading text-overline text-primary-600">
-                Recycling logistics for Bangladesh
-              </p>
-              <h1 className="mt-3 text-display text-neutral-900">
-                Bangladesh&apos;s scrap collectors already run this network. WasteWise makes it
-                official.
+      <main className="overflow-hidden">
+        {/* HERO SECTION */}
+        <section className="relative bg-gradient-to-br from-neutral-50 to-green-50 pt-20 pb-24 lg:pt-32 lg:pb-32 overflow-hidden">
+          <div className="absolute top-0 right-0 -mr-32 -mt-32 w-[600px] h-[600px] bg-green-200/40 blur-3xl rounded-full pointer-events-none" />
+          <PageContainer className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="flex flex-col max-w-xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-100 text-green-700 text-caption font-medium mb-6 w-max border border-green-200">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                Now available in Bangladesh
+              </div>
+              <h1 className="text-display text-neutral-900 mb-6 tracking-tight leading-[1.1]">
+                Formalizing Waste Management in <span className="text-[#114E29]">Bangladesh</span>
               </h1>
-              <p className="mt-5 text-body-lg text-neutral-600">
-                Prior platforms tried to route around the country&apos;s informal collectors.
-                WasteWise routes through them: a verified profile, a bidding system for pickup
-                requests, route tools, and an income dashboard for collectors — plus the
-                tracking, weight verification, and complaint resolution households and
-                businesses never had with a doorstep pickup.
+              <p className="text-body-lg text-neutral-600 mb-8 leading-relaxed">
+                WasteWise brings the informal scrap collection network online. Post a pickup request, track verified collectors in real-time, and earn Green Points for doing your part.
               </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Button size="lg" href="/signup">
+              <div className="flex flex-wrap gap-4">
+                <Button size="lg" href="/signup" className="bg-[#114E29] hover:bg-green-800 text-white rounded-full px-8 shadow-lg shadow-green-900/20">
                   Request a pickup
                 </Button>
-                <Button size="lg" variant="secondary" href="/signup?role=collector">
-                  Sign up as a collector
+                <Button size="lg" variant="secondary" href="/signup?role=collector" className="rounded-full px-8 border-neutral-300">
+                  Join as a collector
                 </Button>
+              </div>
+            </div>
+            
+            <div className="relative">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-green-900/10 border-4 border-white aspect-[4/3] bg-neutral-100 flex items-center justify-center group">
+                <div className="absolute inset-0 bg-[#114E29]/10 group-hover:bg-transparent transition-colors z-10" />
+                <Image 
+                  src="/images/hero.png" 
+                  alt="WasteWise Smart Logistics" 
+                  fill 
+                  className="object-cover"
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                />
+              </div>
+              {/* Floating badges */}
+              <div className="absolute -bottom-6 -left-6 bg-white p-4 rounded-2xl shadow-xl border border-neutral-100 flex items-center gap-4 z-20 animate-fade-in-up">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-700">
+                  <ShieldCheck size={24} />
+                </div>
+                <div>
+                  <p className="text-overline text-neutral-500">SECURITY</p>
+                  <p className="font-bold text-neutral-900">Verified Collectors</p>
+                </div>
               </div>
             </div>
           </PageContainer>
         </section>
 
-        {}
-        <section id="how-it-works" className="bg-neutral-0">
-          <PageContainer className="py-16 lg:py-20">
-            <p className="font-heading text-overline text-primary-600">How it works</p>
-            <h2 className="mt-2 text-h2 text-neutral-900">
-              From request to verified pickup, in three steps
-            </h2>
-            <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
-              {steps.map((step) => (
-                <Card key={step.number}>
-                  <p className="font-data text-data-lg text-primary-500">{step.number}</p>
-                  <h3 className="mt-3 text-h4 text-neutral-900">{step.title}</h3>
-                  <p className="mt-2 text-body-sm text-neutral-500">{step.body}</p>
-                </Card>
-              ))}
+        {/* HOW IT WORKS */}
+        <section id="how-it-works" className="py-24 bg-white">
+          <PageContainer>
+            <div className="text-center max-w-2xl mx-auto mb-16">
+              <p className="font-heading text-overline text-green-700 mb-2">Simple Process</p>
+              <h2 className="text-h2 text-neutral-900">How WasteWise Works</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+              {/* Connector line (desktop only) */}
+              <div className="hidden md:block absolute top-12 left-1/6 right-1/6 h-0.5 bg-neutral-100 -z-10" />
+              
+              <div className="flex flex-col items-center text-center group">
+                <div className="w-24 h-24 rounded-full bg-green-50 border-8 border-white shadow-sm flex items-center justify-center text-[#114E29] mb-6 group-hover:scale-110 transition-transform">
+                  <Truck size={36} />
+                </div>
+                <h3 className="text-h4 mb-3 text-neutral-900">1. Post a Request</h3>
+                <p className="text-body text-neutral-600">Snap a photo or select your waste categories. We instantly estimate the weight and value.</p>
+              </div>
+
+              <div className="flex flex-col items-center text-center group">
+                <div className="w-24 h-24 rounded-full bg-blue-50 border-8 border-white shadow-sm flex items-center justify-center text-blue-600 mb-6 group-hover:scale-110 transition-transform">
+                  <ClipboardList size={36} />
+                </div>
+                <h3 className="text-h4 mb-3 text-neutral-900">2. Collectors Bid</h3>
+                <p className="text-body text-neutral-600">Nearby verified collectors see your request and accept the job based on your preferred time.</p>
+              </div>
+
+              <div className="flex flex-col items-center text-center group">
+                <div className="w-24 h-24 rounded-full bg-yellow-50 border-8 border-white shadow-sm flex items-center justify-center text-yellow-600 mb-6 group-hover:scale-110 transition-transform">
+                  <MapPin size={36} />
+                </div>
+                <h3 className="text-h4 mb-3 text-neutral-900">3. Track & Complete</h3>
+                <p className="text-body text-neutral-600">Track them live on the map. They weigh it, take it, and you instantly earn Green Points.</p>
+              </div>
             </div>
           </PageContainer>
         </section>
 
-        {}
-        <section className="bg-neutral-50">
-          <PageContainer className="py-16 lg:py-20">
-            <p className="font-heading text-overline text-primary-600">Trust infrastructure</p>
-            <h2 className="mt-2 max-w-2xl text-h2 text-neutral-900">
-              Everything an informal pickup never put in writing
-            </h2>
-            <p className="mt-4 max-w-2xl text-body-lg text-neutral-600">
-              Every collector on WasteWise is verified before they&apos;re listed, and every
-              pickup leaves a record — location, weight, and a way to dispute either one.
-            </p>
-            <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {trustFeatures.map((feature) => (
-                <Card key={feature.title}>
-                  <h3 className="text-h4 text-neutral-900">{feature.title}</h3>
-                  <p className="mt-2 text-body-sm text-neutral-500">{feature.body}</p>
-                </Card>
-              ))}
+        {/* FEATURES BENTO GRID */}
+        <section id="features" className="py-24 bg-neutral-50">
+          <PageContainer>
+            <div className="mb-12">
+              <h2 className="text-h2 text-neutral-900 mb-4">Built for Trust & Efficiency</h2>
+              <p className="text-body-lg text-neutral-600 max-w-2xl">
+                We've combined modern logistics tech with the existing collector network to create a seamless experience.
+              </p>
             </div>
-          </PageContainer>
-        </section>
 
-        {}
-        <section id="collectors" className="bg-role-collector-50">
-          <PageContainer className="py-16 lg:py-20">
-            <p className="font-heading text-overline text-role-collector-700">For collectors</p>
-            <h2 className="mt-2 max-w-2xl text-h2 text-neutral-900">
-              Formalizing the network, not replacing it
-            </h2>
-            <p className="mt-4 max-w-2xl text-body-lg text-neutral-600">
-              Existing apps tried to disintermediate Bangladesh&apos;s scrap collectors.
-              WasteWise&apos;s bet is the opposite: give the people already doing this work a
-              verified profile, steadier demand, and a provable income record.
-            </p>
-            <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
-              {collectorFeatures.map((feature) => (
-                <Card key={feature.title}>
-                  <h3 className="text-h4 text-neutral-900">{feature.title}</h3>
-                  <p className="mt-2 text-body-sm text-neutral-500">{feature.body}</p>
-                </Card>
-              ))}
-            </div>
-            <div className="mt-8">
-              <Button variant="ghost" href="/signup?role=collector">
-                Sign up as a collector →
-              </Button>
-            </div>
-          </PageContainer>
-        </section>
-
-        {}
-        <section className="bg-neutral-0">
-          <PageContainer className="py-16 lg:py-20">
-            <p className="font-heading text-overline text-primary-600">Who it&apos;s for</p>
-            <h2 className="mt-2 text-h2 text-neutral-900">One platform, four roles, one loop</h2>
-            <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {roleCards.map((card) => (
-                <Card key={card.role}>
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-h4 text-neutral-900">{card.role}</h3>
-                    {card.note && (
-                      <span className="text-caption text-neutral-400">{card.note}</span>
-                    )}
+            <div className="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-6">
+              
+              {/* Large Feature 1 */}
+              <div className="md:col-span-2 bg-white rounded-3xl p-8 shadow-sm border border-neutral-200/60 overflow-hidden relative group">
+                <div className="relative z-10 w-2/3">
+                  <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center mb-6">
+                    <Camera size={24} />
                   </div>
-                  <p className="mt-2 text-body-sm text-neutral-500">{card.body}</p>
-                </Card>
-              ))}
+                  <h3 className="text-h3 text-neutral-900 mb-3">AI Waste Recognition</h3>
+                  <p className="text-body text-neutral-600">
+                    Not sure what can be recycled? Just point your camera. Our AI model identifies materials instantly and tells you how to separate them.
+                  </p>
+                </div>
+                <div className="absolute right-0 bottom-0 w-1/2 h-full bg-gradient-to-tl from-purple-50 to-transparent -z-10 group-hover:scale-110 transition-transform origin-bottom-right" />
+              </div>
+
+              {/* Small Feature 1 */}
+              <div className="bg-[#114E29] rounded-3xl p-8 shadow-sm text-white overflow-hidden relative group">
+                <div className="relative z-10">
+                  <div className="w-12 h-12 rounded-xl bg-white/10 text-white flex items-center justify-center mb-6">
+                    <ShieldCheck size={24} />
+                  </div>
+                  <h3 className="text-h4 mb-3">Verified Network</h3>
+                  <p className="text-body-sm text-white/80">
+                    Every collector has passed ID and background verification for your safety.
+                  </p>
+                </div>
+              </div>
+
+              {/* Small Feature 2 */}
+              <div className="bg-yellow-100 rounded-3xl p-8 shadow-sm border border-yellow-200/50">
+                <div className="w-12 h-12 rounded-xl bg-yellow-200 text-yellow-800 flex items-center justify-center mb-6">
+                  <Gift size={24} />
+                </div>
+                <h3 className="text-h4 text-neutral-900 mb-3">Green Rewards</h3>
+                <p className="text-body-sm text-neutral-700">
+                  Earn points for every KG recycled. Redeem points directly for mobile recharge.
+                </p>
+              </div>
+
+              {/* Large Feature 2 */}
+              <div className="md:col-span-2 bg-white rounded-3xl p-8 shadow-sm border border-neutral-200/60 overflow-hidden relative">
+                <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-6">
+                  <MapPin size={24} />
+                </div>
+                <h3 className="text-h3 text-neutral-900 mb-3">Real-Time Tracking</h3>
+                <p className="text-body text-neutral-600 max-w-lg">
+                  Follow your collector's exact location on a live map so you know exactly when they'll arrive at your door. No more waiting around.
+                </p>
+              </div>
+
             </div>
           </PageContainer>
         </section>
 
-        {}
-        <section className="bg-neutral-50">
-          <PageContainer className="py-16 text-center lg:py-24">
-            <p className="font-heading text-overline text-primary-600">Get started</p>
-            <h2 className="mt-2 text-h2 text-neutral-900">Put your next pickup in writing</h2>
-            <p className="mx-auto mt-4 max-w-xl text-body-lg text-neutral-600">
-              Whether you&apos;re clearing out recyclables or looking for steadier collection
-              work, WasteWise gives both sides of the pickup something the informal system never
-              had: a record.
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Button size="lg" href="/signup">
-                Sign up
-              </Button>
-              <Button size="lg" variant="secondary" href="/login">
-                Log in
-              </Button>
+        {/* DUAL AUDIENCE SPLIT */}
+        <section id="collectors" className="py-24 bg-white border-t border-neutral-100">
+          <PageContainer>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+              
+              <div>
+                <h2 className="text-h3 text-neutral-900 mb-6">For Households & Businesses</h2>
+                <ul className="space-y-6">
+                  <li className="flex items-start gap-4">
+                    <CheckCircle2 className="text-green-600 shrink-0 mt-1" />
+                    <div>
+                      <h4 className="font-bold text-neutral-900">Convenience at your door</h4>
+                      <p className="text-neutral-600 text-body-sm mt-1">Schedule pickups precisely when you are home.</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-4">
+                    <CheckCircle2 className="text-green-600 shrink-0 mt-1" />
+                    <div>
+                      <h4 className="font-bold text-neutral-900">Fair Weight & Pricing</h4>
+                      <p className="text-neutral-600 text-body-sm mt-1">Pre-estimated weights keep transactions honest and transparent.</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-4">
+                    <CheckCircle2 className="text-green-600 shrink-0 mt-1" />
+                    <div>
+                      <h4 className="font-bold text-neutral-900">Digital Record</h4>
+                      <p className="text-neutral-600 text-body-sm mt-1">Track your total contribution to the environment over time.</p>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-neutral-900 rounded-3xl p-8 md:p-12 text-white shadow-2xl">
+                <h2 className="text-h3 text-white mb-6">For Scrap Collectors</h2>
+                <p className="text-white/70 mb-8">
+                  Stop wandering streets hoping for scrap. Turn your daily foot traffic into a formal, structured business.
+                </p>
+                <ul className="space-y-6 mb-10">
+                  <li className="flex items-start gap-4">
+                    <Route className="text-green-400 shrink-0 mt-1" />
+                    <div>
+                      <h4 className="font-bold text-white">Route Optimization</h4>
+                      <p className="text-white/60 text-body-sm mt-1">We sequence your daily jobs into one optimized map route.</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-4">
+                    <ClipboardList className="text-green-400 shrink-0 mt-1" />
+                    <div>
+                      <h4 className="font-bold text-white">Income Dashboard</h4>
+                      <p className="text-white/60 text-body-sm mt-1">Build a provable income history to show banks and landlords.</p>
+                    </div>
+                  </li>
+                </ul>
+                <Button size="lg" variant="primary" href="/signup?role=collector" className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-neutral-900 font-bold border-none">
+                  Apply to become a collector
+                </Button>
+              </div>
+
             </div>
           </PageContainer>
         </section>
       </main>
 
-      <footer className="border-t border-neutral-200 bg-neutral-0">
-        <PageContainer className="flex flex-col items-start justify-between gap-4 py-8 md:flex-row md:items-center">
-          <div>
-            <p className="font-heading text-h4 text-neutral-900">WasteWise</p>
-            <p className="mt-1 text-body-sm text-neutral-500">
-              Digitizing recycling logistics in Bangladesh.
-            </p>
+      {/* FOOTER */}
+      <footer className="bg-neutral-50 py-4 border-t border-neutral-200/60">
+        <PageContainer className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col items-center md:items-start gap-2">
+            <span className="font-heading text-xl font-bold text-neutral-900">WasteWise</span>
+            <span className="text-caption text-neutral-500 uppercase tracking-wider">Formalizing Waste Management</span>
           </div>
-          <p className="text-caption text-neutral-400">
+          <p className="text-body-sm text-neutral-500">
             &copy; {new Date().getFullYear()} WasteWise. All rights reserved.
           </p>
         </PageContainer>

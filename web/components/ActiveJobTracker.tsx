@@ -423,8 +423,17 @@ function ActiveJobCard({
             </div>
           </div>
         ) : status === "EN_ROUTE" ? (
-          <div className="flex justify-center text-center py-4">
-            <p className="text-body-sm text-neutral-500 italic">Driving to destination... Location is updating automatically. Status will change to Arrived once you are within 50 meters.</p>
+          <div className="flex flex-col gap-4 py-4">
+            <p className="text-body-sm text-neutral-500 italic text-center">Driving to destination... Location is updating automatically.</p>
+            <div className="flex justify-end">
+              <Button size="sm" onClick={() => {
+                setStatusError(null);
+                setAdvancing(true);
+                getTrackingSocket().emit(PICKUP_STATUS_UPDATE_EVENT, { pickupRequestId: job.id, status: "ARRIVED" });
+              }}>
+                Mark as Arrived
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-end gap-2">

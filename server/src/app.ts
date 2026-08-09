@@ -31,6 +31,7 @@ export function createApp() {
     cors({
       origin: env.CLIENT_ORIGIN,
       credentials: true,
+      maxAge: 86400, // cache preflight OPTIONS requests for 24 hours
     }),
   );
   app.use(generalRateLimiter);
@@ -58,6 +59,11 @@ export function createApp() {
   app.use(
     "/uploads/waste-recognition",
     helmet.crossOriginResourcePolicy({ policy: "cross-origin" }),
+    (req, res, next) => {
+      res.setHeader("Content-Disposition", "attachment");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      next();
+    },
     express.static(WASTE_PHOTO_UPLOAD_DIR),
   );
 

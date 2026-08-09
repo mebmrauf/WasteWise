@@ -7,10 +7,22 @@ export function getRewardsBalance(): Promise<{ greenPointsBalance: number }> {
   return authFetch<{ greenPointsBalance: number }>("/rewards/balance", { method: "GET" });
 }
 
+export interface RewardReason {
+  materials: { category: string; weight: number; points: number }[];
+  bonuses: { name: string; points: number }[];
+  basePoints: number;
+  bonusPoints: number;
+  totalPoints: number;
+}
+
 export interface GreenPointsTransaction {
   id: string;
   pickupRequestId: string | null;
   points: number;
+  basePoints: number | null;
+  bonusPoints: number | null;
+  totalPoints: number | null;
+  rewardReason: RewardReason | null;
   type: "EARNED" | "REDEEMED";
   description: string;
   createdAt: string;

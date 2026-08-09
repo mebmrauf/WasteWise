@@ -1,4 +1,3 @@
-
 import { Megaphone } from "lucide-react";
 import { ComingSoonPage } from "@/components/ComingSoonPage";
 

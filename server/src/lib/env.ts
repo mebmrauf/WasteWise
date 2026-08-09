@@ -37,7 +37,7 @@ const envSchema = z.object({
 
   GOOGLE_MAPS_SERVER_API_KEY: z.string().optional().default(""),
   // --- AI Vision (Waste Recognition, optional — feature disabled if blank) ---
-  GOOGLE_VISION_API_KEY: z.string().optional().default(""),
+  GOOGLE_VISION_API_KEY: z.string().transform(s => s.replace(/^["']|["']$/g, '').trim()).optional().default(""),
 
   CLOUDINARY_CLOUD_NAME: z.string().optional().default(""),
   CLOUDINARY_API_KEY: z.string().optional().default(""),
@@ -56,7 +56,7 @@ const envSchema = z.object({
     .default("info"),
 
   ADMIN_EMAIL: z.string().email("must be a valid email for the admin user").default("admin@wastewise.com"),
-  ADMIN_PASSWORD: z.string().min(8, "admin password must be at least 8 characters").default("Admin123!"),
+  ADMIN_PASSWORD: z.string().min(8, "admin password must be at least 8 characters"),
 });
 
 export type Env = z.infer<typeof envSchema>;

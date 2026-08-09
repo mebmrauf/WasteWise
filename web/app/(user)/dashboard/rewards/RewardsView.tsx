@@ -147,28 +147,61 @@ export function RewardsView() {
             ) : (
               <div className="mt-6 flex flex-col gap-3">
                 {greenPointsTransactions.map((transaction) => (
-                  <Card key={transaction.id} className="flex items-center justify-between gap-4 p-5 rounded-2xl hover:shadow-md transition-all border-neutral-100 bg-white/60 backdrop-blur-sm">
-                    <div className="flex items-center gap-4">
-                      <div className={cn(
-                        "flex items-center justify-center h-10 w-10 rounded-full",
-                        transaction.type === "EARNED" ? "bg-success-100 text-success-600" : "bg-neutral-100 text-neutral-600"
-                      )}>
-                        <Icon icon={transaction.type === "EARNED" ? ArrowDownRight : ArrowUpRight} size="sm" />
+                  <Card key={transaction.id} className="flex flex-col gap-4 p-5 rounded-2xl hover:shadow-md transition-all border-neutral-100 bg-white/60 backdrop-blur-sm">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className={cn(
+                          "flex items-center justify-center h-10 w-10 rounded-full",
+                          transaction.type === "EARNED" ? "bg-success-100 text-success-600" : "bg-neutral-100 text-neutral-600"
+                        )}>
+                          <Icon icon={transaction.type === "EARNED" ? ArrowDownRight : ArrowUpRight} size="sm" />
+                        </div>
+                        <div>
+                          <p className="text-body font-medium text-neutral-900">{transaction.description}</p>
+                          <p className="mt-0.5 text-caption text-neutral-500">{formatDateTime(transaction.createdAt)}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-body font-medium text-neutral-900">{transaction.description}</p>
-                        <p className="mt-0.5 text-caption text-neutral-500">{formatDateTime(transaction.createdAt)}</p>
-                      </div>
+                      <span
+                        className={cn(
+                          "font-data text-data-lg",
+                          transaction.type === "EARNED" ? "text-success-700" : "text-neutral-900"
+                        )}
+                      >
+                        {transaction.type === "EARNED" ? "+" : "-"}
+                        {transaction.points.toLocaleString()} pts
+                      </span>
                     </div>
-                    <span
-                      className={cn(
-                        "font-data text-data-lg",
-                        transaction.type === "EARNED" ? "text-success-700" : "text-neutral-900"
-                      )}
-                    >
-                      {transaction.type === "EARNED" ? "+" : "-"}
-                      {transaction.points.toLocaleString()} pts
-                    </span>
+
+                    {transaction.type === "EARNED" && transaction.rewardReason && (
+                      <div className="mt-2 pl-14 flex flex-col gap-3 border-t border-neutral-100 pt-3">
+                        {transaction.rewardReason.materials.length > 0 && (
+                          <div>
+                            <p className="text-caption font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Materials</p>
+                            <div className="flex flex-col gap-1">
+                              {transaction.rewardReason.materials.map((mat, i) => (
+                                <div key={i} className="flex justify-between items-center text-body-sm text-neutral-700">
+                                  <span>{mat.category} <span className="text-neutral-400">({mat.weight} kg)</span></span>
+                                  <span className="font-medium">+{mat.points} pts</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {transaction.rewardReason.bonuses.length > 0 && (
+                          <div>
+                            <p className="text-caption font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Bonuses</p>
+                            <div className="flex flex-col gap-1">
+                              {transaction.rewardReason.bonuses.map((bonus, i) => (
+                                <div key={i} className="flex justify-between items-center text-body-sm text-neutral-700">
+                                  <span>{bonus.name}</span>
+                                  <span className="font-medium text-success-600">+{bonus.points} pts</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </Card>
                 ))}
               </div>
