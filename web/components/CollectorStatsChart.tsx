@@ -88,7 +88,7 @@ export function CollectorStatsChart() {
                 cursor={{ fill: "#f5f5f5" }}
                 contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
                 labelFormatter={(label) => format(new Date(label as string), "MMM d, yyyy")}
-                formatter={(value: number) => [`${value.toFixed(1)} kg`, "Collected"]}
+                formatter={(value: any) => [`${Number(value || 0).toFixed(1)} kg`, "Collected"]}
               />
               <Bar 
                 dataKey="weight" 
@@ -130,7 +130,7 @@ export function CollectorStatsChart() {
                 <Tooltip 
                   cursor={{ fill: "#f5f5f5" }}
                   contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
-                  formatter={(value: number) => [`${value.toFixed(1)} kg`, "Total Weight"]}
+                  formatter={(value: any) => [`${Number(value || 0).toFixed(1)} kg`, "Total Weight"]}
                 />
                 <Bar 
                   dataKey="weight" 

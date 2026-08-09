@@ -132,7 +132,7 @@ export function CollectorRatingModal({ pickupId, collectorName, onClose, onSucce
 
             {errorMsg && (
               <div className="mb-6">
-                <ErrorBanner message={errorMsg} onDismiss={() => setErrorMsg(null)} />
+                <ErrorBanner>{errorMsg}</ErrorBanner>
               </div>
             )}
 
