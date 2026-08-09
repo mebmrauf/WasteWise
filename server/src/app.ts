@@ -31,6 +31,7 @@ export function createApp() {
     cors({
       origin: env.CLIENT_ORIGIN,
       credentials: true,
+      maxAge: 86400, // cache preflight OPTIONS requests for 24 hours
     }),
   );
   app.use(generalRateLimiter);
