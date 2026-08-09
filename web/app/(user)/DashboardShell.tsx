@@ -30,8 +30,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         active: onTrackDetail || onOffersDetail ? true : undefined,
       },
       { label: "Waste Recognition", href: "/waste-recognition", icon: Camera },
-      { label: "Complaints", href: "/dashboard/complaints", icon: Megaphone },
       { label: "Green Rewards", href: "/dashboard/rewards", icon: Gift },
+      { label: "Complaints", href: "/dashboard/complaints", icon: Megaphone },
     ],
     [onTrackDetail, onOffersDetail]
   );

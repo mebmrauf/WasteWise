@@ -59,6 +59,11 @@ export function createApp() {
   app.use(
     "/uploads/waste-recognition",
     helmet.crossOriginResourcePolicy({ policy: "cross-origin" }),
+    (req, res, next) => {
+      res.setHeader("Content-Disposition", "attachment");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      next();
+    },
     express.static(WASTE_PHOTO_UPLOAD_DIR),
   );
 

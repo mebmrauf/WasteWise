@@ -56,7 +56,7 @@ const envSchema = z.object({
     .default("info"),
 
   ADMIN_EMAIL: z.string().email("must be a valid email for the admin user").default("admin@wastewise.com"),
-  ADMIN_PASSWORD: z.string().min(8, "admin password must be at least 8 characters").default("Admin123!"),
+  ADMIN_PASSWORD: z.string().min(8, "admin password must be at least 8 characters"),
 });
 
 export type Env = z.infer<typeof envSchema>;
