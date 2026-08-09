@@ -178,11 +178,9 @@ wasteRecognitionRouter.post(
       throw err;
     }
 
-    // Never trust/persist the client-supplied original filename — same
-    // reasoning as routes/users.ts's avatar upload.
-    const filename = `${req.user!.id}-${randomBytes(8).toString("hex")}.${signature.ext}`;
-    fs.writeFileSync(path.join(WASTE_PHOTO_UPLOAD_DIR, filename), req.file.buffer);
-    const imageUrl = `/uploads/waste-recognition/${filename}`;
+    // The user has opted not to save waste recognition images.
+    // We skip fs.writeFileSync and just pass an empty string for the database log.
+    const imageUrl = "";
 
     const log = await prisma.wasteRecognitionLog.create({
       data: {
