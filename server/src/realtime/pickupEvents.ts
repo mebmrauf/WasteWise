@@ -4,7 +4,7 @@ import { prisma } from "../lib/prisma";
 import { logger } from "../lib/logger";
 import { createNotification } from "../lib/notifications";
 import { authorizePickupAccess } from "../lib/pickupAccess";
-import { POINTS_PER_PICKUP } from "../lib/rewards";
+import { calculateGreenPointsForPickup } from "../lib/rewards";
 import { getIO, pickupRoomName, type Server, type Socket } from "./socket";
 import {
   joinPickupRoomSchema,
@@ -238,7 +238,11 @@ async function handleStatusUpdate(socket: Socket, payload: unknown): Promise<voi
     );
     return;
   }
-  if (access.pickup.status === PickupStatus.ARRIVED && status !== PickupStatus.ARRIVED) {
+  if (
+    access.pickup.status === PickupStatus.ARRIVED && 
+    status !== PickupStatus.ARRIVED && 
+    status !== PickupStatus.EN_ROUTE
+  ) {
     emitPickupError(
       socket,
       PICKUP_STATUS_UPDATE_EVENT,
@@ -333,23 +337,45 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
     return;
   }
 
-  const [updatedPickup, trackingEvent] = await prisma.$transaction([
-    prisma.pickupRequest.update({ where: { id: pickupRequestId }, data: { status: PickupStatus.COMPLETED } }),
-    prisma.pickupTrackingEvent.create({ data: { pickupRequestId, status: PickupStatus.COMPLETED } }),
-    prisma.user.update({
+  const items = await prisma.pickupRequestItem.findMany({
+    where: { pickupRequestId },
+  });
+  
+  const validItems = items
+    .filter(item => item.exactWeightKg !== null)
+    .map(item => ({ category: item.category, exactWeightKg: item.exactWeightKg! }));
+
+  const [updatedPickup, trackingEvent] = await prisma.$transaction(async (tx) => {
+    const { totalPoints, basePoints, bonusPoints, rewardReason } = await calculateGreenPointsForPickup(
+      access.pickup.requesterId,
+      validItems,
+      tx
+    );
+
+    const updated = await tx.pickupRequest.update({ where: { id: pickupRequestId }, data: { status: PickupStatus.COMPLETED } });
+    const tracking = await tx.pickupTrackingEvent.create({ data: { pickupRequestId, status: PickupStatus.COMPLETED } });
+    
+    await tx.user.update({
       where: { id: access.pickup.requesterId },
-      data: { greenPointsBalance: { increment: POINTS_PER_PICKUP } },
-    }),
-    prisma.greenPointsTransaction.create({
+      data: { greenPointsBalance: { increment: totalPoints } },
+    });
+    
+    await tx.greenPointsTransaction.create({
       data: {
         userId: access.pickup.requesterId,
         pickupRequestId,
-        points: POINTS_PER_PICKUP,
+        points: totalPoints,
+        basePoints,
+        bonusPoints,
+        totalPoints,
+        rewardReason,
         type: GreenPointsTransactionType.EARNED,
         description: "Pickup completed",
       },
-    }),
-  ]) as [PickupRequest, PickupTrackingEvent, ...unknown[]];
+    });
+
+    return [updated, tracking];
+  });
 
   emitEvent(getIO().to(pickupRoomName(pickupRequestId)), PICKUP_STATUS_EVENT, {
     pickupRequestId,
