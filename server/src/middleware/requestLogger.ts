@@ -11,7 +11,7 @@ export const requestLogger = pinoHttp({
     return id;
   },
   autoLogging: {
-    ignore: (req) => req.url === "/health" || req.url === "/favicon.ico",
+    ignore: (req) => req.url === "/health" || req.url === "/favicon.ico" || req.url === "/",
   },
   customLogLevel: (_req, res, err) => {
     if (err || res.statusCode >= 500) return "error";
