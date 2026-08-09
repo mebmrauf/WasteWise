@@ -84,20 +84,28 @@ export default function CollectorDashboardPage() {
           </Card>
         )
       ) : (
-        <div className="flex flex-col gap-12 w-full max-w-5xl">
+        <div className="flex flex-col gap-8 w-full max-w-6xl">
+          {/* Welcome Hero */}
+          <div className="rounded-3xl bg-gradient-to-br from-primary-600 to-primary-800 p-8 text-white shadow-xl relative overflow-hidden">
+            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay"></div>
+            <div className="relative z-10">
+              <h2 className="text-3xl font-heading font-bold mb-2">
+                Welcome back, {profile?.fullName?.split(" ")[0] || "Collector"}! 👋
+              </h2>
+              <p className="text-primary-100 max-w-xl text-lg">
+                Here is your performance hub. Check your latest reputation feedback and track the waste you've collected.
+              </p>
+            </div>
+          </div>
 
-          {/* Reputation Section */}
-          <section className="w-full">
+          {/* Bento Grid Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-max">
             <CollectorRatingsPanel 
               averageRating={profile?.collectorProfile?.averageRating ?? null}
               totalRatings={profile?.collectorProfile?.totalRatings ?? 0}
             />
-          </section>
-
-          {/* Stats Section */}
-          <section className="w-full">
             <CollectorStatsChart />
-          </section>
+          </div>
         </div>
       )}
     </PageContainer>

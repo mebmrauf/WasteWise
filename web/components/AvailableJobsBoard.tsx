@@ -138,13 +138,8 @@ export function AvailableJobsBoard() {
 
   return (
     <div className="w-full">
-      <div className="mb-6">
-        <h2 className="text-h2 text-neutral-900">Available Jobs</h2>
-        <p className="mt-1 text-body text-neutral-500">Pickups requested in your service area.</p>
-      </div>
-
       {loadState === "loading" && (
-        <Card className="mt-8 text-center">
+        <Card className="glass-panel border-0 shadow-sm mt-8 text-center p-8">
           <p className="text-body-sm text-neutral-500">Loading open pickup requests…</p>
         </Card>
       )}
@@ -152,27 +147,31 @@ export function AvailableJobsBoard() {
       {loadState === "error" && <ErrorBanner className="mt-8">{loadError}</ErrorBanner>}
 
       {loadState === "unverified" && (
-        <Card className="mt-8 flex flex-col items-center gap-3 py-10 text-center">
-          <Icon icon={ShieldAlert} size="lg" className="text-warning-500" aria-hidden />
+        <Card className="glass-panel mt-8 flex flex-col items-center gap-4 py-16 text-center shadow-lg border-0 rounded-2xl">
+          <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-warning-100 text-warning-500">
+            <Icon icon={ShieldAlert} size="lg" aria-hidden />
+          </div>
           <div>
-            <p className="text-h4 text-neutral-900">Verification pending</p>
-            <p className="mt-1 max-w-md text-body-sm text-neutral-500">
+            <p className="font-heading text-h3 text-neutral-900">Verification pending</p>
+            <p className="mt-2 text-body-lg text-neutral-500 max-w-sm mx-auto">
               Your collector account needs to be verified by an admin before you can browse open
               pickup requests. Check back once your profile has been approved.
             </p>
           </div>
-          <Button variant="secondary" onClick={() => void fetchJobs()}>
+          <Button variant="secondary" onClick={() => void fetchJobs()} className="mt-4 px-8">
             Check again
           </Button>
         </Card>
       )}
 
       {loadState === "ready" && jobs.length === 0 && (
-        <Card className="mt-8 flex flex-col items-center gap-3 py-10 text-center">
-          <Icon icon={ClipboardX} size="lg" className="text-neutral-400" aria-hidden />
+        <Card className="glass-panel mt-8 flex flex-col items-center gap-4 py-16 text-center shadow-lg border-0 rounded-2xl">
+          <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-primary-100 text-primary-500">
+            <Icon icon={ClipboardX} size="lg" aria-hidden />
+          </div>
           <div>
-            <p className="text-h4 text-neutral-900">No open pickup requests right now</p>
-            <p className="mt-1 text-body-sm text-neutral-500">
+            <p className="font-heading text-h3 text-neutral-900">No open pickup requests</p>
+            <p className="mt-2 text-body-lg text-neutral-500 max-w-sm mx-auto">
               New requests appear here as households post them — check back soon.
             </p>
           </div>
@@ -205,7 +204,7 @@ export function AvailableJobsBoard() {
                 />
 
                 {isExpanded && (
-                  <Card className="flex flex-col gap-4">
+                  <Card className="glass-panel border-0 shadow-sm flex flex-col gap-4 rounded-xl p-6 bg-white/40 mt-[-8px]">
                     {alreadySubmitted ? (
                       <p className="text-body-sm text-neutral-600">
                         You&apos;ve already submitted an offer on this pickup — the requester will be

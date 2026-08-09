@@ -312,15 +312,22 @@ export function CollectorProfileView() {
 
   return (
     <PageContainer className="py-8 lg:py-12">
-      <h1 className="text-h1 text-neutral-900">Your profile</h1>
-      <p className="mt-2 text-body-lg text-neutral-500">
-        Manage your contact details, vehicle, and service area.
-      </p>
+      <div className="flex flex-col gap-8 w-full max-w-4xl">
+        {/* Profile Hero */}
+        <div className="rounded-3xl bg-gradient-to-br from-primary-600 to-primary-800 p-8 text-white shadow-xl relative overflow-hidden">
+          <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay"></div>
+          <div className="relative z-10">
+            <h1 className="text-3xl font-heading font-bold mb-2">Your Profile</h1>
+            <p className="text-primary-100 max-w-xl text-lg">
+              Manage your contact details, vehicle, and service area.
+            </p>
+          </div>
+        </div>
 
-      {extrasError && <ErrorBanner className="mt-4 max-w-form">{extrasError}</ErrorBanner>}
+        {extrasError && <ErrorBanner className="w-full">{extrasError}</ErrorBanner>}
 
-      <Card className="mt-8 max-w-form">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+        <Card className="glass-panel border-0 shadow-lg rounded-2xl p-8 w-full">
+          <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
           <AvatarUpload
             name={user.fullName}
             currentSrc={extras?.avatarUrl ?? null}
@@ -443,6 +450,7 @@ export function CollectorProfileView() {
           </div>
         </div>
       </Card>
+      </div>
     </PageContainer>
   );
 }
