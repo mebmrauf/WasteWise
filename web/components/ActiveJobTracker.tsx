@@ -94,13 +94,8 @@ export function ActiveJobTracker() {
 
   return (
     <div className="w-full mb-12">
-      <div className="mb-6">
-        <h2 className="text-h2 text-neutral-900">Active Job</h2>
-        <p className="mt-1 text-body text-neutral-500">Track your current assignment and share live location.</p>
-      </div>
-
       {loadState === "loading" && (
-        <Card className="mt-8 text-center">
+        <Card className="glass-panel border-0 shadow-sm mt-8 text-center p-8">
           <p className="text-body-sm text-neutral-500">Loading your active job…</p>
         </Card>
       )}
@@ -108,19 +103,19 @@ export function ActiveJobTracker() {
       {loadState === "error" && <ErrorBanner className="mt-8">{loadError}</ErrorBanner>}
 
       {loadState === "ready" && jobs.length === 0 && (
-        <Card className="mt-8 flex flex-col items-center gap-3 py-10 text-center">
-          <Icon icon={Compass} size="lg" className="text-neutral-400" aria-hidden />
+        <Card className="glass-panel mt-8 flex flex-col items-center gap-4 py-16 text-center shadow-lg border-0 rounded-2xl">
+          <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-primary-100 text-primary-600">
+            <Icon icon={Compass} size="lg" aria-hidden />
+          </div>
           <div>
-            <p className="text-h4 text-neutral-900">No active job</p>
-            <p className="mt-1 max-w-md text-body-sm text-neutral-500">
-              Once one of your bids is accepted, the job will show up here with live tracking
-              controls.
+            <p className="font-heading text-h3 text-neutral-900">No active job</p>
+            <p className="mt-2 text-body-lg text-neutral-500 max-w-sm mx-auto">
+              Once one of your bids is accepted, the job will show up here with live tracking controls.
             </p>
           </div>
-          <div className="flex flex-wrap justify-center gap-3">
-            <Button href="/collector/jobs">Browse available jobs</Button>
-            {}
-            <Button variant="secondary" onClick={() => void fetchJobs()}>
+          <div className="flex flex-wrap justify-center gap-3 mt-4">
+            <Button href="/collector/jobs" className="px-8">Browse available jobs</Button>
+            <Button variant="secondary" onClick={() => void fetchJobs()} className="px-8">
               Check for updates
             </Button>
           </div>
@@ -346,8 +341,8 @@ function ActiveJobCard({
   const nextStatus = nextStatusInSequence(status);
 
   return (
-    <Card className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <Card className="glass-panel border-0 shadow-lg flex flex-col gap-4 rounded-2xl">
+      <div className="flex flex-wrap items-start justify-between gap-3 p-2">
         <div className="flex items-center gap-2 text-body-sm text-neutral-700">
           <Icon icon={MapPin} size="sm" className="text-neutral-500" aria-hidden />
           <span>{job.pickupFormattedAddress}</span>

@@ -51,7 +51,6 @@ export default function CollectorJobsPage() {
 
   return (
     <PageContainer className="py-8 lg:py-12">
-      <h1 className="text-h1 text-neutral-900 mb-8">Find Jobs</h1>
 
       {!isApproved ? (
         hasMissingInfo ? (
@@ -82,7 +81,20 @@ export default function CollectorJobsPage() {
           </Card>
         )
       ) : (
-        <div className="flex flex-col gap-12 w-full max-w-5xl">
+        <div className="flex flex-col gap-8 w-full max-w-6xl">
+          {/* Marketplace Hero */}
+          <div className="rounded-3xl bg-gradient-to-br from-primary-600 to-primary-800 p-8 text-white shadow-xl relative overflow-hidden">
+            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay"></div>
+            <div className="relative z-10">
+              <h2 className="text-3xl font-heading font-bold mb-2">
+                Available Jobs Marketplace
+              </h2>
+              <p className="text-primary-100 max-w-xl text-lg">
+                Browse open pickup requests in your service area, estimate weights, and submit competitive bids.
+              </p>
+            </div>
+          </div>
+          
           <section className="w-full">
             <AvailableJobsBoard />
           </section>

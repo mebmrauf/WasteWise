@@ -44,7 +44,7 @@ export function AvailableJobListItem({
   className,
 }: AvailableJobListItemProps) {
   return (
-    <Card className={cn("flex flex-col gap-4", className)}>
+    <Card className={cn("glass-panel border-0 shadow-md hover:shadow-lg transition-shadow flex flex-col gap-4 rounded-2xl p-6", className)}>
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2 text-body-sm text-neutral-700">
           <Icon icon={MapPin} size="sm" className="text-neutral-500" />

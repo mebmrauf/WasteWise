@@ -59,10 +59,10 @@ export function CollectorStatsChart() {
   const hasCategoryData = categoryStats.some((c) => c.weight > 0);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <>
       {/* 7-Day Collection Bar Chart */}
-      <Card className="p-6 flex flex-col h-96">
-        <h3 className="text-h4 text-neutral-900 mb-6">Waste Collected (Last 7 Days)</h3>
+      <Card className="glass-panel p-6 flex flex-col h-[400px] border-0 shadow-lg rounded-2xl md:col-span-2 lg:col-span-2">
+        <h3 className="text-h4 text-neutral-900 mb-6 font-heading">Waste Collected (Last 7 Days)</h3>
         <div className="flex-1 w-full h-full min-h-[250px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -92,18 +92,24 @@ export function CollectorStatsChart() {
               />
               <Bar 
                 dataKey="weight" 
-                fill="#10b981" 
+                fill="url(#colorUv)" 
                 radius={[4, 4, 0, 0]}
                 barSize={32}
               />
+              <defs>
+                <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={1}/>
+                </linearGradient>
+              </defs>
             </BarChart>
           </ResponsiveContainer>
         </div>
       </Card>
 
       {/* Category Bar Chart */}
-      <Card className="p-6 flex flex-col h-96">
-        <h3 className="text-h4 text-neutral-900 mb-6">Waste by Category (All Time)</h3>
+      <Card className="glass-panel p-6 flex flex-col h-[400px] border-0 shadow-lg rounded-2xl md:col-span-2 lg:col-span-2">
+        <h3 className="text-h4 text-neutral-900 mb-6 font-heading">Waste by Category (All Time)</h3>
         <div className="flex-1 w-full h-full min-h-[250px]">
           {hasCategoryData ? (
             <ResponsiveContainer width="100%" height="100%">
@@ -150,6 +156,6 @@ export function CollectorStatsChart() {
           )}
         </div>
       </Card>
-    </div>
+    </>
   );
 }
