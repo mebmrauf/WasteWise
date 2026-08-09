@@ -91,3 +91,32 @@ export function updateCollectorProfile(
     headers: { "x-csrf-token": readCsrfToken() },
   });
 }
+
+export interface CollectorRating {
+  id: string;
+  score: number;
+  comment: string | null;
+  createdAt: string;
+}
+
+export function getMyRatings(): Promise<{ ratings: CollectorRating[] }> {
+  return authFetch<{ ratings: CollectorRating[] }>("/users/me/ratings", {
+    method: "GET",
+  });
+}
+
+export interface CollectorCategoryStat {
+  category: string;
+  weight: number;
+}
+
+export interface CollectorDailyStat {
+  date: string;
+  weight: number;
+}
+
+export function getMyStats(): Promise<{ categoryStats: CollectorCategoryStat[]; dailyStats: CollectorDailyStat[] }> {
+  return authFetch<{ categoryStats: CollectorCategoryStat[]; dailyStats: CollectorDailyStat[] }>("/users/me/stats", {
+    method: "GET",
+  });
+}

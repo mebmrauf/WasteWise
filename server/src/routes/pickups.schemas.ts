@@ -95,3 +95,9 @@ export const rejectWeightsSchema = z.object({
   pickupRequestId: pickupIdSchema,
 });
 type RejectWeightsInput = z.infer<typeof rejectWeightsSchema>;
+
+export const ratePickupSchema = z.object({
+  score: z.number().int().min(1).max(5),
+  comment: z.string().trim().max(500).optional(),
+});
+type RatePickupInput = z.infer<typeof ratePickupSchema>;

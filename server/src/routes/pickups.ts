@@ -16,7 +16,7 @@ import {
 import { getLoadSizeKgRange } from "../lib/loadSize";
 import { emitToRoom } from "../realtime/emitToRoom";
 import { PICKUP_STATUS_EVENT } from "../realtime/pickupEvents";
-import { createPickupRequestSchema } from "./pickups.schemas";
+import { createPickupRequestSchema, ratePickupSchema } from "./pickups.schemas";
 
 export const pickupsRouter = Router();
 
@@ -50,6 +50,7 @@ function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], o
 function toPickupDetail(
   pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[] },
   weightRecord: WeightRecord | null,
+  rating?: { score: number; comment: string | null; createdAt: Date } | null,
 ) {
   return {
     ...toPickupSummary(pickup),
@@ -59,6 +60,13 @@ function toPickupDetail(
           estimatedMaxKg: weightRecord.estimatedMaxKg,
           exactWeightKg: weightRecord.exactWeightKg,
           loggedAt: weightRecord.loggedAt,
+        }
+      : null,
+    rating: rating
+      ? {
+          score: rating.score,
+          comment: rating.comment,
+          createdAt: rating.createdAt,
         }
       : null,
   };
@@ -232,7 +240,7 @@ pickupsRouter.get(
       return;
     }
 
-    const [items, weightRecord, offers] = await Promise.all([
+    const [items, weightRecord, offers, rating] = await Promise.all([
       prisma.pickupRequestItem.findMany({
         where: { pickupRequestId: access.pickup.id },
         orderBy: { createdAt: "asc" },
@@ -243,9 +251,12 @@ pickupsRouter.get(
       prisma.offer.findMany({
         where: { pickupRequestId: access.pickup.id, status: OfferStatus.ACCEPTED },
       }),
+      prisma.rating.findUnique({
+        where: { pickupRequestId: access.pickup.id },
+      }),
     ]);
 
-    sendData(res, 200, { pickup: toPickupDetail({ ...access.pickup, items, offers }, weightRecord) });
+    sendData(res, 200, { pickup: toPickupDetail({ ...access.pickup, items, offers }, weightRecord, rating) });
   }),
 );
 
@@ -416,5 +427,80 @@ pickupsRouter.get(
         },
       })),
     });
+  }),
+);
+
+pickupsRouter.post(
+  "/:id/rate",
+  requireAuth,
+  requireRole("USER"),
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    
+    const parsed = ratePickupSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
+      return;
+    }
+    const { score, comment } = parsed.data;
+
+    const pickup = await prisma.pickupRequest.findUnique({ where: { id } });
+    if (!pickup) {
+      sendError(res, 404, "NOT_FOUND", "Pickup not found.");
+      return;
+    }
+    if (pickup.requesterId !== req.user!.id) {
+      sendError(res, 403, "FORBIDDEN", "Only the requester can rate this pickup.");
+      return;
+    }
+    if (pickup.status !== PickupStatus.COMPLETED) {
+      sendError(res, 400, "INVALID_STATUS", "You can only rate a completed pickup.");
+      return;
+    }
+    if (!pickup.assignedCollectorId) {
+      sendError(res, 400, "NO_COLLECTOR", "No collector was assigned to this pickup.");
+      return;
+    }
+
+    const existingRating = await prisma.rating.findUnique({ where: { pickupRequestId: id } });
+    if (existingRating) {
+      sendError(res, 409, "ALREADY_RATED", "You have already rated this pickup.");
+      return;
+    }
+
+    const assignedCollectorId = pickup.assignedCollectorId;
+    
+    await prisma.$transaction(async (tx) => {
+      await tx.rating.create({
+        data: {
+          pickupRequestId: id,
+          raterId: req.user!.id,
+          collectorId: assignedCollectorId,
+          score,
+          comment,
+        },
+      });
+
+      const profile = await tx.collectorProfile.findUnique({
+        where: { userId: assignedCollectorId },
+      });
+      if (profile) {
+        const oldTotal = profile.totalRatings;
+        const oldAvg = profile.averageRating ?? 0;
+        const newTotal = oldTotal + 1;
+        const newAvg = ((oldAvg * oldTotal) + score) / newTotal;
+
+        await tx.collectorProfile.update({
+          where: { userId: assignedCollectorId },
+          data: {
+            totalRatings: newTotal,
+            averageRating: newAvg,
+          },
+        });
+      }
+    });
+
+    sendData(res, 201, { success: true });
   }),
 );

@@ -348,3 +348,93 @@ usersRouter.post(
     sendData(res, 200, { user: toPublicProfile(updated) });
   }),
 );
+
+usersRouter.get(
+  "/me/ratings",
+  requireAuth,
+  requireRole("COLLECTOR"),
+  asyncHandler(async (req, res) => {
+    const ratings = await prisma.rating.findMany({
+      where: { collectorId: req.user!.id },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        score: true,
+        comment: true,
+        createdAt: true,
+      },
+    });
+
+    sendData(res, 200, { ratings });
+  }),
+);
+
+usersRouter.get(
+  "/me/stats",
+  requireAuth,
+  requireRole("COLLECTOR"),
+  asyncHandler(async (req, res) => {
+    const collectorId = req.user!.id;
+    
+    // Get pickups completed by this collector
+    const pickups = await prisma.pickupRequest.findMany({
+      where: {
+        assignedCollectorId: collectorId,
+        status: "COMPLETED",
+      },
+      include: {
+        items: true,
+        weightRecord: true,
+      },
+    });
+
+    const categoryStats: Record<string, number> = {};
+    const dailyStats: Record<string, number> = {};
+
+    // Initialize daily stats for the last 7 days
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      dailyStats[dateStr] = 0;
+    }
+
+    pickups.forEach((pickup) => {
+      // For category stats, use the exactWeightKg if available (from items)
+      pickup.items.forEach((item) => {
+        const weight = item.exactWeightKg || 0;
+        if (!categoryStats[item.category]) {
+          categoryStats[item.category] = 0;
+        }
+        categoryStats[item.category] += weight;
+      });
+
+      // For daily stats, use the exactWeightKg sum of all items
+      // Group by the day the pickup was updated to COMPLETED (updatedAt)
+      const dateStr = pickup.updatedAt.toISOString().split("T")[0];
+      if (dailyStats[dateStr] !== undefined) {
+        const totalWeight = pickup.items.reduce((sum, item) => sum + (item.exactWeightKg || 0), 0);
+        dailyStats[dateStr] += totalWeight;
+      }
+    });
+
+    // Format for charts
+    const formattedCategoryStats = Object.keys(categoryStats).map((category) => ({
+      category,
+      weight: categoryStats[category],
+    }));
+
+    const formattedDailyStats = Object.keys(dailyStats)
+      .sort((a, b) => a.localeCompare(b))
+      .map((date) => ({
+        date,
+        weight: dailyStats[date],
+      }));
+
+    sendData(res, 200, {
+      categoryStats: formattedCategoryStats,
+      dailyStats: formattedDailyStats,
+    });
+  }),
+);

@@ -6,18 +6,16 @@ import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { useRequireRole } from "@/lib/auth/AuthContext";
 import { getMyProfile, type UserProfile } from "@/lib/api/users";
-import { AlertCircle, CheckCircle2, UserCircle2 } from "lucide-react";
+import { AlertCircle, UserCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { ActiveJobTracker } from "@/components/ActiveJobTracker";
-import { CollectorRatingsPanel } from "@/components/CollectorRatingsPanel";
-import { CollectorStatsChart } from "@/components/CollectorStatsChart";
-import { listAssignedPickups, type PickupRequestSummary } from "@/lib/api/pickups";
+import { AvailableJobsBoard } from "@/components/AvailableJobsBoard";
 
-export default function CollectorDashboardPage() {
+export default function CollectorJobsPage() {
   const { user, isLoading: isAuthLoading } = useRequireRole(["COLLECTOR"]);
   const router = useRouter();
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
   const [isProfileLoading, setIsProfileLoading] = React.useState(true);
+
   const fetchProfile = React.useCallback(() => {
     setIsProfileLoading(true);
     getMyProfile()
@@ -53,7 +51,7 @@ export default function CollectorDashboardPage() {
 
   return (
     <PageContainer className="py-8 lg:py-12">
-      <h1 className="text-h1 text-neutral-900 mb-8">Dashboard</h1>
+      <h1 className="text-h1 text-neutral-900 mb-8">Find Jobs</h1>
 
       {!isApproved ? (
         hasMissingInfo ? (
@@ -85,18 +83,8 @@ export default function CollectorDashboardPage() {
         )
       ) : (
         <div className="flex flex-col gap-12 w-full max-w-5xl">
-
-          {/* Reputation Section */}
           <section className="w-full">
-            <CollectorRatingsPanel 
-              averageRating={profile?.collectorProfile?.averageRating ?? null}
-              totalRatings={profile?.collectorProfile?.totalRatings ?? 0}
-            />
-          </section>
-
-          {/* Stats Section */}
-          <section className="w-full">
-            <CollectorStatsChart />
+            <AvailableJobsBoard />
           </section>
         </div>
       )}
