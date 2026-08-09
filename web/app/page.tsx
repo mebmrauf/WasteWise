@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/Button";
@@ -7,18 +6,7 @@ import { NavBar } from "@/components/NavBar";
 import { NavAuthActions } from "@/components/NavAuthActions";
 import { PageContainer } from "@/components/PageContainer";
 
-export const metadata: Metadata = {
-  title: "WasteWise — Formalizing Bangladesh's Recycling Network",
-  description:
-    "WasteWise connects households and businesses with verified informal scrap collectors, plus recycling companies and municipalities — turning ad hoc pickups into tracked, weight-verified, disputable transactions.",
-  openGraph: {
-    title: "WasteWise — Formalizing Bangladesh's Recycling Network",
-    description:
-      "A verified collector directory, weight verification, real-time tracking, and complaint resolution for users — plus route planning, bidding, and an income dashboard for the collectors already doing this work.",
-    type: "website",
-    siteName: "WasteWise",
-  },
-};
+
 
 const steps = [
   {

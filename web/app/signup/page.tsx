@@ -1,19 +1,6 @@
-import type { Metadata } from "next";
 import { AuthPageShell } from "../_components/AuthPageShell";
 import { SignupForm, type SignupRoleChoice } from "./SignupForm";
 
-export const metadata: Metadata = {
-  title: "Sign up — WasteWise",
-  description:
-    "Create a WasteWise account as a household or business, a verified scrap collector, or a recycling company.",
-  openGraph: {
-    title: "Sign up — WasteWise",
-    description:
-      "Create a WasteWise account as a household or business, a verified scrap collector, or a recycling company.",
-    type: "website",
-    siteName: "WasteWise",
-  },
-};
 
 const roleParamToChoice: Record<string, SignupRoleChoice> = {
   HOUSEHOLD: "HOUSEHOLD",
