@@ -22,7 +22,7 @@ export const pickupsRouter = Router();
 
 const PICKUP_LIST_LIMIT = 50;
 
-function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[] }) {
+function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[], rating?: any }) {
   const acceptedOffer = pickup.offers?.find(o => o.status === "ACCEPTED");
   return {
     id: pickup.id,
@@ -42,6 +42,7 @@ function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], o
     latitude: pickup.latitude,
     longitude: pickup.longitude,
     bidAmountsPerKg: acceptedOffer?.bidAmountsPerKg ?? null,
+    hasRating: !!pickup.rating,
     createdAt: pickup.createdAt,
     updatedAt: pickup.updatedAt,
   };
@@ -51,6 +52,7 @@ function toPickupDetail(
   pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[] },
   weightRecord: WeightRecord | null,
   rating?: { score: number; comment: string | null; createdAt: Date } | null,
+  pointsEarned?: number | null,
 ) {
   return {
     ...toPickupSummary(pickup),
@@ -69,6 +71,7 @@ function toPickupDetail(
           createdAt: rating.createdAt,
         }
       : null,
+    pointsEarned: pointsEarned ?? null,
   };
 }
 
@@ -169,7 +172,7 @@ pickupsRouter.get(
       where: { requesterId: req.user!.id },
       orderBy: { createdAt: "desc" },
       take: PICKUP_LIST_LIMIT,
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } } },
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true },
     });
 
     sendData(res, 200, { pickups: pickups.map(toPickupSummary) });
@@ -240,7 +243,7 @@ pickupsRouter.get(
       return;
     }
 
-    const [items, weightRecord, offers, rating] = await Promise.all([
+    const [items, weightRecord, offers, rating, pointsTxn] = await Promise.all([
       prisma.pickupRequestItem.findMany({
         where: { pickupRequestId: access.pickup.id },
         orderBy: { createdAt: "asc" },
@@ -254,9 +257,12 @@ pickupsRouter.get(
       prisma.rating.findUnique({
         where: { pickupRequestId: access.pickup.id },
       }),
+      prisma.greenPointsTransaction.findFirst({
+        where: { pickupRequestId: access.pickup.id },
+      }),
     ]);
 
-    sendData(res, 200, { pickup: toPickupDetail({ ...access.pickup, items, offers }, weightRecord, rating) });
+    sendData(res, 200, { pickup: toPickupDetail({ ...access.pickup, items, offers }, weightRecord, rating, pointsTxn?.points ?? null) });
   }),
 );
 

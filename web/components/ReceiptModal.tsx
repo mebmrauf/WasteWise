@@ -6,7 +6,6 @@ import { CheckCircle2, X, Receipt, Loader2, Star } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Button } from "@/components/Button";
-import { CollectorRatingModal } from "@/components/CollectorRatingModal";
 import { getPickupDetail, getPickupTracking, type PickupRequestDetail, type PickupTracking } from "@/lib/api/pickups";
 import { formatBdt } from "@/lib/utils";
 
@@ -16,7 +15,6 @@ export function ReceiptModal({ pickupId, onClose }: { pickupId: string; onClose:
   const [loadState, setLoadState] = React.useState<LoadState>("loading");
   const [pickupDetail, setPickupDetail] = React.useState<PickupRequestDetail | null>(null);
   const [tracking, setTracking] = React.useState<PickupTracking | null>(null);
-  const [isRatingModalOpen, setIsRatingModalOpen] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -82,7 +80,7 @@ export function ReceiptModal({ pickupId, onClose }: { pickupId: string; onClose:
               total,
             };
           });
-          const pointsEarned = 50;
+          const pointsEarned = pickupDetail.pointsEarned ?? 0;
 
           return (
             <>
@@ -177,14 +175,8 @@ export function ReceiptModal({ pickupId, onClose }: { pickupId: string; onClose:
                     )}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-center">
-                    <p className="text-caption text-neutral-500 mb-3">Thank you for recycling with WasteWise!</p>
-                    <Button 
-                      variant="secondary" 
-                      onClick={() => setIsRatingModalOpen(true)}
-                    >
-                      Rate this collector
-                    </Button>
+                  <div className="flex flex-col items-center justify-center text-center p-2">
+                    <p className="text-caption text-neutral-500 mb-1">Thank you for recycling with WasteWise!</p>
                   </div>
                 )}
               </div>
@@ -192,19 +184,6 @@ export function ReceiptModal({ pickupId, onClose }: { pickupId: string; onClose:
           );
         })()}
       </div>
-
-      {isRatingModalOpen && tracking?.collector && (
-        <CollectorRatingModal
-          pickupId={pickupId}
-          collectorName={tracking.collector.fullName}
-          onClose={() => setIsRatingModalOpen(false)}
-          onSuccess={() => {
-            setIsRatingModalOpen(false);
-            // Refresh detail to get the new rating
-            getPickupDetail(pickupId).then(res => setPickupDetail(res.pickup));
-          }}
-        />
-      )}
     </div>
   );
 }

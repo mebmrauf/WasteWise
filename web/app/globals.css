@@ -33,3 +33,15 @@
     @apply bg-gradient-to-br from-primary-400 to-primary-600;
   }
 }
+
+/* Remove arrows/spinners from number inputs */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+}
+

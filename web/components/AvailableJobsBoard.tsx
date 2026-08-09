@@ -212,38 +212,55 @@ export function AvailableJobsBoard() {
                       </p>
                     ) : (
                       <>
-                        <h2 className="text-h4 text-neutral-900">Place a bid</h2>
-                        {bidErrors[job.id] && <ErrorBanner>{bidErrors[job.id]}</ErrorBanner>}
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          {job.items.map((item) => (
+                        <div className="flex items-center gap-3 border-b border-neutral-100 pb-4 mb-4">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50 text-primary-600">
+                            <Icon icon={ShieldAlert} size="sm" />
+                          </div>
+                          <div>
+                            <h2 className="text-h4 text-neutral-900 leading-tight">Place your bid</h2>
+                            <p className="text-body-sm text-neutral-500">Offer your best price per KG.</p>
+                          </div>
+                        </div>
+                        
+                        {bidErrors[job.id] && <ErrorBanner className="mb-4">{bidErrors[job.id]}</ErrorBanner>}
+                        
+                        <div className="bg-neutral-50/50 border border-neutral-100 p-5 rounded-2xl flex flex-col gap-5">
+                          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                            {job.items.map((item) => (
+                              <Input
+                                key={item.category}
+                                label={`${item.category} Bid (BDT/KG)`}
+                                type="number"
+                                inputMode="numeric"
+                                min={0}
+                                step="1"
+                                placeholder="e.g. 15"
+                                className="bg-white"
+                                value={bidAmountsByJob[job.id]?.[item.category] ?? ""}
+                                onChange={(event) =>
+                                  setBidAmountsByJob((prev) => ({
+                                    ...prev,
+                                    [job.id]: {
+                                      ...(prev[job.id] || {}),
+                                      [item.category]: event.target.value,
+                                    },
+                                  }))
+                                }
+                              />
+                            ))}
+                          </div>
+                          <div className="pt-2">
                             <Input
-                              key={item.category}
-                              label={`${item.category} Bid per KG (BDT)`}
-                              type="number"
-                              inputMode="numeric"
-                              min={0}
-                              step="1"
-                              value={bidAmountsByJob[job.id]?.[item.category] ?? ""}
+                              label="Message (optional)"
+                              placeholder="e.g. I can pick up right now at 3pm"
+                              maxLength={500}
+                              className="bg-white"
+                              value={messageByJob[job.id] ?? ""}
                               onChange={(event) =>
-                                setBidAmountsByJob((prev) => ({
-                                  ...prev,
-                                  [job.id]: {
-                                    ...(prev[job.id] || {}),
-                                    [item.category]: event.target.value,
-                                  },
-                                }))
+                                setMessageByJob((prev) => ({ ...prev, [job.id]: event.target.value }))
                               }
                             />
-                          ))}
-                          <Input
-                            label="Message (optional)"
-                            placeholder="e.g. Can pick up at 3pm"
-                            maxLength={500}
-                            value={messageByJob[job.id] ?? ""}
-                            onChange={(event) =>
-                              setMessageByJob((prev) => ({ ...prev, [job.id]: event.target.value }))
-                            }
-                          />
+                          </div>
                         </div>
                         <div className="flex justify-end gap-3">
                           <Button variant="ghost" size="sm" onClick={() => setExpandedJobId(null)}>
