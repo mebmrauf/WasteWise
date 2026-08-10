@@ -161,6 +161,15 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  referralCode          String?   @unique
+  referredById          String?
+  referredBy            User?     @relation("Referrals", fields: [referredById], references: [id])
+  referredUsers         User[]    @relation("Referrals")
+  referralRewardClaimed Boolean   @default(false)
+  successfulReferrals   Int       @default(0)
+  referralPointsEarned  Int       @default(0)
+  milestonesClaimed     Int[]     @default([])
+
   oauthAccounts          OAuthAccount[]
   emailVerificationCodes EmailVerificationCode[]
   passwordResetCodes     PasswordResetCode[]

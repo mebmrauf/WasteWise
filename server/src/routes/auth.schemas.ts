@@ -18,6 +18,7 @@ export const registerSchema = z
     fullName: z.string().trim().min(1, "Full name is required").max(120),
     role: selectableRole.optional().default(Role.USER),
     accountType: selectableAccountType.optional(),
+    referralCode: z.string().trim().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.role === Role.USER) {
