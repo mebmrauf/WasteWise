@@ -216,9 +216,8 @@ pickupsRouter.get(
     const pickups = await prisma.pickupRequest.findMany({
       where: { 
         status: PickupStatus.PENDING,
-        serviceArea: collectorProfile.serviceArea,
         OR: [
-          { isExclusiveToPreferred: false },
+          { isExclusiveToPreferred: { not: true } },
           { preferredCollectorId: req.user!.id }
         ]
       },
