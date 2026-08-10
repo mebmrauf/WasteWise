@@ -357,8 +357,11 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
     
     const userToUpdate = await tx.user.findUniqueOrThrow({ 
       where: { id: access.pickup.requesterId }, 
-      select: { greenPointsBalance: true, referredById: true, referralRewardClaimed: true } 
+      select: { greenPointsBalance: true, referredById: true, referralRewardClaimed: true, totalGreenPoints: true } 
     });
+
+    const lifetimePointsBefore = Math.max(userToUpdate.totalGreenPoints ?? 0, userToUpdate.greenPointsBalance ?? 0);
+    const oldMembership = calculateMembershipLevel(lifetimePointsBefore);
 
     await tx.user.update({
       where: { id: access.pickup.requesterId },
@@ -367,20 +370,49 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
         totalGreenPoints: { increment: totalPoints },
       },
     });
+
+    const lifetimePointsAfter = lifetimePointsBefore + totalPoints;
+    const newMembership = calculateMembershipLevel(lifetimePointsAfter);
+
+    if (newMembership !== oldMembership) {
+      await tx.greenPointsTransaction.create({
+        data: {
+          userId: access.pickup.requesterId,
+          pickupRequestId,
+          points: 0,
+          type: GreenPointsTransactionType.EARNED,
+          category: "LOYALTY",
+          description: `${newMembership.charAt(0).toUpperCase() + newMembership.slice(1).toLowerCase()} Membership Unlocked`,
+        }
+      });
+    }
     
     await tx.greenPointsTransaction.create({
       data: {
         userId: access.pickup.requesterId,
         pickupRequestId,
-        points: totalPoints,
+        points: basePoints,
         basePoints,
-        bonusPoints,
-        totalPoints,
-        rewardReason,
+        rewardReason: { materials: rewardReason.materials, bonuses: [] },
         type: GreenPointsTransactionType.EARNED,
+        category: "PICKUP",
         description: "Pickup completed",
       },
     });
+
+    for (const bonus of rewardReason.bonuses) {
+      await tx.greenPointsTransaction.create({
+        data: {
+          userId: access.pickup.requesterId,
+          pickupRequestId,
+          points: bonus.points,
+          bonusPoints: bonus.points,
+          type: GreenPointsTransactionType.EARNED,
+          category: "BONUS",
+          description: bonus.name,
+        }
+      });
+    }
 
     let referralRewardsProcessed = false;
     let referrerId: string | null = null;
@@ -407,6 +439,7 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
           pickupRequestId,
           points: 50,
           type: GreenPointsTransactionType.EARNED,
+          category: "REFERRAL",
           description: "Referral signup reward",
         },
       });
@@ -428,6 +461,7 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
           pickupRequestId,
           points: 100,
           type: GreenPointsTransactionType.EARNED,
+          category: "REFERRAL",
           description: "Friend referral reward",
         },
       });
@@ -459,6 +493,7 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
                 userId: referrer.id,
                 points: m.points,
                 type: GreenPointsTransactionType.EARNED,
+                category: "REFERRAL",
                 description: `Referral milestone reward (${m.count} friends)`,
               }
             });

@@ -38,6 +38,7 @@ export interface GreenPointsTransaction {
   totalPoints: number | null;
   rewardReason: RewardReason | null;
   type: "EARNED" | "REDEEMED";
+  category: "PICKUP" | "BONUS" | "REFERRAL" | "LOYALTY" | "REDEMPTION" | "OTHER";
   description: string;
   createdAt: string;
 }

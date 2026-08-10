@@ -19,6 +19,7 @@ function toGreenPointsTransactionSummary(txn: GreenPointsTransaction) {
     pickupRequestId: txn.pickupRequestId,
     points: txn.points,
     type: txn.type,
+    category: txn.category,
     description: txn.description,
     basePoints: txn.basePoints,
     bonusPoints: txn.bonusPoints,
@@ -176,6 +177,7 @@ rewardsRouter.post(
           userId: req.user!.id,
           points: pointsSpent,
           type: GreenPointsTransactionType.REDEEMED,
+          category: "REDEMPTION",
           description: `Mobile recharge — ${phoneNumber}`,
         },
       });
@@ -257,20 +259,34 @@ rewardsRouter.post(
     const nextGiftEligibleDate = new Date();
     nextGiftEligibleDate.setMonth(nextGiftEligibleDate.getMonth() + 6);
 
-    const updatedUser = await prisma.user.update({
-      where: { id: req.user!.id },
-      data: {
-        selectedGift: gift,
-        giftClaimDate: new Date(),
-        nextGiftEligibleDate,
-        giftClaimed: true,
-      },
-      select: {
-        selectedGift: true,
-        giftClaimDate: true,
-        nextGiftEligibleDate: true,
-        giftClaimed: true,
-      },
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id: req.user!.id },
+        data: {
+          selectedGift: gift,
+          giftClaimDate: new Date(),
+          nextGiftEligibleDate,
+          giftClaimed: true,
+        },
+        select: {
+          selectedGift: true,
+          giftClaimDate: true,
+          nextGiftEligibleDate: true,
+          giftClaimed: true,
+        },
+      });
+
+      await tx.greenPointsTransaction.create({
+        data: {
+          userId: req.user!.id,
+          points: 0,
+          type: GreenPointsTransactionType.REDEEMED,
+          category: "REDEMPTION",
+          description: "Exclusive Eco Gift Claimed",
+        }
+      });
+
+      return updated;
     });
 
     sendData(res, 200, {
@@ -314,18 +330,32 @@ rewardsRouter.post(
     const nextDiscountEligibleDate = new Date();
     nextDiscountEligibleDate.setMonth(nextDiscountEligibleDate.getMonth() + 6);
 
-    const updatedUser = await prisma.user.update({
-      where: { id: req.user!.id },
-      data: {
-        lastDiscountClaimDate: new Date(),
-        nextDiscountEligibleDate,
-        discountCouponClaimed: true,
-      },
-      select: {
-        lastDiscountClaimDate: true,
-        nextDiscountEligibleDate: true,
-        discountCouponClaimed: true,
-      },
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id: req.user!.id },
+        data: {
+          lastDiscountClaimDate: new Date(),
+          nextDiscountEligibleDate,
+          discountCouponClaimed: true,
+        },
+        select: {
+          lastDiscountClaimDate: true,
+          nextDiscountEligibleDate: true,
+          discountCouponClaimed: true,
+        },
+      });
+
+      await tx.greenPointsTransaction.create({
+        data: {
+          userId: req.user!.id,
+          points: 0,
+          type: GreenPointsTransactionType.REDEEMED,
+          category: "REDEMPTION",
+          description: "5% Eco Shop Discount Claimed",
+        }
+      });
+
+      return updated;
     });
 
     sendData(res, 200, {

@@ -108,6 +108,15 @@ enum GreenPointsTransactionType {
   REDEEMED
 }
 
+enum TransactionCategory {
+  PICKUP
+  BONUS
+  REFERRAL
+  LOYALTY
+  REDEMPTION
+  OTHER
+}
+
 enum MobileOperator {
   GRAMEENPHONE
   BANGLALINK
@@ -144,31 +153,31 @@ model User {
   emailNotificationsEnabled Boolean @default(true)
   smsNotificationsEnabled   Boolean @default(true)
 
-  greenPointsBalance Int @default(0)
-  totalGreenPoints   Int @default(0)
+  greenPointsBalance Int             @default(0)
+  totalGreenPoints   Int             @default(0)
   membershipLevel    MembershipLevel @default(BRONZE)
-  membershipBadge    String @default("Bronze Badge")
+  membershipBadge    String          @default("Bronze Badge")
 
   lastDiscountClaimDate    DateTime?
   nextDiscountEligibleDate DateTime?
   discountCouponClaimed    Boolean   @default(false)
 
-  selectedGift             PlatinumGift?
-  giftClaimDate            DateTime?
-  nextGiftEligibleDate     DateTime?
-  giftClaimed              Boolean   @default(false)
+  selectedGift         PlatinumGift?
+  giftClaimDate        DateTime?
+  nextGiftEligibleDate DateTime?
+  giftClaimed          Boolean       @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  referralCode          String?   @unique
+  referralCode          String? @unique
   referredById          String?
-  referredBy            User?     @relation("Referrals", fields: [referredById], references: [id])
-  referredUsers         User[]    @relation("Referrals")
-  referralRewardClaimed Boolean   @default(false)
-  successfulReferrals   Int       @default(0)
-  referralPointsEarned  Int       @default(0)
-  milestonesClaimed     Int[]     @default([])
+  referredBy            User?   @relation("Referrals", fields: [referredById], references: [id])
+  referredUsers         User[]  @relation("Referrals")
+  referralRewardClaimed Boolean @default(false)
+  successfulReferrals   Int     @default(0)
+  referralPointsEarned  Int     @default(0)
+  milestonesClaimed     Int[]   @default([])
 
   oauthAccounts          OAuthAccount[]
   emailVerificationCodes EmailVerificationCode[]
@@ -197,8 +206,8 @@ model User {
 
   notifications Notification[]
 
-// --- AI Waste Recognition ---
-  wasteRecognitionLogs WasteRecognitionLog[]
+  // --- AI Waste Recognition ---
+  wasteRecognitionLogs       WasteRecognitionLog[]
   greenPointsTransactions    GreenPointsTransaction[]    @relation("GreenPointsTransactions")
   mobileRechargeTransactions MobileRechargeTransaction[] @relation("MobileRechargeTransactions")
 }
@@ -263,8 +272,8 @@ model CollectorProfile {
   user   User   @relation("CollectorProfileUser", fields: [userId], references: [id], onDelete: Cascade)
 
   vehicleType   VehicleType
-  vehicleNumber String @default("")
-  licenseNumber String @default("")
+  vehicleNumber String      @default("")
+  licenseNumber String      @default("")
 
   serviceArea String @default("")
 
@@ -373,10 +382,10 @@ model Offer {
   collectorId String
   collector   User   @relation("CollectorOffers", fields: [collectorId], references: [id])
 
-  bidAmount Float
+  bidAmount       Float
   bidAmountsPerKg Json? // e.g. { "PLASTIC": 10, "PAPER": 5 }
-  message   String?
-  status    OfferStatus @default(PENDING)
+  message         String?
+  status          OfferStatus @default(PENDING)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -506,15 +515,16 @@ model WasteRecognitionLog {
 }
 
 model GreenPointsTransaction {
-  id String @id @default(cuid())
+  id     String @id @default(cuid())
   userId String
   user   User   @relation("GreenPointsTransactions", fields: [userId], references: [id], onDelete: Cascade)
 
   pickupRequestId String?
   pickupRequest   PickupRequest? @relation(fields: [pickupRequestId], references: [id])
 
-  points Int // Keeping this as the master source of truth for total points changed in transaction for backward compatibility
-  type   GreenPointsTransactionType
+  points      Int // Keeping this as the master source of truth for total points changed in transaction for backward compatibility
+  type        GreenPointsTransactionType
+  category    TransactionCategory        @default(OTHER)
   description String
 
   basePoints   Int?
