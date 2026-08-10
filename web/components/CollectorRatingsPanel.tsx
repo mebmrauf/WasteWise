@@ -63,7 +63,7 @@ export function CollectorRatingsPanel({
                   className={`h-3 w-3 ${
                     star <= Math.round(averageRating || 0)
                       ? "fill-primary-500 text-primary-500"
-                      : "fill-primary-200 text-primary-200"
+                      : "fill-transparent text-neutral-300"
                   }`}
                 />
               ))}
@@ -101,8 +101,8 @@ export function CollectorRatingsPanel({
                           icon={Star}
                           className={`h-3 w-3 ${
                             star <= rating.score
-                              ? "fill-primary-400 text-primary-400"
-                              : "fill-neutral-200 text-neutral-200"
+                              ? "fill-primary-500 text-primary-500"
+                              : "fill-transparent text-neutral-300"
                           }`}
                         />
                       ))}

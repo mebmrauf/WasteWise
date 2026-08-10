@@ -3,8 +3,22 @@ import type { MobileOperator } from "@/components/OperatorSelector";
 import type { SimType } from "@/components/SimTypeToggle";
 import type { MobileRechargeStatus } from "@/lib/rechargeStatus";
 
-export function getRewardsBalance(): Promise<{ greenPointsBalance: number }> {
-  return authFetch<{ greenPointsBalance: number }>("/rewards/balance", { method: "GET" });
+export interface RewardsBalance {
+  greenPointsBalance: number;
+  totalGreenPoints: number;
+  membershipLevel: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
+  membershipBadge: string;
+  lastDiscountClaimDate: string | null;
+  nextDiscountEligibleDate: string | null;
+  discountCouponClaimed: boolean;
+  selectedGift: string | null;
+  giftClaimDate: string | null;
+  nextGiftEligibleDate: string | null;
+  giftClaimed: boolean;
+}
+
+export function getRewardsBalance(): Promise<RewardsBalance> {
+  return authFetch<RewardsBalance>("/rewards/balance", { method: "GET" });
 }
 
 export interface RewardReason {
@@ -70,12 +84,42 @@ export interface RechargeAttempt {
 export interface SubmitRechargeResult {
   recharge: RechargeAttempt;
   greenPointsBalance: number;
+  membershipLevel: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
+  membershipBadge: string;
 }
 
 export function submitRecharge(input: SubmitRechargeInput): Promise<SubmitRechargeResult> {
   return authFetch<SubmitRechargeResult>("/rewards/recharge", {
     method: "POST",
     body: JSON.stringify(input),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export interface ClaimPlatinumGiftResult {
+  selectedGift: string;
+  giftClaimDate: string;
+  nextGiftEligibleDate: string;
+  giftClaimed: boolean;
+}
+
+export function claimPlatinumGift(gift: string): Promise<ClaimPlatinumGiftResult> {
+  return authFetch<ClaimPlatinumGiftResult>("/rewards/claim-gift", {
+    method: "POST",
+    body: JSON.stringify({ gift }),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export interface ClaimDiscountResult {
+  lastDiscountClaimDate: string;
+  nextDiscountEligibleDate: string;
+  discountCouponClaimed: boolean;
+}
+
+export function claimDiscount(): Promise<ClaimDiscountResult> {
+  return authFetch<ClaimDiscountResult>("/rewards/claim-discount", {
+    method: "POST",
     headers: { "x-csrf-token": readCsrfToken() },
   });
 }

@@ -4,7 +4,7 @@ import { prisma } from "../lib/prisma";
 import { logger } from "../lib/logger";
 import { createNotification } from "../lib/notifications";
 import { authorizePickupAccess } from "../lib/pickupAccess";
-import { calculateGreenPointsForPickup } from "../lib/rewards";
+import { calculateGreenPointsForPickup, calculateMembershipLevel, getMembershipBadge } from "../lib/rewards";
 import { getIO, pickupRoomName, type Server, type Socket } from "./socket";
 import {
   joinPickupRoomSchema,
@@ -355,9 +355,14 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
     const updated = await tx.pickupRequest.update({ where: { id: pickupRequestId }, data: { status: PickupStatus.COMPLETED } });
     const tracking = await tx.pickupTrackingEvent.create({ data: { pickupRequestId, status: PickupStatus.COMPLETED } });
     
+    const userToUpdate = await tx.user.findUniqueOrThrow({ where: { id: access.pickup.requesterId }, select: { greenPointsBalance: true } });
+
     await tx.user.update({
       where: { id: access.pickup.requesterId },
-      data: { greenPointsBalance: { increment: totalPoints } },
+      data: { 
+        greenPointsBalance: { increment: totalPoints },
+        totalGreenPoints: { increment: totalPoints },
+      },
     });
     
     await tx.greenPointsTransaction.create({
