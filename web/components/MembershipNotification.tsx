@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { X } from "lucide-react";
+import { X, Award, Diamond } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MembershipNotificationProps {
@@ -25,11 +25,11 @@ export function MembershipNotification({
 
   let content = null;
   let bgColor = "";
-  let icon = "";
+  let icon: React.ReactNode = null;
 
   switch (level) {
     case "BRONZE":
-      icon = "🥉";
+      icon = <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 text-orange-600 shrink-0"><Award className="w-5 h-5" /></div>;
       bgColor = "bg-orange-50 border-orange-200 text-orange-900";
       content = (
         <span>
@@ -38,7 +38,7 @@ export function MembershipNotification({
       );
       break;
     case "SILVER":
-      icon = "🥈";
+      icon = <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-slate-700 shrink-0"><Award className="w-5 h-5" /></div>;
       bgColor = "bg-slate-100 border-slate-300 text-slate-900";
       content = (
         <span>
@@ -47,7 +47,7 @@ export function MembershipNotification({
       );
       break;
     case "GOLD":
-      icon = "🥇";
+      icon = <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-200 text-yellow-700 shrink-0"><Award className="w-5 h-5" /></div>;
       bgColor = "bg-yellow-50 border-yellow-200 text-yellow-900";
       if (goldEligible) {
         content = (
@@ -71,7 +71,7 @@ export function MembershipNotification({
       }
       break;
     case "PLATINUM":
-      icon = "💎";
+      icon = <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-200 text-purple-700 shrink-0"><Diamond className="w-5 h-5" /></div>;
       bgColor = "bg-purple-50 border-purple-200 text-purple-900";
       if (platinumEligible) {
         content = (
@@ -97,8 +97,8 @@ export function MembershipNotification({
   }
 
   return (
-    <div className={cn("relative flex items-start gap-4 p-4 rounded-xl border animate-fade-in shadow-sm", bgColor)}>
-      <div className="text-2xl leading-none">{icon}</div>
+    <div className={cn("relative flex items-center gap-4 p-4 rounded-xl border animate-fade-in shadow-sm", bgColor)}>
+      {icon}
       <div className="flex-1 text-sm md:text-base leading-relaxed pr-6">{content}</div>
       <button
         onClick={() => setIsVisible(false)}

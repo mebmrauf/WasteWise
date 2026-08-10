@@ -1,4 +1,5 @@
 import { AuthPageShell } from "../_components/AuthPageShell";
+import { Suspense } from "react";
 import { SignupForm, type SignupRoleChoice } from "./SignupForm";
 
 
@@ -35,7 +36,9 @@ export default function SignupPage({
         </>
       }
     >
-      <SignupForm defaultRoleChoice={defaultRoleChoice} />
+      <Suspense fallback={<div className="flex justify-center p-8 text-neutral-500">Loading signup...</div>}>
+        <SignupForm defaultRoleChoice={defaultRoleChoice} />
+      </Suspense>
     </AuthPageShell>
   );
 }

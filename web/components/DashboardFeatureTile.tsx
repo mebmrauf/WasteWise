@@ -12,6 +12,7 @@ export interface DashboardFeatureTileProps {
   href?: string;
   interactive?: boolean;
   badge?: React.ReactNode;
+  iconContainerClassName?: string;
   iconClassName?: string;
   labelClassName?: string;
   descriptionClassName?: string;
@@ -25,6 +26,7 @@ export function DashboardFeatureTile({
   href,
   interactive,
   badge,
+  iconContainerClassName,
   iconClassName,
   labelClassName,
   descriptionClassName,
@@ -34,7 +36,9 @@ export function DashboardFeatureTile({
 
   const content = (
     <Card interactive={isInteractive} className={cn("flex flex-col items-start gap-3 h-full", className)}>
-      <Icon icon={icon} size="lg" className={iconClassName} />
+      <div className={cn("flex items-center justify-center h-12 w-12 shrink-0 rounded-full", iconContainerClassName)}>
+        <Icon icon={icon} size="lg" className={iconClassName} />
+      </div>
       <div className="flex flex-col gap-1">
         {}
         <h2 className={cn("text-h4", labelClassName)}>{label}</h2>

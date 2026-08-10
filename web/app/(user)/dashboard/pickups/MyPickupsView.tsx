@@ -201,10 +201,12 @@ export function MyPickupsView() {
 
   return (
     <PageContainer className="py-8 lg:py-12">
-      <h1 className="text-h1 text-neutral-900">My Pickups</h1>
-      <p className="mt-2 text-body-lg text-neutral-500">
-        Every pickup you&apos;ve requested, its status, and its verified weight once collected.
-      </p>
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 p-8 mb-8 rounded-2xl shadow-sm">
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">My Pickups</h1>
+        <p className="mt-2 text-neutral-600">
+          Every pickup you&apos;ve requested, its status, and its verified weight once collected.
+        </p>
+      </Card>
 
       {loadState === "loading" && (
         <Card className="mt-8 text-center">
@@ -215,17 +217,17 @@ export function MyPickupsView() {
       {loadState === "error" && <ErrorBanner className="mt-8">{loadError}</ErrorBanner>}
 
       {loadState === "ready" && pickups.length === 0 && (
-        <Card className="glass-panel mt-8 flex flex-col items-center gap-4 py-16 text-center shadow-lg border-0">
-          <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-primary-100 text-primary-600">
+        <Card className="flex flex-col items-center justify-center p-12 text-center bg-neutral-50 border border-dashed border-neutral-300 shadow-none min-h-[300px] mt-8">
+          <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-4">
             <Icon icon={ClipboardList} size="lg" aria-hidden />
           </div>
           <div>
-            <p className="font-heading text-h3 text-neutral-900">No pickups yet</p>
-            <p className="mt-2 text-body-lg text-neutral-500 max-w-sm mx-auto">
+            <h3 className="text-lg font-bold text-neutral-900 mb-2">No pickups yet</h3>
+            <p className="text-sm text-neutral-500 max-w-sm mx-auto">
               Once you request a pickup, it'll show up here with live tracking and verified weights.
             </p>
           </div>
-          <Button href="/dashboard/pickups/new" className="mt-4 px-8">Request your first pickup</Button>
+          <Button href="/dashboard/pickups/new" className="mt-4 px-8 bg-emerald-600 hover:bg-emerald-700 text-white">Request your first pickup</Button>
         </Card>
       )}
 
@@ -280,16 +282,16 @@ export function MyPickupsView() {
               .sort((a, b) => new Date(b.timeSlotStart).getTime() - new Date(a.timeSlotStart).getTime());
 
             const renderHistoryRow = (pickup: PickupRequestSummary) => (
-              <Card key={pickup.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 shadow-sm border border-neutral-200 bg-white hover:border-neutral-300 transition-colors gap-4">
+              <Card key={pickup.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 shadow-sm border border-neutral-100 bg-white hover:shadow-md transition-shadow gap-4 rounded-2xl">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 shrink-0">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shrink-0">
                     <Icon icon={ClipboardList} size="sm" />
                   </div>
                   <div>
                     <div className="font-semibold text-neutral-900">
                       {new Date(pickup.timeSlotStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
-                    <div className="text-body-sm text-neutral-500">
+                    <div className="text-sm text-neutral-500">
                       {pickup.items.length} item{pickup.items.length !== 1 ? "s" : ""} &bull; {PICKUP_STATUS_LABEL[pickup.status]}
                     </div>
                   </div>
@@ -298,7 +300,7 @@ export function MyPickupsView() {
                   {pickup.status === "COMPLETED" && !pickup.hasRating && (
                     <Button
                       onClick={() => setRatingModalPickupId(pickup.id)}
-                      variant="primary"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
                       size="sm"
                     >
                       Rate collector
@@ -314,7 +316,7 @@ export function MyPickupsView() {
                     </Button>
                   )}
                   {pickup.status === "CANCELLED" && (
-                    <div className="text-body-sm text-neutral-400 italic">Cancelled</div>
+                    <div className="text-sm text-neutral-400 italic">Cancelled</div>
                   )}
                 </div>
               </Card>
@@ -326,19 +328,19 @@ export function MyPickupsView() {
               const isTrackView = isExpanded && expandedView === "track";
 
               return (
-              <Card key={pickup.id} className="relative flex flex-col border border-neutral-200 shadow-sm transition-all hover:border-green-300 overflow-hidden rounded-2xl p-0 bg-white">
+              <Card key={pickup.id} className="relative flex flex-col border border-neutral-100 shadow-sm transition-shadow hover:shadow-md overflow-hidden rounded-2xl p-0 bg-white">
                 <div className="p-5 sm:p-6 flex flex-col gap-5">
                   {/* Header */}
                   <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-700 shrink-0">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shrink-0">
                         <Icon icon={Package} size="sm" />
                       </div>
                       <div>
-                        <h3 className="font-heading text-h5 text-neutral-900 leading-tight">Pickup Request</h3>
+                        <h3 className="text-lg font-bold text-neutral-900 leading-tight">Pickup Request</h3>
                       </div>
                     </div>
-                    <StatusPill tone={PICKUP_STATUS_TONE[pickup.status]} className="text-body-sm px-4 py-1.5 shadow-sm">
+                    <StatusPill tone={PICKUP_STATUS_TONE[pickup.status]} className="text-sm px-4 py-1.5 shadow-sm">
                       {PICKUP_STATUS_LABEL[pickup.status]}
                     </StatusPill>
                   </div>
@@ -521,13 +523,13 @@ export function MyPickupsView() {
             if (activeTab === "active") {
               if (activePickups.length === 0) {
                 return (
-                  <Card className="flex flex-col items-center justify-center p-12 text-center bg-neutral-50 border border-dashed border-neutral-300 shadow-none">
-                    <Icon icon={Package} size="xl" className="text-neutral-300 mb-4" />
-                    <h3 className="text-h5 font-bold text-neutral-800 mb-2">No Active Pickups</h3>
-                    <p className="text-body text-neutral-500 max-w-md mb-6">
+                  <Card className="flex flex-col items-center justify-center p-12 text-center bg-neutral-50 border border-dashed border-neutral-300 shadow-none min-h-[300px]">
+                    <Icon icon={Package} size="xl" className="text-neutral-400 mb-4" />
+                    <h3 className="text-lg font-bold text-neutral-900 mb-2">No Active Pickups</h3>
+                    <p className="text-sm text-neutral-500 max-w-md mb-6">
                       You don't have any pickups in progress. Schedule a new one to get started.
                     </p>
-                    <Button href="/dashboard/pickups/new" size="sm">Schedule Pickup</Button>
+                    <Button href="/dashboard/pickups/new" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">Schedule Pickup</Button>
                   </Card>
                 );
               }
@@ -541,10 +543,10 @@ export function MyPickupsView() {
             if (activeTab === "history") {
               if (historyPickups.length === 0) {
                 return (
-                  <Card className="flex flex-col items-center justify-center p-12 text-center bg-neutral-50 border border-dashed border-neutral-300 shadow-none">
-                    <Icon icon={ClipboardList} size="xl" className="text-neutral-300 mb-4" />
-                    <h3 className="text-h5 font-bold text-neutral-800 mb-2">No History Yet</h3>
-                    <p className="text-body text-neutral-500 max-w-md">
+                  <Card className="flex flex-col items-center justify-center p-12 text-center bg-neutral-50 border border-dashed border-neutral-300 shadow-none min-h-[300px]">
+                    <Icon icon={ClipboardList} size="xl" className="text-neutral-400 mb-4" />
+                    <h3 className="text-lg font-bold text-neutral-900 mb-2">No History Yet</h3>
+                    <p className="text-sm text-neutral-500 max-w-md">
                       Your completed and cancelled pickups will appear here.
                     </p>
                   </Card>
