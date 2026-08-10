@@ -41,6 +41,9 @@ function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], o
     pickupFormattedAddress: pickup.pickupFormattedAddress,
     latitude: pickup.latitude,
     longitude: pickup.longitude,
+    serviceArea: pickup.serviceArea,
+    preferredCollectorId: pickup.preferredCollectorId,
+    isExclusiveToPreferred: pickup.isExclusiveToPreferred,
     bidAmountsPerKg: acceptedOffer?.bidAmountsPerKg ?? null,
     hasRating: !!pickup.rating,
     createdAt: pickup.createdAt,
@@ -86,7 +89,7 @@ pickupsRouter.post(
       sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    const { items, timeSlotStart, timeSlotEnd, placeId, formattedAddress, latitude, longitude } = parsed.data;
+    const { items, timeSlotStart, timeSlotEnd, placeId, formattedAddress, latitude, longitude, serviceArea, preferredCollectorId, isExclusiveToPreferred } = parsed.data;
 
     let resolvedAddress: { formattedAddress: string; latitude: number | null; longitude: number | null };
 
@@ -150,6 +153,9 @@ pickupsRouter.post(
         pickupFormattedAddress: resolvedAddress.formattedAddress,
         latitude: resolvedAddress.latitude,
         longitude: resolvedAddress.longitude,
+        serviceArea,
+        preferredCollectorId,
+        isExclusiveToPreferred,
         weightRecord: {
           create: {
             estimatedMinKg: minKg,
@@ -196,9 +202,26 @@ pickupsRouter.get(
       );
       return;
     }
+    
+    if (!collectorProfile?.serviceArea) {
+      sendError(
+        res,
+        403,
+        "COLLECTOR_SERVICE_AREA_MISSING",
+        "You must select a service area in your profile to view open pickup requests.",
+      );
+      return;
+    }
 
     const pickups = await prisma.pickupRequest.findMany({
-      where: { status: PickupStatus.PENDING },
+      where: { 
+        status: PickupStatus.PENDING,
+        serviceArea: collectorProfile.serviceArea,
+        OR: [
+          { isExclusiveToPreferred: false },
+          { preferredCollectorId: req.user!.id }
+        ]
+      },
       orderBy: { createdAt: "desc" },
       take: PICKUP_LIST_LIMIT,
       include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } } },

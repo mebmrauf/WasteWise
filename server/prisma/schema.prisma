@@ -306,6 +306,9 @@ model PickupRequest {
   assignedCollectorId String?
   assignedCollector   User?   @relation("AssignedCollector", fields: [assignedCollectorId], references: [id])
 
+  preferredCollectorId   String?
+  isExclusiveToPreferred Boolean @default(false)
+
   items PickupRequestItem[]
 
   timeSlotStart DateTime
@@ -316,6 +319,7 @@ model PickupRequest {
   pickupFormattedAddress String
   latitude               Float?
   longitude              Float?
+  serviceArea            String?
 
   offers                  Offer[]
   weightRecord            WeightRecord?

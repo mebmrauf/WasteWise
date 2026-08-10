@@ -222,7 +222,7 @@ export function TrackPickupPanel({
 
             {collectorLocation && (
               <p className="mt-auto pt-6 text-caption text-neutral-500">
-                Last updated {new Date(collectorLocation.updatedAt).toLocaleTimeString()}
+                Last updated {new Date(collectorLocation.updatedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: true })}
               </p>
             )}
           </Card>

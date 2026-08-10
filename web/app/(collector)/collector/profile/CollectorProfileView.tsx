@@ -12,9 +12,7 @@ import { Input } from "@/components/Input";
 import { PageContainer } from "@/components/PageContainer";
 import { Select } from "@/components/Select";
 import { StatusPill } from "@/components/StatusPill";
-import { AddressAutocomplete, type AddressSuggestion } from "@/components/AddressAutocomplete";
-import { Map } from "@/components/Map";
-import { fetchAddressSuggestions, fetchPlaceDetails, PlacesConfigError } from "@/lib/api/places";
+
 import { useRequireRole } from "@/lib/auth/AuthContext";
 import { AuthApiError } from "@/lib/api/auth";
 import {
@@ -27,6 +25,7 @@ import {
 } from "@/lib/api/users";
 import { VEHICLE_TYPE_LABELS, type VehicleType } from "@/lib/vehicleType";
 import { VERIFICATION_STATUS_TONE, VERIFICATION_STATUS_LABEL } from "@/lib/verificationStatus";
+import { ALL_SERVICE_AREAS } from "@/lib/areas";
 
 const profileErrorMessages: Record<string, string> = {
   VALIDATION_ERROR: "Please check that value and try again.",
@@ -128,99 +127,6 @@ export function CollectorProfileView() {
     isUploading: boolean;
     error: string | null;
   }>({ isUploading: false, error: null });
-
-  const [addressSuggestions, setAddressSuggestions] = React.useState<AddressSuggestion[]>([]);
-  const [isLoadingAddressSuggestions, setIsLoadingAddressSuggestions] = React.useState(false);
-  const [addressSuggestionsError, setAddressSuggestionsError] = React.useState<string | null>(null);
-  const [mapCenter, setMapCenter] = React.useState<{ lat: number; lng: number } | null>(null);
-  const addressSessionTokenRef = React.useRef<string | null>(null);
-  const addressDebounceTimerRef = React.useRef<number | null>(null);
-  const addressRequestSeqRef = React.useRef(0);
-
-  React.useEffect(() => {
-    return () => {
-      if (addressDebounceTimerRef.current !== null) {
-        window.clearTimeout(addressDebounceTimerRef.current);
-      }
-    };
-  }, []);
-
-  function ensureAddressSessionToken(): string {
-    if (!addressSessionTokenRef.current) {
-      addressSessionTokenRef.current = crypto.randomUUID();
-    }
-    return addressSessionTokenRef.current;
-  }
-
-  function rotateAddressSessionToken() {
-    addressSessionTokenRef.current = crypto.randomUUID();
-  }
-
-  function clearPendingAddressDebounce() {
-    if (addressDebounceTimerRef.current !== null) {
-      window.clearTimeout(addressDebounceTimerRef.current);
-      addressDebounceTimerRef.current = null;
-    }
-  }
-
-  async function runAddressSuggestionsFetch(query: string) {
-    const seq = ++addressRequestSeqRef.current;
-    setIsLoadingAddressSuggestions(true);
-    setAddressSuggestionsError(null);
-    try {
-      const token = ensureAddressSessionToken();
-      const results = await fetchAddressSuggestions(query, token);
-      if (seq !== addressRequestSeqRef.current) return;
-      setAddressSuggestions(results);
-      setIsLoadingAddressSuggestions(false);
-    } catch (err) {
-      if (seq !== addressRequestSeqRef.current) return;
-      setAddressSuggestions([]);
-      setIsLoadingAddressSuggestions(false);
-      setAddressSuggestionsError(
-        err instanceof PlacesConfigError
-          ? "Address search isn't available right now."
-          : "Couldn't load address suggestions. Try again.",
-      );
-    }
-  }
-
-  function handleAddressQueryChange(nextQuery: string) {
-    setDetails((prev) => ({ ...prev, serviceArea: nextQuery }));
-    clearPendingAddressDebounce();
-
-    const trimmed = nextQuery.trim();
-    if (trimmed.length < 3) {
-      addressRequestSeqRef.current += 1;
-      setAddressSuggestions([]);
-      setIsLoadingAddressSuggestions(false);
-      setAddressSuggestionsError(null);
-      return;
-    }
-
-    addressDebounceTimerRef.current = window.setTimeout(() => {
-      void runAddressSuggestionsFetch(trimmed);
-    }, 400);
-  }
-
-  async function handleSelectAddressSuggestion(suggestion: AddressSuggestion) {
-    clearPendingAddressDebounce();
-    addressRequestSeqRef.current += 1;
-    rotateAddressSessionToken();
-    setDetails((prev) => ({ ...prev, serviceArea: suggestion.description }));
-    setAddressSuggestions([]);
-    setIsLoadingAddressSuggestions(false);
-    setAddressSuggestionsError(null);
-    
-    try {
-      const details = await fetchPlaceDetails(suggestion.placeId);
-      if (details.latitude && details.longitude) {
-        setMapCenter({ lat: details.latitude, lng: details.longitude });
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  }
 
   const [detailsSave, setDetailsSave] = React.useState<FieldSaveState>(idleSaveState);
   const savedDetails = draftFromProfile(extras?.collectorProfile ?? null);
@@ -416,25 +322,21 @@ export function CollectorProfileView() {
             onChange={(event) => setDetails((prev) => ({ ...prev, licenseNumber: event.target.value }))}
           />
           <div>
-            <AddressAutocomplete
+            <Select
               label="Service area"
               value={details.serviceArea}
-              placeholder="e.g. Gulshan, Dhaka"
-              onChange={handleAddressQueryChange}
-              suggestions={addressSuggestions}
-              onSelectSuggestion={handleSelectAddressSuggestion}
-              isLoading={isLoadingAddressSuggestions}
-              error={addressSuggestionsError}
               disabled={!extras || detailsSave.isSaving}
+              onChange={(event) =>
+                setDetails((prev) => ({ ...prev, serviceArea: event.target.value }))
+              }
+              options={[
+                { value: "", label: "Select an area..." },
+                ...ALL_SERVICE_AREAS.map((area: string) => ({ value: area, label: area }))
+              ]}
             />
             <p className="mt-1 text-label text-neutral-500">
               The area you collect from — shown to help match you with nearby pickup requests.
             </p>
-            {mapCenter && (
-              <div className="mt-4 h-48 w-full overflow-hidden rounded-lg sm:h-64 border border-neutral-200 shadow-inner">
-                <Map center={mapCenter} zoom={14} marker={mapCenter} />
-              </div>
-            )}
           </div>
 
           {detailsSave.error && <ErrorBanner>{detailsSave.error}</ErrorBanner>}

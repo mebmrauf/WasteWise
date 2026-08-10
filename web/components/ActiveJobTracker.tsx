@@ -235,7 +235,7 @@ function ActiveJobCard({
         const { latitude, longitude } = position.coords;
         
         if (statusRef.current === "EN_ROUTE") {
-          const distanceToUser = haversineDistanceMeters(latitude, longitude, job.latitude, job.longitude);
+          const distanceToUser = haversineDistanceMeters(latitude, longitude, job.latitude || 0, job.longitude || 0);
           if (distanceToUser <= 50) {
             getTrackingSocket().emit(PICKUP_STATUS_UPDATE_EVENT, { pickupRequestId: job.id, status: "ARRIVED" });
           }

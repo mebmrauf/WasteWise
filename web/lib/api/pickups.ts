@@ -81,9 +81,12 @@ export interface PickupRequestSummary {
   status: PickupStatus;
   placeId: string;
   pickupFormattedAddress: string;
-  latitude: number;
-  longitude: number;
-  bidAmountsPerKg?: Record<string, number> | null;
+  latitude: number | null;
+  longitude: number | null;
+  serviceArea: string | null;
+  preferredCollectorId: string | null;
+  isExclusiveToPreferred: boolean;
+  bidAmountsPerKg: Record<string, number> | null;
   hasRating: boolean;
   createdAt: string;
   updatedAt: string;
@@ -128,6 +131,9 @@ export interface CreatePickupRequestInput {
   formattedAddress?: string;
   latitude?: number;
   longitude?: number;
+  serviceArea?: string;
+  preferredCollectorId?: string;
+  isExclusiveToPreferred?: boolean;
 }
 
 export function createPickupRequest(input: CreatePickupRequestInput): Promise<{ pickup: PickupRequestDetail }> {

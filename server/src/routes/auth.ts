@@ -55,6 +55,14 @@ function toPublicUser(user: User) {
     accountType: user.accountType,
     isEmailVerified: user.isEmailVerified,
     avatarUrl: user.avatarUrl,
+    membershipLevel: user.membershipLevel,
+    membershipBadge: user.membershipBadge,
+    totalGreenPoints: user.totalGreenPoints,
+    giftClaimed: user.giftClaimed,
+    selectedGift: user.selectedGift,
+    nextGiftEligibleDate: user.nextGiftEligibleDate,
+    discountCouponClaimed: user.discountCouponClaimed,
+    nextDiscountEligibleDate: user.nextDiscountEligibleDate,
     createdAt: user.createdAt,
   };
 }

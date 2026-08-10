@@ -11,7 +11,7 @@ import { formatBdt } from "@/lib/utils";
 
 type LoadState = "loading" | "ready" | "error";
 
-export function ReceiptModal({ pickupId, onClose }: { pickupId: string; onClose: () => void }) {
+export function ReceiptModal({ pickupId, onClose, onRateCollector }: { pickupId: string; onClose: () => void; onRateCollector?: () => void }) {
   const [loadState, setLoadState] = React.useState<LoadState>("loading");
   const [pickupDetail, setPickupDetail] = React.useState<PickupRequestDetail | null>(null);
   const [tracking, setTracking] = React.useState<PickupTracking | null>(null);
@@ -175,8 +175,14 @@ export function ReceiptModal({ pickupId, onClose }: { pickupId: string; onClose:
                     )}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-center p-2">
+                  <div className="flex flex-col items-center justify-center text-center p-2 gap-3">
                     <p className="text-caption text-neutral-500 mb-1">Thank you for recycling with WasteWise!</p>
+                    {onRateCollector && (
+                      <Button size="sm" variant="ghost" onClick={onRateCollector} className="flex items-center gap-2">
+                        <Icon icon={Star} size="sm" className="text-primary-500" />
+                        Rate your collector
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>

@@ -47,39 +47,37 @@ export default function CollectorJobsPage() {
     !profile?.collectorProfile ||
     !profile.collectorProfile.vehicleNumber.trim() ||
     !profile.collectorProfile.licenseNumber.trim() ||
-    !profile.collectorProfile.serviceArea.trim();
+    !profile.collectorProfile.serviceArea?.trim();
 
   return (
     <PageContainer className="py-8 lg:py-12">
 
-      {!isApproved ? (
-        hasMissingInfo ? (
-          <Card className="max-w-2xl bg-neutral-50 border-neutral-200">
-            <div className="flex flex-col items-center text-center py-8">
-              <UserCircle2 className="h-16 w-16 text-neutral-400 mb-4" />
-              <h2 className="text-h2 text-neutral-900 mb-2">Profile incomplete</h2>
-              <p className="text-body text-neutral-600 mb-8 max-w-md mx-auto">
-                Before an admin can verify your account, you must provide your vehicle and service area details.
-              </p>
-              <Button onClick={() => router.push("/collector/profile")}>
-                Complete my profile
-              </Button>
-            </div>
-          </Card>
-        ) : (
-          <Card className="max-w-2xl bg-warning-50 border-warning-200">
-            <div className="flex flex-col items-center text-center py-8">
-              <AlertCircle className="h-16 w-16 text-warning-500 mb-4" />
-              <h2 className="text-h2 text-warning-900 mb-2">Verification pending</h2>
-              <p className="text-body text-warning-800 mb-8 max-w-md mx-auto">
-                Your collector account needs to be verified by an admin before you can browse open pickup requests. Check back once your profile has been approved.
-              </p>
-              <Button onClick={fetchProfile} disabled={isProfileLoading}>
-                Check again
-              </Button>
-            </div>
-          </Card>
-        )
+      {hasMissingInfo ? (
+        <Card className="max-w-2xl bg-neutral-50 border-neutral-200">
+          <div className="flex flex-col items-center text-center py-8">
+            <UserCircle2 className="h-16 w-16 text-neutral-400 mb-4" />
+            <h2 className="text-h2 text-neutral-900 mb-2">Profile incomplete</h2>
+            <p className="text-body text-neutral-600 mb-8 max-w-md mx-auto">
+              You must provide your vehicle and service area details before you can browse open pickup requests.
+            </p>
+            <Button onClick={() => router.push("/collector/profile")}>
+              Complete my profile
+            </Button>
+          </div>
+        </Card>
+      ) : !isApproved ? (
+        <Card className="max-w-2xl bg-warning-50 border-warning-200">
+          <div className="flex flex-col items-center text-center py-8">
+            <AlertCircle className="h-16 w-16 text-warning-500 mb-4" />
+            <h2 className="text-h2 text-warning-900 mb-2">Verification pending</h2>
+            <p className="text-body text-warning-800 mb-8 max-w-md mx-auto">
+              Your collector account needs to be verified by an admin before you can browse open pickup requests. Check back once your profile has been approved.
+            </p>
+            <Button onClick={fetchProfile} disabled={isProfileLoading}>
+              Check again
+            </Button>
+          </div>
+        </Card>
       ) : (
         <div className="flex flex-col gap-8 w-full max-w-6xl">
           {/* Marketplace Hero */}

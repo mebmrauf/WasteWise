@@ -6,6 +6,9 @@ export type SelectableRole = Extract<Role, "USER" | "COLLECTOR" | "RECYCLING_COM
 
 export type AccountType = "HOUSEHOLD" | "BUSINESS";
 
+export type MembershipLevel = "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
+export type PlatinumGift = "TREE_SAPLING" | "ECO_TOTE_BAG" | "REUSABLE_WATER_BOTTLE";
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -15,6 +18,14 @@ export interface AuthUser {
   accountType: AccountType | null;
   isEmailVerified: boolean;
   avatarUrl: string | null;
+  membershipLevel: MembershipLevel;
+  membershipBadge: string;
+  totalGreenPoints: number;
+  giftClaimed: boolean;
+  selectedGift: PlatinumGift | null;
+  nextGiftEligibleDate: string | null;
+  discountCouponClaimed: boolean;
+  nextDiscountEligibleDate: string | null;
   createdAt: string;
 }
 

@@ -28,6 +28,9 @@ export const createPickupRequestSchema = z
     formattedAddress: z.string().optional(),
     latitude: z.number().optional(),
     longitude: z.number().optional(),
+    serviceArea: z.string().optional(),
+    preferredCollectorId: z.string().cuid().optional(),
+    isExclusiveToPreferred: z.boolean().default(false),
   })
   .strict()
   .superRefine((data, ctx) => {
