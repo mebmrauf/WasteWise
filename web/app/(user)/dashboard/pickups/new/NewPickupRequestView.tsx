@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Truck, Package, Clock, MapPin, Home, Navigation, Search } from "lucide-react";
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/AddressAutocomplete";
 import { Icon } from "@/components/Icon";
@@ -12,8 +12,10 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { Input } from "@/components/Input";
 import { PageContainer } from "@/components/PageContainer";
 import { PillRadioGroup } from "@/components/PillRadioGroup";
-import { type SelectOption } from "@/components/Select";
+import { Select, type SelectOption } from "@/components/Select";
 import { StepProgress } from "@/components/StepProgress";
+import { ALL_SERVICE_AREAS } from "@/lib/areas";
+import { getVerifiedCollectors, type CollectorDirectoryEntry } from "@/lib/api/collectors";
 import { SummaryPanel, SummaryRow } from "@/components/SummaryPanel";
 import { TimeSlotPicker, type TimeSlot } from "@/components/TimeSlotPicker";
 import { WasteCategoryQuantityPicker } from "@/components/WasteCategoryQuantityPicker";
@@ -91,14 +93,23 @@ function formatWindowSummary(dateStr: string, window: TimeWindow): string {
 
 export function NewPickupRequestView() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preferredCollectorId = searchParams.get("preferredCollectorId");
+  const preferredCollectorName = searchParams.get("collectorName");
+
   const [validationMessage, setValidationMessage] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const [isExclusiveToPreferred, setIsExclusiveToPreferred] = React.useState(true);
 
   const [categories, setCategories] = React.useState<WasteCategory[]>([]);
   const [quantities, setQuantities] = React.useState<Partial<Record<WasteCategory, LoadSize>>>({});
   const [date, setDate] = React.useState("");
   const [timeWindowId, setTimeWindowId] = React.useState<string | null>(null);
+
+  const [serviceArea, setServiceArea] = React.useState<string>("");
+  const [localCollectors, setLocalCollectors] = React.useState<CollectorDirectoryEntry[]>([]);
+  const [selectedCollectorId, setSelectedCollectorId] = React.useState<string>(preferredCollectorId || "");
 
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
   const [profileError, setProfileError] = React.useState<string | null>(null);
@@ -150,6 +161,34 @@ export function NewPickupRequestView() {
       if (addressDebounceTimerRef.current !== null) window.clearTimeout(addressDebounceTimerRef.current);
     };
   }, []);
+
+  const activeAddress = React.useMemo(() => {
+    if (addressMode === "saved") return profile?.formattedAddress;
+    if (addressMode === "custom") return selectedCustomPlace?.description;
+    if (addressMode === "current") return currentLocationPlace?.formattedAddress;
+    return null;
+  }, [addressMode, profile, selectedCustomPlace, currentLocationPlace]);
+
+  React.useEffect(() => {
+    if (activeAddress && !serviceArea) {
+      const lowerAddress = activeAddress.toLowerCase();
+      const detected = ALL_SERVICE_AREAS.find(area => lowerAddress.includes(area.toLowerCase()));
+      if (detected) {
+        setServiceArea(detected);
+      }
+    }
+  }, [activeAddress, serviceArea]);
+
+  React.useEffect(() => {
+    if (serviceArea) {
+      getVerifiedCollectors({ serviceArea }).then(cols => {
+        cols.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
+        setLocalCollectors(cols);
+      }).catch(console.error);
+    } else {
+      setLocalCollectors([]);
+    }
+  }, [serviceArea]);
 
 
 
@@ -273,7 +312,8 @@ export function NewPickupRequestView() {
     date !== "" &&
     selectedWindow !== null &&
     !isSlotInPast &&
-    resolvedPlaceId !== null;
+    resolvedPlaceId !== null &&
+    serviceArea !== "";
 
   function handleQuantityChange(category: WasteCategory, loadSize: LoadSize) {
     setQuantities((prev) => ({ ...prev, [category]: loadSize }));
@@ -318,7 +358,7 @@ export function NewPickupRequestView() {
         longitude = details.longitude;
       }
 
-      await createPickupRequest({
+      const payload = {
         items: categories.map((category) => ({
           category,
           loadSize: quantities[category] as LoadSize,
@@ -329,7 +369,14 @@ export function NewPickupRequestView() {
         formattedAddress,
         latitude,
         longitude,
-      });
+        serviceArea,
+        ...(selectedCollectorId ? { 
+          preferredCollectorId: selectedCollectorId, 
+          isExclusiveToPreferred 
+        } : {})
+      };
+
+      await createPickupRequest(payload);
       router.push("/dashboard/pickups");
     } catch (err) {
       setSubmitError(resolveSubmitPickupErrorMessage(err));
@@ -352,6 +399,8 @@ export function NewPickupRequestView() {
       </div>
 
       {profileError && <ErrorBanner className="mt-4 max-w-form">{profileError}</ErrorBanner>}
+
+
 
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] animate-slide-up">
         <div className="flex flex-col gap-6">
@@ -570,6 +619,53 @@ export function NewPickupRequestView() {
               )}
             </div>
             
+            <div className="mt-6 pt-6 border-t border-neutral-100 flex flex-col gap-4">
+              <Select
+                label="Service Area (Required)"
+                value={serviceArea}
+                onChange={(e) => {
+                  setServiceArea(e.target.value);
+                  setSelectedCollectorId(""); // Reset collector when area changes
+                }}
+                options={[
+                  { value: "", label: "Select your zone...", disabled: true },
+                  ...ALL_SERVICE_AREAS.map(area => ({ value: area, label: area }))
+                ]}
+              />
+
+              {serviceArea && localCollectors.length > 0 && (
+                <div className="p-4 bg-primary-50 rounded-xl border border-primary-100">
+                  <h3 className="font-semibold text-primary-900 mb-2">Optional: Request a Specific Collector</h3>
+                  <p className="text-body-sm text-primary-800 mb-4">
+                    Choose a highly-rated collector in your area to send this request directly to them.
+                  </p>
+                  <Select
+                    label="Preferred Collector"
+                    value={selectedCollectorId}
+                    onChange={(e) => setSelectedCollectorId(e.target.value)}
+                    options={[
+                      { value: "", label: "Broadcast to everyone (Default)" },
+                      ...localCollectors.map(col => ({ 
+                        value: col.id, 
+                        label: `${col.fullName} - ⭐ ${col.averageRating ? col.averageRating.toFixed(1) : "New"}` 
+                      }))
+                    ]}
+                  />
+                  {selectedCollectorId && (
+                    <label className="flex items-center gap-2 mt-4 text-body-sm text-neutral-800 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={isExclusiveToPreferred}
+                        onChange={(e) => setIsExclusiveToPreferred(e.target.checked)}
+                        className="rounded text-primary-600 focus:ring-primary-500 w-4 h-4"
+                      />
+                      Send this request ONLY to the selected collector.
+                    </label>
+                  )}
+                </div>
+              )}
+            </div>
+
             {validationMessage && <ErrorBanner className="mt-4">{validationMessage}</ErrorBanner>}
           </Card>
 

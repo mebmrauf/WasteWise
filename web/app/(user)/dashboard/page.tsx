@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Camera, ClipboardList, Medal, Leaf, Wind, Truck, Gift, Package } from "lucide-react";
+import { Battery, Camera, ClipboardList, Gift, Leaf, Medal, Package, Truck, Wind, BadgeCheck } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { StatusPill } from "@/components/StatusPill";
 import { Card } from "@/components/Card";
@@ -129,7 +129,7 @@ export default function UserDashboardPage() {
 
   // Recent Pickups logic
   const recentPickupsWithEarnings = [...completedPickups]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .sort((a, b) => new Date(b.timeSlotStart).getTime() - new Date(a.timeSlotStart).getTime())
     .slice(0, 3)
     .map(p => {
       let weight = 0;
@@ -145,14 +145,24 @@ export default function UserDashboardPage() {
 
   // Active tracking banner logic
   const activePickupList = pickups.filter((p) => !["COMPLETED", "CANCELLED"].includes(p.status));
-  const nextActivePickup = activePickupList.length > 0 ? activePickupList[0] : null;
+  const statusPriority: Record<string, number> = {
+    VERIFYING_WEIGHTS: 4,
+    ARRIVED: 3,
+    EN_ROUTE: 2,
+    ASSIGNED: 1,
+    PENDING: 0,
+  };
+  const sortedActivePickups = [...activePickupList].sort((a, b) => {
+    return (statusPriority[b.status] || 0) - (statusPriority[a.status] || 0);
+  });
+  const nextActivePickup = sortedActivePickups.length > 0 ? sortedActivePickups[0] : null;
 
   return (
     <PageContainer className="py-8 max-w-6xl">
       {/* Banner & Primary CTA */}
       <div className="bg-[#114E29] text-white p-8 rounded-2xl mb-8 flex flex-col md:flex-row md:items-center justify-between shadow-lg min-h-[160px] relative overflow-hidden gap-6">
         <div className="relative z-10">
-          <h1 className="text-display text-white mb-2 font-bold tracking-tight">
+          <h1 className="text-display text-white font-bold tracking-tight mb-2">
             {greeting}, {displayName}!
           </h1>
           <p className="text-white/90 text-body-lg max-w-xl">
@@ -204,7 +214,7 @@ export default function UserDashboardPage() {
                   
                   <div className="flex flex-col sm:items-end">
                     <Button href={`/dashboard/pickups?pickupId=${nextActivePickup.id}&view=${nextActivePickup.status === 'PENDING' ? 'offers' : 'track'}`} variant="primary" size="sm" className="w-full sm:w-auto shadow-sm bg-green-700 hover:bg-green-800">
-                      {nextActivePickup.status === "PENDING" ? "Review Offers" : "Track Live"}
+                      {nextActivePickup.status === "PENDING" ? "Review Offers" : (["EN_ROUTE", "ARRIVED", "VERIFYING_WEIGHTS"].includes(nextActivePickup.status) ? "Track Live" : "View Details")}
                     </Button>
                   </div>
                 </div>
@@ -249,10 +259,9 @@ export default function UserDashboardPage() {
             </Card>
           </div>
 
-          {/* Quick Actions */}
           <div className="mb-10">
             <h2 className="text-h4 text-neutral-900 mb-4 font-semibold">Quick Actions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <DashboardFeatureTile
                 icon={Truck}
                 label="Request Pickup"
@@ -285,6 +294,14 @@ export default function UserDashboardPage() {
                 className="p-5 shadow-sm border border-neutral-200 bg-white hover:border-yellow-300"
                 iconClassName="p-2 bg-yellow-100 text-yellow-700 rounded-full box-content"
               />
+              <DashboardFeatureTile
+                icon={BadgeCheck}
+                label="Verified Collectors"
+                description="Find trusted collectors near you."
+                href="/dashboard/collectors"
+                className="p-5 shadow-sm border border-neutral-200 bg-white hover:border-indigo-300"
+                iconClassName="p-2 bg-indigo-100 text-indigo-700 rounded-full box-content"
+              />
             </div>
           </div>
 
@@ -313,7 +330,7 @@ export default function UserDashboardPage() {
                   {recentPickupsWithEarnings.map(rp => (
                     <Card key={rp.id} className="flex items-center justify-between p-4 shadow-sm border border-neutral-200 bg-white hover:border-neutral-300 transition-colors">
                       <div>
-                        <div className="font-semibold text-neutral-900">{new Date(rp.createdAt).toLocaleDateString()}</div>
+                        <div className="font-semibold text-neutral-900">{new Date(rp.timeSlotStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                         <div className="text-body-sm text-neutral-500">{rp.items.length} categories &bull; {rp.totalWeight.toFixed(1)} kg</div>
                       </div>
                       <div className="text-right">

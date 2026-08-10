@@ -15,6 +15,7 @@ import { offersRouter } from "./routes/offers";
 import { rewardsRouter } from "./routes/rewards";
 import { notificationsRouter } from "./routes/notifications";
 import { adminRouter } from "./routes/admin";
+import { collectorsRouter } from "./routes/collectors";
 
 export function createApp() {
   const app = express();
@@ -52,6 +53,7 @@ export function createApp() {
   app.use("/api/v1/rewards", rewardsRouter);
   app.use("/api/v1/notifications", notificationsRouter);
   app.use("/api/v1/admin", adminRouter);
+  app.use("/api/v1/collectors", collectorsRouter);
 
   // Serves uploaded waste-recognition photos back out. Deliberately
   // root-relative (not under /api/v1) since it's static file serving, not a

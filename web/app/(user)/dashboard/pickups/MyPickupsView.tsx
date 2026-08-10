@@ -261,8 +261,23 @@ export function MyPickupsView() {
 
           <div className="flex flex-col gap-6">
           {(() => {
-            const activePickups = pickups.filter((p) => p.status !== "COMPLETED" && p.status !== "CANCELLED");
-            const historyPickups = pickups.filter((p) => p.status === "COMPLETED" || p.status === "CANCELLED");
+            const statusPriority: Record<string, number> = {
+              VERIFYING_WEIGHTS: 4,
+              ARRIVED: 3,
+              EN_ROUTE: 2,
+              ASSIGNED: 1,
+              PENDING: 0,
+            };
+            const activePickups = pickups
+              .filter((p) => p.status !== "COMPLETED" && p.status !== "CANCELLED")
+              .sort((a, b) => {
+                const pDiff = (statusPriority[b.status] || 0) - (statusPriority[a.status] || 0);
+                if (pDiff !== 0) return pDiff;
+                return new Date(a.timeSlotStart).getTime() - new Date(b.timeSlotStart).getTime();
+              });
+            const historyPickups = pickups
+              .filter((p) => p.status === "COMPLETED" || p.status === "CANCELLED")
+              .sort((a, b) => new Date(b.timeSlotStart).getTime() - new Date(a.timeSlotStart).getTime());
 
             const renderHistoryRow = (pickup: PickupRequestSummary) => (
               <Card key={pickup.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 shadow-sm border border-neutral-200 bg-white hover:border-neutral-300 transition-colors gap-4">
@@ -272,7 +287,7 @@ export function MyPickupsView() {
                   </div>
                   <div>
                     <div className="font-semibold text-neutral-900">
-                      {new Date(pickup.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {new Date(pickup.timeSlotStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
                     <div className="text-body-sm text-neutral-500">
                       {pickup.items.length} item{pickup.items.length !== 1 ? "s" : ""} &bull; {PICKUP_STATUS_LABEL[pickup.status]}
@@ -312,18 +327,15 @@ export function MyPickupsView() {
 
               return (
               <Card key={pickup.id} className="relative flex flex-col border border-neutral-200 shadow-sm transition-all hover:border-green-300 overflow-hidden rounded-2xl p-0 bg-white">
-                <div className="p-6 sm:p-8 flex flex-col gap-6">
+                <div className="p-5 sm:p-6 flex flex-col gap-5">
                   {/* Header */}
-                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-5">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-50 text-green-700 shrink-0">
-                        <Icon icon={Package} size="md" />
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-700 shrink-0">
+                        <Icon icon={Package} size="sm" />
                       </div>
                       <div>
-                        <h3 className="font-heading text-h4 text-neutral-900 leading-tight">Pickup Request</h3>
-                        <p className="text-body-sm text-neutral-500">
-                          {new Date(pickup.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </p>
+                        <h3 className="font-heading text-h5 text-neutral-900 leading-tight">Pickup Request</h3>
                       </div>
                     </div>
                     <StatusPill tone={PICKUP_STATUS_TONE[pickup.status]} className="text-body-sm px-4 py-1.5 shadow-sm">
@@ -332,15 +344,15 @@ export function MyPickupsView() {
                   </div>
 
                   {/* Body Content: 1-Column with Timeline & Icons */}
-                  <div className="flex flex-col gap-6">
+                  <div className="flex flex-col gap-5">
                     {/* Mini Timeline (Simulated) */}
-                    <div className="relative pt-2 pb-4 px-2 sm:px-6 mb-2">
+                    <div className="relative pt-1 pb-3 px-2 sm:px-6 mb-1">
                       {/* Background track */}
-                      <div className="absolute top-3.5 left-10 right-10 h-0.5 bg-neutral-100 rounded-full" />
+                      <div className="absolute top-2.5 left-10 right-10 h-0.5 bg-neutral-100 rounded-full" />
                       
                       {/* Active track */}
                       <div 
-                        className="absolute top-3.5 left-10 h-0.5 bg-green-500 rounded-full transition-all duration-500" 
+                        className="absolute top-2.5 left-10 h-0.5 bg-green-500 rounded-full transition-all duration-500" 
                         style={{ width: pickup.status === "PENDING" ? "0%" : pickup.status === "ASSIGNED" ? "33%" : ["EN_ROUTE", "ARRIVED"].includes(pickup.status) ? "66%" : "100%" }}
                       />
 

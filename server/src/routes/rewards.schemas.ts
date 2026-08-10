@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MobileOperator, SimType } from "@prisma/client";
+import { MobileOperator, SimType, PlatinumGift } from "@prisma/client";
 import { MAX_RECHARGE_TAKA, MIN_RECHARGE_TAKA } from "../lib/rewards";
 
 const phoneNumberSchema = z
@@ -26,3 +26,10 @@ export const rechargeRequestSchema = z
   })
   .strict();
 export type RechargeRequestInput = z.infer<typeof rechargeRequestSchema>;
+
+export const claimPlatinumGiftSchema = z
+  .object({
+    gift: z.nativeEnum(PlatinumGift, { required_error: "gift is required" }),
+  })
+  .strict();
+export type ClaimPlatinumGiftInput = z.infer<typeof claimPlatinumGiftSchema>;

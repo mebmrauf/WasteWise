@@ -58,6 +58,11 @@ function toPublicUser(user: User) {
     membershipLevel: user.membershipLevel,
     membershipBadge: user.membershipBadge,
     totalGreenPoints: user.totalGreenPoints,
+    giftClaimed: user.giftClaimed,
+    selectedGift: user.selectedGift,
+    nextGiftEligibleDate: user.nextGiftEligibleDate,
+    discountCouponClaimed: user.discountCouponClaimed,
+    nextDiscountEligibleDate: user.nextDiscountEligibleDate,
     createdAt: user.createdAt,
   };
 }
