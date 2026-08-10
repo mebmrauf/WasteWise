@@ -15,6 +15,9 @@ export interface AuthUser {
   accountType: AccountType | null;
   isEmailVerified: boolean;
   avatarUrl: string | null;
+  membershipLevel: string;
+  membershipBadge: string;
+  totalGreenPoints: number;
   createdAt: string;
 }
 

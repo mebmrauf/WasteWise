@@ -55,6 +55,9 @@ function toPublicUser(user: User) {
     accountType: user.accountType,
     isEmailVerified: user.isEmailVerified,
     avatarUrl: user.avatarUrl,
+    membershipLevel: user.membershipLevel,
+    membershipBadge: user.membershipBadge,
+    totalGreenPoints: user.totalGreenPoints,
     createdAt: user.createdAt,
   };
 }

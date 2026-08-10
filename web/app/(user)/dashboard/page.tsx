@@ -1,13 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { Truck, Camera, Gift, ClipboardList } from "lucide-react";
+import Link from "next/link";
+import { Camera, ClipboardList, Medal, Leaf, Wind, Truck, Gift } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
-import { DashboardFeatureTile } from "@/components/DashboardFeatureTile";
 import { Card } from "@/components/Card";
+import { Button } from "@/components/Button";
+import { DashboardFeatureTile } from "@/components/DashboardFeatureTile";
 import { listPickups, type PickupRequestSummary } from "@/lib/api/pickups";
 import { getRewardsBalance } from "@/lib/api/rewards";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { WasteSoldChart, type ChartDataPoint } from "@/components/WasteSoldChart";
+import { Icon } from "@/components/Icon";
 
 export default function UserDashboardPage() {
   const { user } = useAuth();
@@ -45,85 +49,310 @@ export default function UserDashboardPage() {
     greeting = "Good afternoon";
   }
 
-  // In a real app we'd fetch the total recycled weight. We'll default to 0 for now.
-  const totalRecycled = 0;
+  const currentYear = new Date().getFullYear().toString();
+  const completedPickups = pickups.filter(p => p.status === "COMPLETED");
+  
+  let totalRecycled = 0;
+  let totalEarnings = 0;
+  let co2OffsetBase = 0;
+  let treesSavedBase = 0;
+  
+  const yearlyMap: Record<string, number> = {};
+  const monthlyMap: Record<string, number> = {};
+
+  completedPickups.forEach(p => {
+    let weight = 0;
+    p.items.forEach(item => {
+      const w = item.exactWeightKg || 0;
+      weight += w;
+      
+      const bidPerKg = p.bidAmountsPerKg?.[item.category] || 0;
+      totalEarnings += w * bidPerKg;
+      
+      // Category-specific eco impact multipliers
+      switch (item.category) {
+        case "PAPER":
+          treesSavedBase += w * 0.017;
+          co2OffsetBase += w * 1.0;
+          break;
+        case "PLASTIC":
+          co2OffsetBase += w * 1.5;
+          break;
+        case "METAL":
+          co2OffsetBase += w * 2.5;
+          break;
+        case "GLASS":
+          co2OffsetBase += w * 0.3;
+          break;
+        case "ORGANIC":
+          co2OffsetBase += w * 0.5;
+          break;
+        case "ELECTRONIC":
+          co2OffsetBase += w * 1.0;
+          break;
+        default:
+          co2OffsetBase += w * 0.5;
+          break;
+      }
+    });
+    totalRecycled += weight;
+
+    const dateStr = p.createdAt.split("T")[0]; 
+    if (dateStr) {
+      const year = dateStr.split("-")[0];
+      const monthNum = parseInt(dateStr.split("-")[1] || "1", 10);
+      
+      yearlyMap[year] = (yearlyMap[year] || 0) + weight;
+
+      if (year === currentYear) {
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const monthLabel = monthNames[monthNum - 1] || "Unknown";
+        monthlyMap[monthLabel] = (monthlyMap[monthLabel] || 0) + weight;
+      }
+    }
+  });
+
+  const areaData: ChartDataPoint[] = Object.entries(yearlyMap)
+    .map(([label, weight]) => ({ label, weight }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  const monthOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const barData: ChartDataPoint[] = Object.entries(monthlyMap)
+    .map(([label, weight]) => ({ label, weight }))
+    .sort((a, b) => monthOrder.indexOf(a.label) - monthOrder.indexOf(b.label));
+
+  const co2Offset = co2OffsetBase.toFixed(1); 
+  const treesSaved = treesSavedBase.toFixed(2); 
+
+  // Recent Pickups logic
+  const recentPickupsWithEarnings = [...completedPickups]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 3)
+    .map(p => {
+      let weight = 0;
+      let earnings = 0;
+      p.items.forEach(item => {
+        const w = item.exactWeightKg || 0;
+        weight += w;
+        const bidPerKg = p.bidAmountsPerKg?.[item.category] || 0;
+        earnings += w * bidPerKg;
+      });
+      return { ...p, totalWeight: weight, totalEarnings: earnings };
+    });
+
+  // Active tracking banner logic
+  const activePickupList = pickups.filter((p) => !["COMPLETED", "CANCELLED"].includes(p.status));
+  const nextActivePickup = activePickupList.length > 0 ? activePickupList[0] : null;
 
   return (
-    <PageContainer className="py-8 max-w-5xl">
-      {/* Banner */}
-      <div className="bg-[#114E29] text-white p-8 rounded-2xl mb-8 flex flex-col justify-center shadow-lg min-h-[160px]">
-        <h1 className="text-display text-white mb-2 font-bold tracking-tight">
-          {greeting}, {displayName}!
-        </h1>
-        <p className="text-white/90 text-body-lg max-w-2xl">
-          Ready to make an impact today? Request a pickup, scan waste, or track your active collections right from here.
-        </p>
+    <PageContainer className="py-8 max-w-6xl">
+      {/* Banner & Primary CTA */}
+      <div className="bg-[#114E29] text-white p-8 rounded-2xl mb-8 flex flex-col md:flex-row md:items-center justify-between shadow-lg min-h-[160px] relative overflow-hidden gap-6">
+        <div className="relative z-10">
+          <h1 className="text-display text-white mb-2 font-bold tracking-tight">
+            {greeting}, {displayName}!
+          </h1>
+          <p className="text-white/90 text-body-lg max-w-xl">
+            Ready to make an impact today? Schedule a pickup or track your active collections.
+          </p>
+        </div>
+        
+        <div className="relative z-10 flex items-center gap-6">
+          <Button href="/dashboard/pickups/new" size="lg" variant="secondary" className="font-bold px-8 shadow-sm border-none text-green-900 hover:text-green-900">
+            Request Pickup
+          </Button>
+        </div>
       </div>
 
-      {/* Stats */}
       {isLoading ? (
         <div className="animate-pulse space-y-4">
-          <div className="h-32 bg-neutral-200 rounded-2xl w-full" />
+          <div className="h-32 bg-neutral-200 rounded-lg w-full" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="flex flex-col p-6 shadow-sm border border-neutral-200 bg-white">
-            <span className="text-overline text-neutral-500 mb-2">ACTIVE PICKUPS</span>
-            <div className="text-display font-bold text-neutral-900">{activePickups}</div>
-          </Card>
-          <Card className="flex flex-col p-6 shadow-sm border border-neutral-200 bg-white">
-            <span className="text-overline text-neutral-500 mb-2">TOTAL COLLECTED</span>
-            <div className="text-display font-bold text-neutral-900">
-              {totalRecycled} <span className="text-body text-neutral-500">kg</span>
+        <>
+          {/* Dynamic Active Tracking Banner */}
+          {nextActivePickup && (
+            <div className="mb-8 bg-blue-50 border border-blue-200 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-full text-blue-700">
+                  <Icon icon={Truck} size="md" />
+                </div>
+                <div>
+                  <h3 className="text-body-lg font-bold text-blue-900">Pickup in Progress</h3>
+                  <p className="text-body-sm text-blue-700 mt-1">
+                    Status: <span className="font-semibold">{nextActivePickup.status}</span> &bull; Scheduled: {new Date(nextActivePickup.timeSlotStart).toLocaleDateString()} ({new Date(nextActivePickup.timeSlotStart).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(nextActivePickup.timeSlotEnd).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})
+                  </p>
+                </div>
+              </div>
+              <Button href="/dashboard/pickups" variant="secondary" className="bg-white text-blue-900 border border-blue-200 shadow-sm hover:bg-blue-100 font-semibold whitespace-nowrap">
+                Track Pickup
+              </Button>
             </div>
-          </Card>
-          <Card className="flex flex-col p-6 shadow-sm border border-neutral-200 bg-white">
-            <span className="text-overline text-neutral-500 mb-2">GREEN POINTS</span>
-            <div className="text-display font-bold text-neutral-900">
-              {rewardsBalance} <span className="text-body text-neutral-500">pts</span>
-            </div>
-          </Card>
-        </div>
-      )}
+          )}
 
-      {/* Quick Actions */}
-      <div className="mb-4">
-        <h2 className="text-h4 text-neutral-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <DashboardFeatureTile
-            icon={Truck}
-            label="Request Pickup"
-            description="Schedule a smart pickup easily."
-            href="/dashboard/pickups/new"
-            className="p-5 shadow-sm border border-neutral-200 bg-white hover:border-green-300"
-            iconClassName="p-2 bg-green-100 text-green-700 rounded-full box-content"
-          />
-          <DashboardFeatureTile
-            icon={ClipboardList}
-            label="My Pickups"
-            description="Track and manage active requests."
-            href="/dashboard/pickups"
-            className="p-5 shadow-sm border border-neutral-200 bg-white hover:border-blue-300"
-            iconClassName="p-2 bg-blue-100 text-blue-700 rounded-full box-content"
-          />
-          <DashboardFeatureTile
-            icon={Camera}
-            label="Scan Waste"
-            description="Use AI to identify materials."
-            href="/waste-recognition"
-            className="p-5 shadow-sm border border-neutral-200 bg-white hover:border-purple-300"
-            iconClassName="p-2 bg-purple-100 text-purple-700 rounded-full box-content"
-          />
-          <DashboardFeatureTile
-            icon={Gift}
-            label="Green Rewards"
-            description="View and redeem your points."
-            href="/dashboard/rewards"
-            className="p-5 shadow-sm border border-neutral-200 bg-white hover:border-yellow-300"
-            iconClassName="p-2 bg-yellow-100 text-yellow-700 rounded-full box-content"
-          />
-        </div>
-      </div>
+          <h2 className="text-h4 text-neutral-900 mb-4 font-semibold">Overview</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {/* 3 Top-Level Stats */}
+            <Card className="flex flex-col p-6 shadow-sm border border-neutral-200 bg-white hover:border-green-300 transition-colors">
+              <span className="text-overline text-neutral-500 mb-2">TOTAL EARNED</span>
+              <div className="text-display font-bold text-neutral-900">
+                ৳{totalEarnings.toFixed(0)}
+              </div>
+            </Card>
+            
+            <Card className="flex flex-col p-6 shadow-sm border border-neutral-200 bg-white hover:border-green-300 transition-colors">
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-overline text-neutral-500">ACTIVE PICKUPS</span>
+                {activePickups > 0 && (
+                  <Link href="/dashboard/pickups" className="text-caption text-primary hover:underline font-medium">
+                    View &rarr;
+                  </Link>
+                )}
+              </div>
+              <div className="text-display font-bold text-neutral-900">{activePickups}</div>
+            </Card>
+
+            <Card className="flex flex-col p-6 shadow-sm border border-green-200 bg-[#f0fdf4]">
+              <span className="text-overline text-green-700 mb-2">ECO IMPACT</span>
+              <div className="flex flex-col gap-2 mt-1">
+                <div className="flex items-center gap-2">
+                  <Icon icon={Wind} size="sm" className="text-green-600" />
+                  <span className="text-body-sm font-semibold text-green-900">{co2Offset} kg CO₂ saved</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Icon icon={Leaf} size="sm" className="text-green-600" />
+                  <span className="text-body-sm font-semibold text-green-900">{treesSaved} trees planted</span>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="mb-10">
+            <h2 className="text-h4 text-neutral-900 mb-4 font-semibold">Quick Actions</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <DashboardFeatureTile
+                icon={Truck}
+                label="Request Pickup"
+                description="Schedule a smart pickup easily."
+                href="/dashboard/pickups/new"
+                className="p-5 shadow-sm border border-neutral-200 bg-white hover:border-green-300"
+                iconClassName="p-2 bg-green-100 text-green-700 rounded-full box-content"
+              />
+              <DashboardFeatureTile
+                icon={ClipboardList}
+                label="My Pickups"
+                description="Track and manage active requests."
+                href="/dashboard/pickups"
+                className="p-5 shadow-sm border border-neutral-200 bg-white hover:border-blue-300"
+                iconClassName="p-2 bg-blue-100 text-blue-700 rounded-full box-content"
+              />
+              <DashboardFeatureTile
+                icon={Camera}
+                label="Scan Waste"
+                description="Use AI to identify materials."
+                href="/waste-recognition"
+                className="p-5 shadow-sm border border-neutral-200 bg-white hover:border-purple-300"
+                iconClassName="p-2 bg-purple-100 text-purple-700 rounded-full box-content"
+              />
+              <DashboardFeatureTile
+                icon={Gift}
+                label="Green Rewards"
+                description="View and redeem your points."
+                href="/dashboard/rewards"
+                className="p-5 shadow-sm border border-neutral-200 bg-white hover:border-yellow-300"
+                iconClassName="p-2 bg-yellow-100 text-yellow-700 rounded-full box-content"
+              />
+            </div>
+          </div>
+
+          <div className="mb-10">
+            <h2 className="text-h4 text-neutral-900 mb-4 font-semibold">Recycling History</h2>
+            
+            {totalRecycled === 0 ? (
+              <Card className="flex flex-col items-center justify-center p-12 text-center bg-neutral-50 border border-dashed border-neutral-300 shadow-none min-h-[300px]">
+                <Icon icon={Leaf} size="xl" className="text-neutral-300 mb-4" />
+                <h3 className="text-h5 font-bold text-neutral-800 mb-2">Welcome to WasteWise!</h3>
+                <p className="text-body text-neutral-500 max-w-md mb-6">
+                  You haven't recycled anything yet. Request your first pickup to start tracking your environmental impact and earning rewards.
+                </p>
+                <Button href="/dashboard/pickups/new">Schedule First Pickup</Button>
+              </Card>
+            ) : (
+              <WasteSoldChart areaData={areaData} barData={barData} currentYear={currentYear} />
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            {recentPickupsWithEarnings.length > 0 ? (
+              <div>
+                <h2 className="text-h4 text-neutral-900 mb-4 font-semibold">Recent Pickups</h2>
+                <div className="flex flex-col gap-3">
+                  {recentPickupsWithEarnings.map(rp => (
+                    <Card key={rp.id} className="flex items-center justify-between p-4 shadow-sm border border-neutral-200 bg-white hover:border-neutral-300 transition-colors">
+                      <div>
+                        <div className="font-semibold text-neutral-900">{new Date(rp.createdAt).toLocaleDateString()}</div>
+                        <div className="text-body-sm text-neutral-500">{rp.items.length} categories &bull; {rp.totalWeight.toFixed(1)} kg</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-green-700 text-body-lg">৳{rp.totalEarnings.toFixed(0)}</div>
+                        <div className="text-caption text-neutral-400 uppercase tracking-wider">Earned</div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div />
+            )}
+
+            <div className="flex flex-col gap-4">
+              <h2 className="text-h4 text-neutral-900 mb-4 font-semibold">Balances & Rewards</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Card className="flex flex-col p-6 shadow-none border border-neutral-200 bg-white">
+                  <span className="text-caption text-neutral-500 uppercase tracking-widest mb-2">Total Sold</span>
+                  <div className="text-h2 font-bold text-neutral-900">
+                    {totalRecycled.toFixed(1)} <span className="text-body text-neutral-500 font-normal">kg</span>
+                  </div>
+                </Card>
+                
+                <Card className="flex flex-col p-6 shadow-none border border-neutral-200 bg-white">
+                  <span className="text-caption text-neutral-500 uppercase tracking-widest mb-2">Green Points</span>
+                  <div className="text-h2 font-bold text-neutral-900 flex items-center justify-between">
+                    <span>{rewardsBalance} <span className="text-body text-neutral-500 font-normal">pts</span></span>
+                    <Link href="/dashboard/rewards" className="text-body-sm text-primary hover:underline font-medium tracking-normal">
+                      Redeem &rarr;
+                    </Link>
+                  </div>
+                </Card>
+              </div>
+
+              {user && (
+                <Card className="flex flex-col p-6 shadow-none border border-neutral-200 bg-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-caption text-neutral-500 uppercase tracking-widest block mb-1">Membership</span>
+                      <div className="text-h3 font-bold text-neutral-900">{user.membershipLevel}</div>
+                    </div>
+                    <Icon 
+                      icon={Medal} 
+                      className={
+                        user.membershipLevel === "BRONZE" ? "text-[#CD7F32]" :
+                        user.membershipLevel === "SILVER" ? "text-slate-400" :
+                        user.membershipLevel === "GOLD" ? "text-yellow-500" :
+                        user.membershipLevel === "PLATINUM" ? "text-indigo-500" :
+                        "text-neutral-300"
+                      } 
+                      size="xl" 
+                    />
+                  </div>
+                </Card>
+              )}
+            </div>
+          </div>
+          
+        </>
+      )}
     </PageContainer>
   );
 }
