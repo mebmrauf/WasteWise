@@ -15,6 +15,19 @@ enum Role {
   ADMIN
 }
 
+enum MembershipLevel {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum PlatinumGift {
+  TREE_SAPLING
+  ECO_TOTE_BAG
+  REUSABLE_WATER_BOTTLE
+}
+
 enum AccountType {
   HOUSEHOLD
   BUSINESS
@@ -132,6 +145,18 @@ model User {
   smsNotificationsEnabled   Boolean @default(true)
 
   greenPointsBalance Int @default(0)
+  totalGreenPoints   Int @default(0)
+  membershipLevel    MembershipLevel @default(BRONZE)
+  membershipBadge    String @default("Bronze Badge")
+
+  lastDiscountClaimDate    DateTime?
+  nextDiscountEligibleDate DateTime?
+  discountCouponClaimed    Boolean   @default(false)
+
+  selectedGift             PlatinumGift?
+  giftClaimDate            DateTime?
+  nextGiftEligibleDate     DateTime?
+  giftClaimed              Boolean   @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

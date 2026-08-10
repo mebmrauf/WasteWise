@@ -102,8 +102,8 @@ export function CollectorRatingModal({ pickupId, collectorName, onClose, onSucce
                     <Star 
                       className={`h-10 w-10 sm:h-12 sm:w-12 transition-colors ${
                         isFilled 
-                          ? "fill-warning-400 text-warning-400" 
-                          : "fill-neutral-100 text-neutral-300"
+                          ? "fill-primary-500 text-primary-500" 
+                          : "fill-transparent text-neutral-300"
                       }`} 
                     />
                   </button>

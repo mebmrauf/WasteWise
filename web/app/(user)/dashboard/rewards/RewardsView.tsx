@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ClipboardList, Gift, Sparkles, ArrowDownRight, ArrowUpRight, Smartphone } from "lucide-react";
+import { ClipboardList, Gift, Sparkles, ArrowDownRight, ArrowUpRight, Smartphone, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { ErrorBanner } from "@/components/ErrorBanner";
@@ -20,6 +20,9 @@ import {
 import { RECHARGE_STATUS_LABEL, RECHARGE_STATUS_TONE } from "@/lib/rechargeStatus";
 import { formatBdt, cn } from "@/lib/utils";
 import { RedeemRechargeWizard } from "./RedeemRechargeWizard";
+import { MembershipNotification } from "@/components/MembershipNotification";
+import { PlatinumGiftModal } from "@/components/PlatinumGiftModal";
+import { claimDiscount } from "@/lib/api/rewards";
 
 type LoadState = "loading" | "ready" | "error";
 type Mode = "overview" | "redeem";
@@ -32,12 +35,34 @@ function formatDateTime(iso: string): string {
   )}`;
 }
 
+const GIFT_NAMES: Record<string, string> = {
+  TREE_SAPLING: "Tree Sapling",
+  ECO_TOTE_BAG: "Eco-friendly Tote Bag",
+  REUSABLE_WATER_BOTTLE: "Reusable Water Bottle",
+};
+
 export function RewardsView() {
   const [loadState, setLoadState] = React.useState<LoadState>("loading");
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [mode, setMode] = React.useState<Mode>("overview");
 
   const [balance, setBalance] = React.useState<number>(0);
+  const [totalPoints, setTotalPoints] = React.useState<number>(0);
+  const [membershipLevel, setMembershipLevel] = React.useState<"BRONZE" | "SILVER" | "GOLD" | "PLATINUM">("BRONZE");
+  const [membershipBadge, setMembershipBadge] = React.useState<string>("Bronze Badge");
+  
+  const [lastDiscountClaimDate, setLastDiscountClaimDate] = React.useState<string | null>(null);
+  const [nextDiscountEligibleDate, setNextDiscountEligibleDate] = React.useState<string | null>(null);
+  const [discountCouponClaimed, setDiscountCouponClaimed] = React.useState(false);
+  const [isClaimingDiscount, setIsClaimingDiscount] = React.useState(false);
+
+  const [selectedGift, setSelectedGift] = React.useState<string | null>(null);
+  const [giftClaimDate, setGiftClaimDate] = React.useState<string | null>(null);
+  const [nextGiftEligibleDate, setNextGiftEligibleDate] = React.useState<string | null>(null);
+  const [giftClaimed, setGiftClaimed] = React.useState(false);
+  
+  const [isGiftModalOpen, setIsGiftModalOpen] = React.useState(false);
+
   const [greenPointsTransactions, setGreenPointsTransactions] = React.useState<GreenPointsTransaction[]>([]);
   const [mobileRechargeTransactions, setMobileRechargeTransactions] = React.useState<MobileRechargeTransaction[]>([]);
 
@@ -47,6 +72,19 @@ export function RewardsView() {
     return Promise.all([getRewardsBalance(), getRewardsHistory()])
       .then(([balanceResult, historyResult]) => {
         setBalance(balanceResult.greenPointsBalance);
+        setTotalPoints(balanceResult.totalGreenPoints);
+        setMembershipLevel(balanceResult.membershipLevel);
+        setMembershipBadge(balanceResult.membershipBadge);
+        
+        setLastDiscountClaimDate(balanceResult.lastDiscountClaimDate);
+        setNextDiscountEligibleDate(balanceResult.nextDiscountEligibleDate);
+        setDiscountCouponClaimed(balanceResult.discountCouponClaimed);
+        
+        setSelectedGift(balanceResult.selectedGift);
+        setGiftClaimDate(balanceResult.giftClaimDate);
+        setNextGiftEligibleDate(balanceResult.nextGiftEligibleDate);
+        setGiftClaimed(balanceResult.giftClaimed);
+
         setGreenPointsTransactions(historyResult.greenPointsTransactions);
         setMobileRechargeTransactions(historyResult.mobileRechargeTransactions);
         setLoadState("ready");
@@ -67,20 +105,87 @@ export function RewardsView() {
 
   function handleWizardComplete(result: SubmitRechargeResult) {
     setBalance(result.greenPointsBalance);
+    setMembershipLevel(result.membershipLevel);
+    setMembershipBadge(result.membershipBadge);
+    
     getRewardsHistory()
       .then((historyResult) => {
         setGreenPointsTransactions(historyResult.greenPointsTransactions);
         setMobileRechargeTransactions(historyResult.mobileRechargeTransactions);
       })
-      .catch(() => {
-      });
+      .catch(() => {});
+  }
+
+  // Calculate membership progress
+  let nextLevelPoints = 501;
+  let nextLevelName = "Silver";
+  let progressPercentage = 0;
+  if (membershipLevel === "BRONZE") {
+    nextLevelPoints = 501;
+    nextLevelName = "Silver";
+    progressPercentage = (totalPoints / 501) * 100;
+  } else if (membershipLevel === "SILVER") {
+    nextLevelPoints = 1500;
+    nextLevelName = "Gold";
+    progressPercentage = (totalPoints / 1500) * 100;
+  } else if (membershipLevel === "GOLD") {
+    nextLevelPoints = 3000;
+    nextLevelName = "Platinum";
+    progressPercentage = (totalPoints / 3000) * 100;
+  } else {
+    progressPercentage = 100;
+  }
+  progressPercentage = Math.min(Math.max(progressPercentage, 0), 100);
+
+  // Benefits
+  const benefits = [];
+  if (membershipLevel === "BRONZE") {
+    benefits.push("Bronze Badge");
+  } else if (membershipLevel === "SILVER") {
+    benefits.push("5% Extra Green Points", "Silver Badge");
+  } else if (membershipLevel === "GOLD") {
+    benefits.push("10% Extra Green Points", "5% discount in Eco Shop", "Gold Badge");
+  } else if (membershipLevel === "PLATINUM") {
+    benefits.push("15% Extra Green Points", "Exclusive Eco Gifts", "Platinum Badge");
+  }
+
+  const isEligibleForDiscount =
+    (membershipLevel === "GOLD" || membershipLevel === "PLATINUM") &&
+    (!nextDiscountEligibleDate || new Date() >= new Date(nextDiscountEligibleDate));
+
+  const isEligibleForGift =
+    membershipLevel === "PLATINUM" &&
+    (!nextGiftEligibleDate || new Date() >= new Date(nextGiftEligibleDate));
+
+  async function handleClaimDiscount() {
+    setIsClaimingDiscount(true);
+    try {
+      const result = await claimDiscount();
+      setLastDiscountClaimDate(result.lastDiscountClaimDate);
+      setNextDiscountEligibleDate(result.nextDiscountEligibleDate);
+      setDiscountCouponClaimed(result.discountCouponClaimed);
+    } catch (err) {
+      alert("Failed to claim discount. Please try again.");
+    } finally {
+      setIsClaimingDiscount(false);
+    }
   }
 
   return (
     <PageContainer className="py-8 lg:py-12">
+      <div className="mb-6">
+        <MembershipNotification 
+          level={membershipLevel} 
+          goldEligible={membershipLevel === "GOLD" && isEligibleForDiscount}
+          goldNextDate={membershipLevel === "GOLD" && !isEligibleForDiscount ? nextDiscountEligibleDate : null}
+          platinumEligible={membershipLevel === "PLATINUM" && isEligibleForGift}
+          platinumNextDate={membershipLevel === "PLATINUM" && !isEligibleForGift ? nextGiftEligibleDate : null}
+        />
+      </div>
+
       <h1 className="text-h1 text-neutral-900">Green Rewards</h1>
       <p className="mt-2 text-body-lg text-neutral-500">
-        Earn Green Points for every completed pickup, then redeem them for a mobile recharge.
+        Earn Green Points, climb loyalty levels, and redeem rewards.
       </p>
 
       {loadState === "loading" && (
@@ -93,6 +198,157 @@ export function RewardsView() {
 
       {loadState === "ready" && (
         <div className="mt-8 flex flex-col gap-8">
+          
+          {/* Membership Card */}
+          <Card className="overflow-hidden animate-slide-up">
+            <div className="p-6 md:p-8 bg-gradient-to-br from-neutral-50 to-neutral-100 border-b border-neutral-200">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                  <h2 className="text-h3 text-neutral-900 mb-1">Membership Status</h2>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl leading-none">
+                      {membershipLevel === "BRONZE" && "🥉"}
+                      {membershipLevel === "SILVER" && "🥈"}
+                      {membershipLevel === "GOLD" && "🥇"}
+                      {membershipLevel === "PLATINUM" && "💎"}
+                    </span>
+                    <span className="text-lg font-semibold text-neutral-900">{membershipLevel.charAt(0) + membershipLevel.slice(1).toLowerCase()} Member</span>
+                  </div>
+                  <p className="mt-4 text-body-sm text-neutral-500">Total Lifetime Green Points</p>
+                  <p className="text-3xl font-data font-bold text-neutral-900">{totalPoints.toLocaleString()}</p>
+                </div>
+
+                <div className="w-full md:w-1/2 bg-white p-5 rounded-2xl shadow-sm border border-neutral-100">
+                  <h3 className="text-sm font-semibold text-neutral-900 mb-3 uppercase tracking-wider">Benefits</h3>
+                  <ul className="flex flex-col gap-2">
+                    {benefits.map((b, i) => (
+                      <li key={i} className="flex items-center gap-2 text-sm text-neutral-700">
+                        <CheckCircle2 className="w-4 h-4 text-success-500" />
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              
+              <div className="mt-8">
+                {membershipLevel !== "PLATINUM" ? (
+                  <>
+                    <div className="flex justify-between items-end mb-2">
+                      <p className="text-sm font-medium text-neutral-700">Progress to {nextLevelName}</p>
+                    </div>
+                    <div className="w-full bg-neutral-200 rounded-full h-3 overflow-hidden">
+                      <div className="bg-primary-500 h-3 rounded-full transition-all duration-1000" style={{ width: `${progressPercentage}%` }} />
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center p-4 bg-primary-50 text-primary-900 rounded-xl font-medium border border-primary-100">
+                    Maximum Membership Achieved 🌟
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Gold Discount Section */}
+            {(membershipLevel === "GOLD" || membershipLevel === "PLATINUM") && (
+              <div className="p-6 md:p-8 bg-white border-t border-neutral-100">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+                      <span>🏷️</span> Eco Shop Discount
+                    </h3>
+                    <p className="text-neutral-500 text-sm mt-1 max-w-md">
+                      As a {membershipLevel === "PLATINUM" ? "Platinum" : "Gold"} member, you are eligible to claim a 5% OFF coupon for the Eco Shop every 6 months.
+                    </p>
+                    
+                    {lastDiscountClaimDate && (
+                      <div className="mt-4 p-4 rounded-xl border border-neutral-100 bg-neutral-50 inline-block">
+                        <p className="text-sm font-semibold text-neutral-900 mb-2">Coupon Status</p>
+                        <p className="text-sm text-neutral-700 flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-success-500" /> 5% OFF Coupon
+                        </p>
+                        <div className="mt-2 text-xs text-neutral-500 grid grid-cols-2 gap-x-4 gap-y-1">
+                          <span>Claimed on:</span>
+                          <span className="font-medium text-neutral-700">{new Date(lastDiscountClaimDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                          {nextDiscountEligibleDate && (
+                            <>
+                              <span>Next eligible claim:</span>
+                              <span className="font-medium text-neutral-700">{new Date(nextDiscountEligibleDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <Button 
+                      onClick={handleClaimDiscount} 
+                      disabled={!isEligibleForDiscount || isClaimingDiscount}
+                      className="whitespace-nowrap"
+                    >
+                      {isClaimingDiscount ? "Claiming..." : (isEligibleForDiscount ? "Claim Discount" : "Claimed")}
+                    </Button>
+                    {!isEligibleForDiscount && nextDiscountEligibleDate && (
+                      <p className="text-xs text-neutral-500 text-center mt-2">
+                        Available again on {new Date(nextDiscountEligibleDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Platinum Gift Section */}
+            {membershipLevel === "PLATINUM" && (
+              <div className="p-6 md:p-8 bg-white border-t border-neutral-100">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+                      <span>🎁</span> Exclusive Eco Gift
+                    </h3>
+                    <p className="text-neutral-500 text-sm mt-1 max-w-md">
+                      As a Platinum member, you are eligible to claim one exclusive eco-friendly gift every 6 months.
+                    </p>
+                    
+                    {selectedGift && (
+                      <div className="mt-4 p-4 rounded-xl border border-neutral-100 bg-neutral-50 inline-block">
+                        <p className="text-sm font-semibold text-neutral-900 mb-2">Gift Status</p>
+                        <p className="text-sm text-neutral-700 flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-success-500" /> {GIFT_NAMES[selectedGift] || selectedGift}
+                        </p>
+                        <div className="mt-2 text-xs text-neutral-500 grid grid-cols-2 gap-x-4 gap-y-1">
+                          <span>Claimed on:</span>
+                          <span className="font-medium text-neutral-700">{new Date(giftClaimDate!).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                          {nextGiftEligibleDate && (
+                            <>
+                              <span>Next eligible claim:</span>
+                              <span className="font-medium text-neutral-700">{new Date(nextGiftEligibleDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <Button 
+                      onClick={() => setIsGiftModalOpen(true)} 
+                      disabled={!isEligibleForGift}
+                      className="whitespace-nowrap"
+                    >
+                      {isEligibleForGift ? "Claim Gift" : "Claimed"}
+                    </Button>
+                    {!isEligibleForGift && nextGiftEligibleDate && (
+                      <p className="text-xs text-neutral-500 text-center mt-2">
+                        Available again on {new Date(nextGiftEligibleDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </Card>
+
+
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-600 to-primary-900 p-8 shadow-xl text-center animate-slide-up">
             <div className="absolute -top-24 -left-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
             <div className="absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
@@ -263,6 +519,17 @@ export function RewardsView() {
           </div>
         </div>
       )}
+
+      <PlatinumGiftModal 
+        isOpen={isGiftModalOpen} 
+        onClose={() => setIsGiftModalOpen(false)} 
+        onClaimed={(gift, date, nextDate) => {
+          setSelectedGift(gift);
+          setGiftClaimDate(date);
+          setNextGiftEligibleDate(nextDate);
+          setGiftClaimed(true);
+        }} 
+      />
     </PageContainer>
   );
 }

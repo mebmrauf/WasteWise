@@ -1,4 +1,4 @@
-import { MobileOperator, WasteCategory, PrismaClient } from "@prisma/client";
+import { MobileOperator, WasteCategory, PrismaClient, MembershipLevel } from "@prisma/client";
 import { prisma } from "./prisma";
 
 export const MIN_RECHARGE_TAKA = 20;
@@ -100,6 +100,41 @@ export function calculateBonusPoints(
   return { totalBonusPoints, bonusesBreakdown };
 }
 
+export function calculateMembershipLevel(totalPoints: number): MembershipLevel {
+  if (totalPoints >= 3000) return "PLATINUM";
+  if (totalPoints >= 1501) return "GOLD";
+  if (totalPoints >= 501) return "SILVER";
+  return "BRONZE";
+}
+
+export function getMembershipBonusPercentage(level: MembershipLevel): number {
+  switch (level) {
+    case "PLATINUM":
+      return 15;
+    case "GOLD":
+      return 10;
+    case "SILVER":
+      return 5;
+    case "BRONZE":
+    default:
+      return 0;
+  }
+}
+
+export function getMembershipBadge(level: MembershipLevel): string {
+  switch (level) {
+    case "PLATINUM":
+      return "Platinum Badge";
+    case "GOLD":
+      return "Gold Badge";
+    case "SILVER":
+      return "Silver Badge";
+    case "BRONZE":
+    default:
+      return "Bronze Badge";
+  }
+}
+
 export async function getMonthlyPickupCount(userId: string, tx?: Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">) {
   const db = tx ?? prisma;
   const now = new Date();
@@ -136,15 +171,33 @@ export async function calculateGreenPointsForPickup(
     isFifthPickupThisMonth
   );
 
-  const totalPoints = totalBasePoints + totalBonusPoints;
+  // Apply Membership Bonus
+  const db = tx ?? prisma;
+  const user = await db.user.findUnique({ where: { id: userId }, select: { greenPointsBalance: true, totalGreenPoints: true } });
+  const lifetimePoints = Math.max(user?.totalGreenPoints ?? 0, user?.greenPointsBalance ?? 0);
+  const currentLevel = calculateMembershipLevel(lifetimePoints);
+  const membershipBonusPercentage = getMembershipBonusPercentage(currentLevel);
+  
+  const subtotal = totalBasePoints + totalBonusPoints;
+  const membershipBonusPoints = Math.round(subtotal * (membershipBonusPercentage / 100));
+  
+  if (membershipBonusPoints > 0) {
+    bonusesBreakdown.push({
+      name: `${currentLevel.charAt(0).toUpperCase() + currentLevel.slice(1).toLowerCase()} Member Bonus (${membershipBonusPercentage}%)`,
+      points: membershipBonusPoints,
+    });
+  }
+
+  const finalTotalBonusPoints = totalBonusPoints + membershipBonusPoints;
+  const totalPoints = totalBasePoints + finalTotalBonusPoints;
 
   const rewardReason = {
     materials: materialsBreakdown,
     bonuses: bonusesBreakdown,
     basePoints: totalBasePoints,
-    bonusPoints: totalBonusPoints,
+    bonusPoints: finalTotalBonusPoints,
     totalPoints: totalPoints,
   };
 
-  return { totalPoints, basePoints: totalBasePoints, bonusPoints: totalBonusPoints, rewardReason };
+  return { totalPoints, basePoints: totalBasePoints, bonusPoints: finalTotalBonusPoints, rewardReason };
 }

@@ -164,8 +164,8 @@ export function ReceiptModal({ pickupId, onClose }: { pickupId: string; onClose:
                           icon={Star} 
                           className={`h-5 w-5 ${
                             star <= pickupDetail.rating!.score 
-                              ? "fill-warning-400 text-warning-400" 
-                              : "fill-neutral-200 text-neutral-300"
+                              ? "fill-primary-500 text-primary-500" 
+                              : "fill-transparent text-neutral-300"
                           }`} 
                         />
                       ))}
