@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ClipboardList, Gift, Sparkles, ArrowDownRight, ArrowUpRight, Smartphone, CheckCircle2, Recycle, Users, Award, Target, Tag, ChevronDown, ChevronUp, History } from "lucide-react";
+import { ClipboardList, Gift, Sparkles, ArrowDownRight, ArrowUpRight, Smartphone, CheckCircle2, Recycle, Users, Award, Target, Tag, ChevronDown, ChevronUp, History, Diamond } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { ErrorBanner } from "@/components/ErrorBanner";
@@ -323,13 +323,11 @@ export function RewardsView() {
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                   <h2 className="text-h3 text-neutral-900 mb-1">Membership Status</h2>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl leading-none">
-                      {membershipLevel === "BRONZE" && "🥉"}
-                      {membershipLevel === "SILVER" && "🥈"}
-                      {membershipLevel === "GOLD" && "🥇"}
-                      {membershipLevel === "PLATINUM" && "💎"}
-                    </span>
+                  <div className="flex items-center gap-3">
+                    {membershipLevel === "BRONZE" && <div className="flex items-center justify-center w-10 h-10 rounded-full bg-orange-100 text-orange-600"><Award className="w-5 h-5" /></div>}
+                    {membershipLevel === "SILVER" && <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-200 text-slate-700"><Award className="w-5 h-5" /></div>}
+                    {membershipLevel === "GOLD" && <div className="flex items-center justify-center w-10 h-10 rounded-full bg-yellow-200 text-yellow-700"><Award className="w-5 h-5" /></div>}
+                    {membershipLevel === "PLATINUM" && <div className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-200 text-purple-700"><Diamond className="w-5 h-5" /></div>}
                     <span className="text-lg font-semibold text-neutral-900">{membershipLevel.charAt(0) + membershipLevel.slice(1).toLowerCase()} Member</span>
                   </div>
                   <p className="mt-4 text-body-sm text-neutral-500">Total Lifetime Green Points</p>
@@ -360,8 +358,8 @@ export function RewardsView() {
                     </div>
                   </>
                 ) : (
-                  <div className="text-center p-4 bg-primary-50 text-primary-900 rounded-xl font-medium border border-primary-100">
-                    Maximum Membership Achieved 🌟
+                  <div className="flex items-center justify-center gap-2 text-center p-4 bg-primary-50 text-primary-900 rounded-xl font-medium border border-primary-100">
+                    Maximum Membership Achieved <Sparkles className="w-5 h-5 text-primary-600" />
                   </div>
                 )}
               </div>
@@ -373,7 +371,7 @@ export function RewardsView() {
                 <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                   <div>
                     <h3 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
-                      <span>🏷️</span> Eco Shop Discount
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-yellow-100 text-yellow-700"><Tag className="w-4 h-4" /></div> Eco Shop Discount
                     </h3>
                     <p className="text-neutral-500 text-sm mt-1 max-w-md">
                       As a {membershipLevel === "PLATINUM" ? "Platinum" : "Gold"} member, you are eligible to claim a 5% OFF coupon for the Eco Shop every 6 months.
@@ -422,7 +420,7 @@ export function RewardsView() {
                 <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                   <div>
                     <h3 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
-                      <span>🎁</span> Exclusive Eco Gift
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-pink-100 text-pink-700"><Gift className="w-4 h-4" /></div> Exclusive Eco Gift
                     </h3>
                     <p className="text-neutral-500 text-sm mt-1 max-w-md">
                       As a Platinum member, you are eligible to claim one exclusive eco-friendly gift every 6 months.

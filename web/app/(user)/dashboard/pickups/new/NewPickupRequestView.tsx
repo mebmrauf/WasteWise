@@ -386,17 +386,12 @@ export function NewPickupRequestView() {
 
   return (
     <PageContainer className="py-8 lg:py-12">
-      <div className="flex items-center gap-4 animate-slide-up">
-        <div className="inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-primary-100 to-emerald-100 text-primary-600 shadow-sm border border-primary-100/50">
-          <Icon icon={Truck} size="xl" />
-        </div>
-        <div>
-          <h1 className="font-heading text-h1 text-neutral-900 tracking-tight">Schedule a pickup</h1>
-          <p className="mt-2 text-body-lg text-neutral-500 max-w-xl">
-            Tell us what you&apos;re recycling and when — we&apos;ll match you with a nearby collector.
-          </p>
-        </div>
-      </div>
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 p-8 mb-8 rounded-2xl shadow-sm">
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Schedule a pickup</h1>
+        <p className="mt-2 text-neutral-600">
+          Tell us what you&apos;re recycling and when — we&apos;ll match you with a nearby collector.
+        </p>
+      </Card>
 
       {profileError && <ErrorBanner className="mt-4 max-w-form">{profileError}</ErrorBanner>}
 
@@ -406,8 +401,7 @@ export function NewPickupRequestView() {
         <div className="flex flex-col gap-6">
           
           {/* Section 1: Categories */}
-          <Card className="glass-panel border-0 shadow-xl rounded-[2rem] p-8 relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
             <div className="flex items-center gap-5 mb-8">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner">
                 <Icon icon={Package} size="lg" />
@@ -426,8 +420,7 @@ export function NewPickupRequestView() {
           </Card>
 
           {/* Section 2: Quantity & Time */}
-          <Card className="glass-panel border-0 shadow-xl rounded-[2rem] p-8 relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
             <div className="flex items-center gap-5 mb-8">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner">
                 <Icon icon={Clock} size="lg" />
@@ -478,8 +471,7 @@ export function NewPickupRequestView() {
 
         <div className="flex flex-col gap-6 sticky top-24 h-fit">
           {/* Section 3: Address */}
-          <Card className="glass-panel border-0 shadow-xl rounded-[2rem] p-8 relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
             <div className="flex items-center gap-4 mb-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner">
                 <Icon icon={MapPin} size="md" />
@@ -671,7 +663,7 @@ export function NewPickupRequestView() {
 
           <SummaryPanel
             title="Request summary"
-            className="glass-panel border-0 shadow-2xl rounded-[2rem] bg-gradient-to-b from-white to-primary-50/20"
+            className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all"
             footer={
             <div className="flex flex-col gap-3">
               {submitError && <ErrorBanner>{submitError}</ErrorBanner>}

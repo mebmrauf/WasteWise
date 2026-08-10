@@ -339,25 +339,20 @@ export function ProfileView() {
 
   return (
     <PageContainer className="py-8 lg:py-12">
-      <div className="flex items-center gap-4 animate-slide-up">
-        <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-100 text-primary-600 shadow-inner">
-          <Icon icon={User} size="xl" />
-        </div>
-        <div>
-          <h1 className="font-heading text-h1 text-neutral-900">Your Profile</h1>
-          <p className="mt-1 text-body-lg text-neutral-500">
-            Manage your contact details, address, avatar, and notification preferences.
-          </p>
-        </div>
-      </div>
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 p-8 mb-8 rounded-2xl shadow-sm">
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Your Profile</h1>
+        <p className="mt-2 text-neutral-600">
+          Manage your contact details, address, avatar, and notification preferences.
+        </p>
+      </Card>
 
       {extrasError && (
         <ErrorBanner className="mt-6 max-w-form">{extrasError}</ErrorBanner>
       )}      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
         {/* Left Column: Profile Snapshot */}
         <div className="lg:col-span-1">
-          <Card className="glass-panel border-0 shadow-xl rounded-3xl animate-slide-up flex flex-col items-center text-center p-0 relative overflow-hidden">
-            <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-br from-primary-400 to-primary-700" />
+          <Card className="p-0 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all flex flex-col items-center text-center relative overflow-hidden">
+            <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-br from-emerald-400 to-emerald-700" />
             <div className="relative z-10 mt-16 p-8 flex flex-col items-center w-full">
               <AvatarUpload
                 name={user.fullName}
@@ -380,8 +375,8 @@ export function ProfileView() {
 
         {/* Right Column: Settings */}
         <div className="lg:col-span-2 flex flex-col gap-8">
-          <Card className="glass-panel border-0 shadow-xl rounded-3xl animate-slide-up p-8" style={{ animationDelay: '100ms' }}>
-            <h3 className="text-h4 font-heading text-neutral-900 mb-6">Personal Details</h3>
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
+            <h3 className="text-xl font-bold text-neutral-900 mb-6">Personal Details</h3>
             <div className="flex flex-col gap-6">
               <EditableField
                 label="Full name"
@@ -435,8 +430,8 @@ export function ProfileView() {
             </div>
           </Card>
 
-          <Card className="glass-panel border-0 shadow-xl rounded-3xl animate-slide-up p-8" style={{ animationDelay: '200ms' }}>
-            <h3 className="text-h4 font-heading text-neutral-900 mb-6">Notification Preferences</h3>
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
+            <h3 className="text-xl font-bold text-neutral-900 mb-6">Notification Preferences</h3>
             <div className="flex flex-col gap-4">
               <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
                 <input

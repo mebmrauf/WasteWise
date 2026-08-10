@@ -111,7 +111,7 @@ export default function ReferralsPage() {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-              <Button onClick={handleCopyCode} variant="outline" className="w-full sm:w-auto min-w-[120px]">
+              <Button onClick={handleCopyCode} variant="secondary" className="w-full sm:w-auto min-w-[120px]">
                 Copy Code
               </Button>
               <Button onClick={handleShareLink} className="w-full sm:w-auto min-w-[120px]">

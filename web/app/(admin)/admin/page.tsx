@@ -7,6 +7,7 @@ import { Button } from "@/components/Button";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { StatusPill } from "@/components/StatusPill";
 import { VEHICLE_TYPE_LABELS } from "@/lib/vehicleType";
+import { PageContainer } from "@/components/PageContainer";
 
 export default function AdminDashboardPage() {
   const [collectors, setCollectors] = React.useState<CollectorWithUser[]>([]);
@@ -45,9 +46,13 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div>
-      <h1 className="text-h2 mb-2 text-neutral-900">Pending Approvals</h1>
-      <p className="text-body text-neutral-500 mb-8">Review and verify new collector registrations.</p>
+    <PageContainer className="py-8 lg:py-12">
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 p-8 mb-8 rounded-2xl shadow-sm">
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Admin Dashboard</h1>
+        <p className="mt-2 text-neutral-600">
+          Review and verify new collector registrations.
+        </p>
+      </Card>
 
       {successMsg && (
         <div className="mb-8 p-4 bg-success-50 text-success-700 rounded-xl border border-success-200">
@@ -61,14 +66,14 @@ export default function AdminDashboardPage() {
         <section>
           <h2 className="text-h3 text-neutral-900 mb-4">Awaiting Verification</h2>
           {collectors.filter(c => c.verificationStatus === "PENDING").length === 0 ? (
-            <Card className="py-12 text-center flex flex-col items-center justify-center bg-neutral-50/50">
+            <Card className="py-12 text-center flex flex-col items-center justify-center bg-neutral-50 border border-dashed border-neutral-300 shadow-none rounded-2xl">
               <p className="text-body font-medium text-neutral-900">No pending approvals</p>
               <p className="text-body-sm text-neutral-500 mt-1">All caught up!</p>
             </Card>
           ) : (
             <div className="flex flex-col gap-4">
               {collectors.filter(c => c.verificationStatus === "PENDING").map((c) => (
-                <Card key={c.user.id} className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 border-l-4 border-l-warning-500">
+                <Card key={c.user.id} className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 bg-white border border-neutral-100 shadow-sm rounded-2xl border-l-4 border-l-amber-500">
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-3">
                       <h3 className="text-body font-medium text-neutral-900">{c.user.fullName}</h3>
@@ -102,13 +107,13 @@ export default function AdminDashboardPage() {
         <section>
           <h2 className="text-h3 text-neutral-900 mb-4">Verified Collectors</h2>
           {collectors.filter(c => c.verificationStatus !== "PENDING").length === 0 ? (
-            <Card className="py-12 text-center flex flex-col items-center justify-center bg-neutral-50/50 border-dashed">
+            <Card className="py-12 text-center flex flex-col items-center justify-center bg-neutral-50 border border-dashed border-neutral-300 shadow-none rounded-2xl">
               <p className="text-body font-medium text-neutral-500">No verified collectors yet</p>
             </Card>
           ) : (
             <div className="flex flex-col gap-4">
               {collectors.filter(c => c.verificationStatus !== "PENDING").map((c) => (
-                <Card key={c.user.id} className={`flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 border-l-4 ${c.verificationStatus === 'APPROVED' ? 'border-l-success-500' : 'border-l-error-500'}`}>
+                <Card key={c.user.id} className={`flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 bg-white border border-neutral-100 shadow-sm rounded-2xl border-l-4 ${c.verificationStatus === 'APPROVED' ? 'border-l-emerald-500' : 'border-l-red-500'}`}>
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-3">
                       <h3 className="text-body font-medium text-neutral-900">{c.user.fullName}</h3>
@@ -143,6 +148,6 @@ export default function AdminDashboardPage() {
           )}
         </section>
       </div>
-    </div>
+    </PageContainer>
   );
 }
