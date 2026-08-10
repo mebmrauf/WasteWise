@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Select } from "@/components/Select";
@@ -53,10 +53,14 @@ export interface SignupFormProps {
 export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
   const { signup } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [roleChoice, setRoleChoice] = React.useState<SignupRoleChoice>(defaultRoleChoice);
+  const [clearedReferral, setClearedReferral] = React.useState(false);
   const isPhoneRequired = roleChoice === "COLLECTOR";
+  const defaultReferralCode = searchParams.get("ref") ?? "";
+  const isReferralReadOnly = Boolean(defaultReferralCode) && !clearedReferral;
 
   return (
     <form
@@ -70,6 +74,7 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
         const email = String(formData.get("email") ?? "");
         const phone = String(formData.get("phone") ?? "").trim();
         const password = String(formData.get("password") ?? "");
+        const referralCode = String(formData.get("referralCode") ?? "").trim();
         const { role, accountType } = resolveRoleChoice(roleChoice);
 
         setIsSubmitting(true);
@@ -80,6 +85,7 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
           role,
           ...(phone ? { phone } : {}),
           ...(accountType ? { accountType } : {}),
+          ...(referralCode ? { referralCode } : {}),
         })
           .then(() => {
             router.push("/");
@@ -130,6 +136,27 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
         minLength={8}
         disabled={isSubmitting}
       />
+      <div className="flex flex-col gap-1">
+        <div className="flex justify-between items-end">
+          <label className="text-label text-neutral-800">Referral Code (Optional)</label>
+          {isReferralReadOnly && (
+            <button
+              type="button"
+              onClick={() => setClearedReferral(true)}
+              className="text-xs text-neutral-500 hover:text-neutral-700 underline"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        <Input
+          name="referralCode"
+          defaultValue={clearedReferral ? "" : defaultReferralCode}
+          readOnly={isReferralReadOnly}
+          disabled={isSubmitting}
+          className={isReferralReadOnly ? "bg-neutral-100" : ""}
+        />
+      </div>
 
       <Button type="submit" fullWidth className="mt-2" disabled={isSubmitting}>
         {isSubmitting ? "Creating account…" : "Create account"}

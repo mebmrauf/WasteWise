@@ -204,16 +204,6 @@ function ActiveJobCard({
 
   const [geoError, setGeoError] = React.useState<string | null>(null);
 
-  const [canMarkEnRoute, setCanMarkEnRoute] = React.useState(true);
-
-  React.useEffect(() => {
-    const pickupDate = new Date(job.timeSlotStart);
-    const today = new Date();
-    const pickupDay = new Date(pickupDate.getFullYear(), pickupDate.getMonth(), pickupDate.getDate());
-    const currentDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    setCanMarkEnRoute(currentDay.getTime() >= pickupDay.getTime());
-  }, [job.timeSlotStart]);
-
   const watchIdRef = React.useRef<number | null>(null);
   const lastEmitRef = React.useRef<{ at: number; lat: number; lng: number } | null>(null);
 
@@ -437,14 +427,9 @@ function ActiveJobCard({
           </div>
         ) : (
           <div className="flex flex-col items-end gap-2">
-            {nextStatus === "EN_ROUTE" && !canMarkEnRoute && (
-              <p className="text-body-sm text-neutral-500 text-right">
-                You can only start this job on the scheduled pickup date ({new Date(job.timeSlotStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}).
-              </p>
-            )}
             <Button 
               size="sm" 
-              disabled={!nextStatus || advancing || (nextStatus === "EN_ROUTE" && !canMarkEnRoute)} 
+              disabled={!nextStatus || advancing} 
               onClick={handleAdvanceStatus}
             >
               {advancing ? "Updating…" : nextStatus ? `Mark as ${PICKUP_STATUS_LABEL[nextStatus]}` : "Job completed"}

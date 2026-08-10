@@ -104,6 +104,7 @@ export interface SignupInput {
   fullName: string;
   role?: SelectableRole;
   accountType?: AccountType;
+  referralCode?: string;
 }
 
 export function signup(input: SignupInput): Promise<{ user: AuthUser }> {
