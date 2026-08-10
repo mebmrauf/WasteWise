@@ -2,12 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Camera, ClipboardList, Medal, Leaf, Wind, Truck, Gift } from "lucide-react";
+import { Camera, ClipboardList, Medal, Leaf, Wind, Truck, Gift, Package } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
+import { StatusPill } from "@/components/StatusPill";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { DashboardFeatureTile } from "@/components/DashboardFeatureTile";
 import { listPickups, type PickupRequestSummary } from "@/lib/api/pickups";
+import { PICKUP_STATUS_TONE, PICKUP_STATUS_LABEL } from "@/lib/pickupStatus";
 import { getRewardsBalance } from "@/lib/api/rewards";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { WasteSoldChart, type ChartDataPoint } from "@/components/WasteSoldChart";
@@ -19,23 +21,24 @@ export default function UserDashboardPage() {
   const [rewardsBalance, setRewardsBalance] = React.useState(0);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  React.useEffect(() => {
-    async function fetchDashboardStats() {
-      try {
-        const [pickupsData, rewardsData] = await Promise.all([
-          listPickups().catch(() => ({ pickups: [] })),
-          getRewardsBalance().catch(() => ({ greenPointsBalance: 0 })),
-        ]);
-        setPickups(pickupsData.pickups);
-        setRewardsBalance(rewardsData.greenPointsBalance);
-      } catch (err) {
-        console.error("Failed to load dashboard stats", err);
-      } finally {
-        setIsLoading(false);
-      }
+  const fetchData = React.useCallback(async () => {
+    try {
+      const [pickupsData, rewardsData] = await Promise.all([
+        listPickups().catch(() => ({ pickups: [] })),
+        getRewardsBalance().catch(() => ({ greenPointsBalance: 0 })),
+      ]);
+      setPickups(pickupsData.pickups);
+      setRewardsBalance(rewardsData.greenPointsBalance);
+    } catch (err) {
+      console.error("Failed to load dashboard stats", err);
+    } finally {
+      setIsLoading(false);
     }
-    fetchDashboardStats();
   }, []);
+
+  React.useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const activePickups = pickups.filter((p) => !["COMPLETED", "CANCELLED"].includes(p.status)).length;
   const displayName = user?.fullName?.trim() || "User";
@@ -170,23 +173,42 @@ export default function UserDashboardPage() {
         </div>
       ) : (
         <>
-          {/* Dynamic Active Tracking Banner */}
+          {/* Active Mission Widget (Glanceable) */}
           {nextActivePickup && (
-            <div className="mb-8 bg-blue-50 border border-blue-200 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 rounded-full text-blue-700">
-                  <Icon icon={Truck} size="md" />
+            <div className="mb-8 animate-fade-in-up">
+              <h2 className="text-h5 text-neutral-900 mb-3 font-semibold flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                </span>
+                Active Request
+              </h2>
+              <Card className="p-0 border border-green-200 overflow-hidden bg-white shadow-sm hover:border-green-400 transition-colors">
+                <div className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50 text-green-700 shadow-inner shrink-0">
+                      <Icon icon={Truck} size="sm" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="font-bold text-body text-neutral-900">Your Pickup Request</p>
+                        <StatusPill tone={PICKUP_STATUS_TONE[nextActivePickup.status]} className="shadow-sm py-1 px-3 text-[10px]">
+                          {PICKUP_STATUS_LABEL[nextActivePickup.status]}
+                        </StatusPill>
+                      </div>
+                      <p className="text-caption text-neutral-500">
+                        {new Date(nextActivePickup.timeSlotStart).toLocaleDateString()} &bull; {new Date(nextActivePickup.timeSlotStart).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: true})}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col sm:items-end">
+                    <Button href={`/dashboard/pickups?pickupId=${nextActivePickup.id}&view=${nextActivePickup.status === 'PENDING' ? 'offers' : 'track'}`} variant="primary" size="sm" className="w-full sm:w-auto shadow-sm bg-green-700 hover:bg-green-800">
+                      {nextActivePickup.status === "PENDING" ? "Review Offers" : "Track Live"}
+                    </Button>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-body-lg font-bold text-blue-900">Pickup in Progress</h3>
-                  <p className="text-body-sm text-blue-700 mt-1">
-                    Status: <span className="font-semibold">{nextActivePickup.status}</span> &bull; Scheduled: {new Date(nextActivePickup.timeSlotStart).toLocaleDateString()} ({new Date(nextActivePickup.timeSlotStart).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(nextActivePickup.timeSlotEnd).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})
-                  </p>
-                </div>
-              </div>
-              <Button href="/dashboard/pickups" variant="secondary" className="bg-white text-blue-900 border border-blue-200 shadow-sm hover:bg-blue-100 font-semibold whitespace-nowrap">
-                Track Pickup
-              </Button>
+              </Card>
             </div>
           )}
 

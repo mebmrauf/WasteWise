@@ -5,6 +5,7 @@ import { ClipboardList, Package, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { CategoryQuantityRow } from "@/components/CategoryQuantityRow";
+import { WasteCategoryChip } from "@/components/WasteCategoryChip";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
 import { InlineConfirm } from "@/components/InlineConfirm";
@@ -30,6 +31,7 @@ import {
   type PickupRequestSummary,
 } from "@/lib/api/pickups";
 import { PICKUP_STATUS_TONE, PICKUP_STATUS_LABEL } from "@/lib/pickupStatus";
+import { cn } from "@/lib/utils";
 
 const cancelPickupErrorMessages: Record<string, string> = {
   INVALID_STATUS_TRANSITION:
@@ -49,8 +51,8 @@ function formatPickupWindow(startIso: string, endIso: string): string {
   const start = new Date(startIso);
   const end = new Date(endIso);
   const dateLabel = start.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
-  const startTime = start.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-  const endTime = end.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const startTime = start.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: true });
+  const endTime = end.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: true });
   return `${dateLabel} · ${startTime} - ${endTime}`;
 }
 
@@ -60,6 +62,7 @@ export function MyPickupsView() {
   const [loadState, setLoadState] = React.useState<LoadState>("loading");
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [pickups, setPickups] = React.useState<PickupRequestSummary[]>([]);
+  const [activeTab, setActiveTab] = React.useState<"active" | "history">("active");
 
   const [cancellingId, setCancellingId] = React.useState<string | null>(null);
   const [cancelErrors, setCancelErrors] = React.useState<Record<string, string>>({});
@@ -69,6 +72,22 @@ export function MyPickupsView() {
   
   const [expandedPickupId, setExpandedPickupId] = React.useState<string | null>(null);
   const [expandedView, setExpandedView] = React.useState<"offers" | "track" | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const openPickupId = urlParams.get("pickupId");
+      const openView = urlParams.get("view");
+      
+      if (openPickupId && (openView === "offers" || openView === "track")) {
+        setExpandedPickupId(openPickupId);
+        setExpandedView(openView as "offers" | "track");
+        
+        // Clean up URL so it doesn't stay there if they refresh
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, []);
 
   const cancelTriggerRefs = React.useRef<Map<string, React.RefObject<HTMLButtonElement | HTMLAnchorElement>>>(
     new Map(),
@@ -211,25 +230,93 @@ export function MyPickupsView() {
       )}
 
       {loadState === "ready" && pickups.length > 0 && (
-        <div className="mt-8 flex flex-col gap-12">
+        <div className="mt-8">
+          {/* Tab Navigation */}
+          <div className="flex items-center gap-6 border-b border-neutral-200 mb-8">
+            <button
+              onClick={() => setActiveTab("active")}
+              className={cn(
+                "pb-4 text-body-lg font-semibold transition-colors relative",
+                activeTab === "active" ? "text-green-700" : "text-neutral-500 hover:text-neutral-700"
+              )}
+            >
+              Active Pickups
+              {activeTab === "active" && (
+                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-green-600 rounded-t-full" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("history")}
+              className={cn(
+                "pb-4 text-body-lg font-semibold transition-colors relative",
+                activeTab === "history" ? "text-green-700" : "text-neutral-500 hover:text-neutral-700"
+              )}
+            >
+              History
+              {activeTab === "history" && (
+                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-green-600 rounded-t-full" />
+              )}
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-6">
           {(() => {
             const activePickups = pickups.filter((p) => p.status !== "COMPLETED" && p.status !== "CANCELLED");
             const historyPickups = pickups.filter((p) => p.status === "COMPLETED" || p.status === "CANCELLED");
 
-            const renderPickupCard = (pickup: PickupRequestSummary) => {
+            const renderHistoryRow = (pickup: PickupRequestSummary) => (
+              <Card key={pickup.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 shadow-sm border border-neutral-200 bg-white hover:border-neutral-300 transition-colors gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 shrink-0">
+                    <Icon icon={ClipboardList} size="sm" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-neutral-900">
+                      {new Date(pickup.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </div>
+                    <div className="text-body-sm text-neutral-500">
+                      {pickup.items.length} item{pickup.items.length !== 1 ? "s" : ""} &bull; {PICKUP_STATUS_LABEL[pickup.status]}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  {pickup.status === "COMPLETED" && !pickup.hasRating && (
+                    <Button
+                      onClick={() => setRatingModalPickupId(pickup.id)}
+                      variant="primary"
+                      size="sm"
+                    >
+                      Rate collector
+                    </Button>
+                  )}
+                  {pickup.status === "COMPLETED" && (
+                    <Button
+                      onClick={() => setReceiptModalPickupId(pickup.id)}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      View receipt
+                    </Button>
+                  )}
+                  {pickup.status === "CANCELLED" && (
+                    <div className="text-body-sm text-neutral-400 italic">Cancelled</div>
+                  )}
+                </div>
+              </Card>
+            );
+
+            const renderActivePickupCard = (pickup: PickupRequestSummary) => {
               const isExpanded = expandedPickupId === pickup.id;
               const isOffersView = isExpanded && expandedView === "offers";
               const isTrackView = isExpanded && expandedView === "track";
 
               return (
-              <Card key={pickup.id} className="glass-panel relative flex flex-col border-0 shadow-xl transition-all hover:shadow-2xl overflow-hidden rounded-[2rem] p-0 animate-slide-up">
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-400 to-emerald-500 opacity-80" />
-                
+              <Card key={pickup.id} className="relative flex flex-col border border-neutral-200 shadow-sm transition-all hover:border-green-300 overflow-hidden rounded-2xl p-0 bg-white">
                 <div className="p-6 sm:p-8 flex flex-col gap-6">
                   {/* Header */}
                   <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-5">
                     <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner shrink-0">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-50 text-green-700 shrink-0">
                         <Icon icon={Package} size="md" />
                       </div>
                       <div>
@@ -244,44 +331,69 @@ export function MyPickupsView() {
                     </StatusPill>
                   </div>
 
-                  {/* Body Content */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Items */}
-                    <div className="flex flex-col gap-4">
-                      <p className="text-label text-neutral-500 uppercase tracking-wider">Items to collect</p>
-                      <div className="flex flex-col gap-3">
-                        {pickup.items.map((item) => (
-                          <div key={item.id} className="bg-neutral-50/50 border border-neutral-100 rounded-xl p-3 pl-4 transition-colors hover:bg-neutral-50">
-                            <CategoryQuantityRow
-                              category={item.category}
-                              quantityLabel={`${LOAD_SIZE_LABELS[item.loadSize]} (${formatKgRange(item.loadSize)})`}
-                              className="w-full flex-nowrap"
-                            />
-                          </div>
-                        ))}
+                  {/* Body Content: 1-Column with Timeline & Icons */}
+                  <div className="flex flex-col gap-6">
+                    {/* Mini Timeline (Simulated) */}
+                    <div className="relative pt-2 pb-4 px-2 sm:px-6 mb-2">
+                      {/* Background track */}
+                      <div className="absolute top-3.5 left-10 right-10 h-0.5 bg-neutral-100 rounded-full" />
+                      
+                      {/* Active track */}
+                      <div 
+                        className="absolute top-3.5 left-10 h-0.5 bg-green-500 rounded-full transition-all duration-500" 
+                        style={{ width: pickup.status === "PENDING" ? "0%" : pickup.status === "ASSIGNED" ? "33%" : ["EN_ROUTE", "ARRIVED"].includes(pickup.status) ? "66%" : "100%" }}
+                      />
+
+                      <div className="relative flex justify-between text-center">
+                        <div className="flex flex-col items-center gap-2 w-16 -ml-4">
+                          <div className={cn("h-3 w-3 rounded-full border-2 border-white z-10", true ? "bg-green-500 shadow-[0_0_0_2px_rgba(34,197,94,0.2)]" : "bg-neutral-200")} />
+                          <span className={cn("text-[10px] uppercase font-bold tracking-wider", true ? "text-green-700" : "text-neutral-400")}>Requested</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-2 w-16">
+                          <div className={cn("h-3 w-3 rounded-full border-2 border-white z-10", ["ASSIGNED", "EN_ROUTE", "ARRIVED", "VERIFYING_WEIGHTS"].includes(pickup.status) ? "bg-green-500 shadow-[0_0_0_2px_rgba(34,197,94,0.2)]" : "bg-neutral-200")} />
+                          <span className={cn("text-[10px] uppercase font-bold tracking-wider", ["ASSIGNED", "EN_ROUTE", "ARRIVED", "VERIFYING_WEIGHTS"].includes(pickup.status) ? "text-green-700" : "text-neutral-400")}>Assigned</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-2 w-16">
+                          <div className={cn("h-3 w-3 rounded-full border-2 border-white z-10", ["EN_ROUTE", "ARRIVED", "VERIFYING_WEIGHTS"].includes(pickup.status) ? "bg-green-500 shadow-[0_0_0_2px_rgba(34,197,94,0.2)]" : "bg-neutral-200")} />
+                          <span className={cn("text-[10px] uppercase font-bold tracking-wider", ["EN_ROUTE", "ARRIVED", "VERIFYING_WEIGHTS"].includes(pickup.status) ? "text-green-700" : "text-neutral-400")}>En Route</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-2 w-16 -mr-4">
+                          <div className={cn("h-3 w-3 rounded-full border-2 border-white z-10", ["VERIFYING_WEIGHTS"].includes(pickup.status) ? "bg-green-500 shadow-[0_0_0_2px_rgba(34,197,94,0.2)]" : "bg-neutral-200")} />
+                          <span className={cn("text-[10px] uppercase font-bold tracking-wider", ["VERIFYING_WEIGHTS"].includes(pickup.status) ? "text-green-700" : "text-neutral-400")}>Weighing</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Details */}
-                    <div className="flex flex-col gap-4">
-                      <p className="text-label text-neutral-500 uppercase tracking-wider">Pickup details</p>
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-center gap-4 bg-neutral-50/50 border border-neutral-100 rounded-xl p-3 transition-colors hover:bg-neutral-50">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm text-primary-600">
-                            <Icon icon={Calendar} size="sm" />
-                          </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Items */}
+                      <div className="flex flex-col gap-2 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4 h-full">
+                        <p className="text-caption text-neutral-500 uppercase tracking-wider mb-1">Items to collect</p>
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
+                          {pickup.items.map((item) => (
+                            <div key={item.id} className="flex flex-col gap-1 items-start bg-white border border-neutral-100 p-2 rounded-lg shadow-sm">
+                              <WasteCategoryChip category={item.category} />
+                              <span className="text-caption text-neutral-500 font-medium px-1 truncate w-full" title={`${LOAD_SIZE_LABELS[item.loadSize]} (${formatKgRange(item.loadSize)})`}>
+                                {LOAD_SIZE_LABELS[item.loadSize]}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Details */}
+                      <div className="flex flex-col gap-4">
+                        <div className="flex-1 flex items-center gap-4 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4">
+                          <Icon icon={Calendar} size="sm" className="text-green-700 shrink-0" />
                           <div>
-                            <p className="text-label text-neutral-500 mb-0.5">Time window</p>
+                            <p className="text-caption text-neutral-500 mb-0.5">Time window</p>
                             <p className="text-body-sm font-semibold text-neutral-900">{formatPickupWindow(pickup.timeSlotStart, pickup.timeSlotEnd)}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4 bg-neutral-50/50 border border-neutral-100 rounded-xl p-3 transition-colors hover:bg-neutral-50">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm text-primary-600">
-                            <Icon icon={MapPin} size="sm" />
-                          </div>
+                        <div className="flex-1 flex items-center gap-4 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4">
+                          <Icon icon={MapPin} size="sm" className="text-green-700 shrink-0" />
                           <div className="min-w-0">
-                            <p className="text-label text-neutral-500 mb-0.5">Address</p>
-                            <p className="text-body-sm font-semibold text-neutral-900 truncate">{pickup.pickupFormattedAddress}</p>
+                            <p className="text-caption text-neutral-500 mb-0.5">Address</p>
+                            <p className="text-body-sm font-semibold text-neutral-900 truncate" title={pickup.pickupFormattedAddress}>{pickup.pickupFormattedAddress}</p>
                           </div>
                         </div>
                       </div>
@@ -335,28 +447,9 @@ export function MyPickupsView() {
                       </>
                     )}
 
-                    {(pickup.status === "ASSIGNED" || pickup.status === "EN_ROUTE" || pickup.status === "ARRIVED" || pickup.status === "VERIFYING_WEIGHTS" || pickup.status === "COMPLETED") && (
+                    {(pickup.status === "ASSIGNED" || pickup.status === "EN_ROUTE" || pickup.status === "ARRIVED" || pickup.status === "VERIFYING_WEIGHTS") && (
                       <>
-                        {pickup.status === "COMPLETED" ? (
-                          <>
-                            {!pickup.hasRating && (
-                              <Button
-                                onClick={() => setRatingModalPickupId(pickup.id)}
-                                variant="primary"
-                                size="sm"
-                              >
-                                Rate collector
-                              </Button>
-                            )}
-                            <Button
-                              onClick={() => setReceiptModalPickupId(pickup.id)}
-                              variant="secondary"
-                              size="sm"
-                            >
-                              View receipt
-                            </Button>
-                          </>
-                        ) : pickup.status === "ASSIGNED" ? (
+                        {pickup.status === "ASSIGNED" ? (
                           <Button 
                             disabled 
                             variant="secondary" 
@@ -410,30 +503,45 @@ export function MyPickupsView() {
                 )}
                 </div>
               </Card>
-            );
-          };
+              );
+            };
 
-          return (
-              <>
-                {activePickups.length > 0 && (
-                  <div>
-                    <h2 className="text-h3 text-neutral-900 mb-4">Active Pickups</h2>
-                    <div className="flex flex-col gap-4">
-                      {activePickups.map(renderPickupCard)}
-                    </div>
-                  </div>
-                )}
-                {historyPickups.length > 0 && (
-                  <div>
-                    <h2 className="text-h3 text-neutral-900 mb-4">Completed History</h2>
-                    <div className="flex flex-col gap-4">
-                      {historyPickups.map(renderPickupCard)}
-                    </div>
-                  </div>
-                )}
-              </>
-            );
+            if (activeTab === "active") {
+              if (activePickups.length === 0) {
+                return (
+                  <Card className="flex flex-col items-center justify-center p-12 text-center bg-neutral-50 border border-dashed border-neutral-300 shadow-none">
+                    <Icon icon={Package} size="xl" className="text-neutral-300 mb-4" />
+                    <h3 className="text-h5 font-bold text-neutral-800 mb-2">No Active Pickups</h3>
+                    <p className="text-body text-neutral-500 max-w-md mb-6">
+                      You don't have any pickups in progress. Schedule a new one to get started.
+                    </p>
+                    <Button href="/dashboard/pickups/new" size="sm">Schedule Pickup</Button>
+                  </Card>
+                );
+              }
+              return (
+                <div className="flex flex-col gap-6 w-full">
+                  {activePickups.map(renderActivePickupCard)}
+                </div>
+              );
+            }
+
+            if (activeTab === "history") {
+              if (historyPickups.length === 0) {
+                return (
+                  <Card className="flex flex-col items-center justify-center p-12 text-center bg-neutral-50 border border-dashed border-neutral-300 shadow-none">
+                    <Icon icon={ClipboardList} size="xl" className="text-neutral-300 mb-4" />
+                    <h3 className="text-h5 font-bold text-neutral-800 mb-2">No History Yet</h3>
+                    <p className="text-body text-neutral-500 max-w-md">
+                      Your completed and cancelled pickups will appear here.
+                    </p>
+                  </Card>
+                );
+              }
+              return historyPickups.map(renderHistoryRow);
+            }
           })()}
+          </div>
         </div>
       )}
 
@@ -441,6 +549,11 @@ export function MyPickupsView() {
         <ReceiptModal 
           pickupId={receiptModalPickupId} 
           onClose={() => setReceiptModalPickupId(null)} 
+          onRateCollector={() => {
+            const id = receiptModalPickupId;
+            setReceiptModalPickupId(null);
+            setTimeout(() => setRatingModalPickupId(id), 0);
+          }}
         />
       )}
 

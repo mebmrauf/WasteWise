@@ -53,10 +53,10 @@ interface TimeWindow extends TimeSlot {
 }
 
 const TIME_WINDOWS: TimeWindow[] = [
-  { id: "08:00-10:00", label: "08:00 - 10:00", startHour: 8, endHour: 10 },
-  { id: "10:00-12:00", label: "10:00 - 12:00", startHour: 10, endHour: 12 },
-  { id: "14:00-16:00", label: "14:00 - 16:00", startHour: 14, endHour: 16 },
-  { id: "16:00-18:00", label: "16:00 - 18:00", startHour: 16, endHour: 18 },
+  { id: "08:00-10:00", label: "08:00 AM - 10:00 AM", startHour: 8, endHour: 10 },
+  { id: "10:00-12:00", label: "10:00 AM - 12:00 PM", startHour: 10, endHour: 12 },
+  { id: "14:00-16:00", label: "02:00 PM - 04:00 PM", startHour: 14, endHour: 16 },
+  { id: "16:00-18:00", label: "04:00 PM - 06:00 PM", startHour: 16, endHour: 18 },
 ];
 
 const LOAD_SIZE_OPTIONS: SelectOption[] = [

@@ -32,8 +32,8 @@ export function formatTimeSlot(startIso: string, endIso: string): string {
   const start = new Date(startIso);
   const end = new Date(endIso);
   const dateLabel = start.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
-  const startTime = start.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-  const endTime = end.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const startTime = start.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: true });
+  const endTime = end.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: true });
   return `${dateLabel} · ${startTime} - ${endTime}`;
 }
 

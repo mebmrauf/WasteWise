@@ -28,7 +28,7 @@ function formatDateTime(iso: string): string {
   const date = new Date(iso);
   return `${date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} · ${date.toLocaleTimeString(
     undefined,
-    { hour: "2-digit", minute: "2-digit" },
+    { hour: "2-digit", minute: "2-digit", hour12: true },
   )}`;
 }
 

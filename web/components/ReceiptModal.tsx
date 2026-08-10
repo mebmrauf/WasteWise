@@ -11,7 +11,7 @@ import { formatBdt } from "@/lib/utils";
 
 type LoadState = "loading" | "ready" | "error";
 
-export function ReceiptModal({ pickupId, onClose }: { pickupId: string; onClose: () => void }) {
+export function ReceiptModal({ pickupId, onClose, onRateCollector }: { pickupId: string; onClose: () => void; onRateCollector?: () => void }) {
   const [loadState, setLoadState] = React.useState<LoadState>("loading");
   const [pickupDetail, setPickupDetail] = React.useState<PickupRequestDetail | null>(null);
   const [tracking, setTracking] = React.useState<PickupTracking | null>(null);
