@@ -23,11 +23,10 @@ const sizeClasses: Record<AvatarSize, string> = {
 };
 
 const accentFillClasses: Record<RoleAccent, string> = {
-  user: "bg-primary-50 text-primary-600",
-  business: "bg-primary-50 text-primary-600",
-  collector: "bg-collector-50 text-collector-600",
-  recyclingCompany: "bg-recycling-50 text-recycling-600",
-  admin: "bg-admin-50 text-admin-600",
+  user: "bg-role-user-500",
+  collector: "bg-role-collector-500",
+  recyclingCompany: "bg-role-recycler-500",
+  admin: "bg-role-admin-500",
 };
 
 function getInitials(name: string): string {

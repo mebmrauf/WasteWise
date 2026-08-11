@@ -112,13 +112,6 @@ authRouter.post(
               serviceArea: "",
               verificationStatus: "PENDING",
             }
-          } : undefined,
-          recyclingCompanyProfile: role === "RECYCLING_COMPANY" ? {
-            create: {
-              companyName: fullName,
-              district: "Dhaka",
-              verificationStatus: "PENDING",
-            }
           } : undefined
         },
       });
@@ -270,7 +263,7 @@ async function findOrCreateOAuthUser(
       fullName: profile.fullName,
       passwordHash: null,
       role: "USER",
-      accountType: "INDIVIDUAL",
+      accountType: "HOUSEHOLD",
       isEmailVerified: true, // provider already verified this email address
       oauthAccounts: {
         create: { provider, providerAccountId: profile.providerAccountId },

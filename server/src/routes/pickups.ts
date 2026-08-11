@@ -44,7 +44,6 @@ function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], o
     serviceArea: pickup.serviceArea,
     preferredCollectorId: pickup.preferredCollectorId,
     isExclusiveToPreferred: pickup.isExclusiveToPreferred,
-    isBulk: pickup.isBulk,
     bidAmountsPerKg: acceptedOffer?.bidAmountsPerKg ?? null,
     hasRating: !!pickup.rating,
     createdAt: pickup.createdAt,
@@ -90,15 +89,7 @@ pickupsRouter.post(
       sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    const { items, timeSlotStart, timeSlotEnd, placeId, formattedAddress, latitude, longitude, serviceArea, preferredCollectorId, isExclusiveToPreferred, isBulk, estimatedTotalWeight } = parsed.data;
-
-    if (isBulk) {
-      const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
-      if (!user || user.accountType !== "BUSINESS") {
-        sendError(res, 403, "FORBIDDEN", "Only Business accounts can create Bulk Pickups.");
-        return;
-      }
-    }
+    const { items, timeSlotStart, timeSlotEnd, placeId, formattedAddress, latitude, longitude, serviceArea, preferredCollectorId, isExclusiveToPreferred } = parsed.data;
 
     let resolvedAddress: { formattedAddress: string; latitude: number | null; longitude: number | null };
 
@@ -142,23 +133,13 @@ pickupsRouter.post(
       }
     }
 
-    let minKg = 0;
-    let maxKg = 0;
-
-    if (estimatedTotalWeight !== undefined) {
-      minKg = estimatedTotalWeight;
-      maxKg = estimatedTotalWeight;
-    } else {
-      const calc = items.reduce(
-        (sum, item) => {
-          const range = getLoadSizeKgRange(item.loadSize);
-          return { minKg: sum.minKg + range.minKg, maxKg: sum.maxKg + range.maxKg };
-        },
-        { minKg: 0, maxKg: 0 },
-      );
-      minKg = calc.minKg;
-      maxKg = calc.maxKg;
-    }
+    const { minKg, maxKg } = items.reduce(
+      (sum, item) => {
+        const range = getLoadSizeKgRange(item.loadSize);
+        return { minKg: sum.minKg + range.minKg, maxKg: sum.maxKg + range.maxKg };
+      },
+      { minKg: 0, maxKg: 0 },
+    );
 
     const pickup = await prisma.pickupRequest.create({
       data: {
@@ -175,7 +156,6 @@ pickupsRouter.post(
         serviceArea,
         preferredCollectorId,
         isExclusiveToPreferred,
-        isBulk,
         weightRecord: {
           create: {
             estimatedMinKg: minKg,
