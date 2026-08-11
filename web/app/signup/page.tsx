@@ -16,12 +16,13 @@ function resolveDefaultRoleChoice(roleParam: string | string[] | undefined): Sig
   return roleParamToChoice[normalized] ?? "HOUSEHOLD";
 }
 
-export default function SignupPage({
+export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: { role?: string | string[] };
+  searchParams: Promise<{ role?: string | string[] }>;
 }) {
-  const defaultRoleChoice = resolveDefaultRoleChoice(searchParams.role);
+  const resolvedSearchParams = await searchParams;
+  const defaultRoleChoice = resolveDefaultRoleChoice(resolvedSearchParams.role);
 
   return (
     <AuthPageShell

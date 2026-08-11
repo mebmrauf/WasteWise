@@ -77,10 +77,9 @@ export function createApp() {
   });
 
   app.use(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    (err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    (err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
       logger.error({ err, path: req.path }, "Unhandled error");
-      sendError(res, 500, "INTERNAL_ERROR", "Something went wrong. Please try again.");
+      sendError(res, 500, "INTERNAL_ERROR", err?.message || "Something went wrong. Please try again.");
     },
   );
 
