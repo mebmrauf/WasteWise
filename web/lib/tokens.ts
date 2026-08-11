@@ -61,6 +61,7 @@ export const colors = {
 
   role: {
     user: { 50: "#EAF3EE", 500: "#2F6B4F", 700: "#1F4834", 900: "#0E2419" } satisfies AccentRamp,
+    business: { 50: "#E8F0F7", 500: "#3870B5", 700: "#285082", 900: "#1E3A5F" } satisfies AccentRamp,
     collector: { 50: "#F7ECE3", 500: "#B5652F", 700: "#82461E", 900: "#3D2413" } satisfies AccentRamp,
     recyclingCompany: { 50: "#E3F2F4", 500: "#1F7A8C", 700: "#14515D", 900: "#0D2E34" } satisfies AccentRamp,
     admin: { 50: "#EAEAF6", 500: "#4A4E9E", 700: "#33366E", 900: "#23244F" } satisfies AccentRamp,

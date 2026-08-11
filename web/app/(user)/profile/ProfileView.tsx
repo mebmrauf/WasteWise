@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { User } from "lucide-react";
+import { User, Award } from "lucide-react";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/AddressAutocomplete";
 import { Button } from "@/components/Button";
@@ -366,8 +366,15 @@ export function ProfileView() {
               />
               <h2 className="text-h3 font-heading text-neutral-900">{user.fullName}</h2>
               <p className="text-body text-neutral-500">{user.email}</p>
-              <div className="mt-6 w-full flex items-center justify-center gap-2 text-caption text-primary-700 bg-primary-50 px-4 py-2 rounded-full font-medium">
-                <Icon icon={User} size="sm" /> User Account
+              <div className="mt-6 w-full flex flex-col items-center justify-center gap-2">
+                <div className="text-caption text-primary-700 bg-primary-50 px-4 py-2 rounded-full font-medium flex items-center gap-2">
+                  <Icon icon={User} size="sm" /> {user.accountType === "BUSINESS" ? "Business Account" : "User Account"}
+                </div>
+                {user.accountType === "BUSINESS" && (
+                  <div className="text-caption text-amber-700 bg-amber-50 px-4 py-2 rounded-full font-medium flex items-center gap-2">
+                    <Icon icon={Award} size="sm" /> Business Loyalty
+                  </div>
+                )}
               </div>
             </div>
           </Card>
@@ -378,6 +385,12 @@ export function ProfileView() {
           <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
             <h3 className="text-xl font-bold text-neutral-900 mb-6">Personal Details</h3>
             <div className="flex flex-col gap-6">
+              <div className="flex flex-col">
+                <span className="text-label text-neutral-800 mb-1">Account Type</span>
+                <div className="text-body text-neutral-900 font-medium">
+                  {user.accountType === "BUSINESS" ? "🏢 Business" : "👤 Individual"}
+                </div>
+              </div>
               <EditableField
                 label="Full name"
                 value={fullName}

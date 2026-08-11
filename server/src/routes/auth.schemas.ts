@@ -5,7 +5,7 @@ const phoneRegex = /^\+?[0-9]{7,15}$/;
 
 const selectableRole = z.enum([Role.USER, Role.COLLECTOR, Role.RECYCLING_COMPANY]);
 
-const selectableAccountType = z.enum([AccountType.HOUSEHOLD, AccountType.BUSINESS]);
+const selectableAccountType = z.enum([AccountType.INDIVIDUAL, AccountType.BUSINESS]);
 
 export const registerSchema = z
   .object({
@@ -26,7 +26,7 @@ export const registerSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["accountType"],
-          message: "accountType is required (HOUSEHOLD or BUSINESS) when role is USER",
+          message: "accountType is required (INDIVIDUAL or BUSINESS) when role is USER",
         });
       }
     } else if (data.accountType !== undefined) {

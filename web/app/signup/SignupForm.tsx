@@ -18,12 +18,12 @@ const roleChoiceOptions: { value: SignupRoleChoice; label: string }[] = [
   { value: "RECYCLING_COMPANY", label: "Recycling Company" },
 ];
 
-function resolveRoleChoice(
-  choice: SignupRoleChoice
+function resolveRoleAndAccountType(
+  roleChoice: SignupRoleChoice
 ): { role: SelectableRole; accountType?: AccountType } {
-  switch (choice) {
+  switch (roleChoice) {
     case "HOUSEHOLD":
-      return { role: "USER", accountType: "HOUSEHOLD" };
+      return { role: "USER", accountType: "INDIVIDUAL" };
     case "BUSINESS":
       return { role: "USER", accountType: "BUSINESS" };
     case "COLLECTOR":
@@ -75,7 +75,7 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
         const phone = String(formData.get("phone") ?? "").trim();
         const password = String(formData.get("password") ?? "");
         const referralCode = String(formData.get("referralCode") ?? "").trim();
-        const { role, accountType } = resolveRoleChoice(roleChoice);
+        const { role, accountType: resolvedAccountType } = resolveRoleAndAccountType(roleChoice);
 
         setIsSubmitting(true);
         void signup({
@@ -84,7 +84,7 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
           fullName,
           role,
           ...(phone ? { phone } : {}),
-          ...(accountType ? { accountType } : {}),
+          ...(resolvedAccountType ? { accountType: resolvedAccountType } : {}),
           ...(referralCode ? { referralCode } : {}),
         })
           .then(() => {
@@ -123,7 +123,7 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
         autoComplete="tel"
         placeholder="+8801700000000"
         required={isPhoneRequired}
-        helperText={isPhoneRequired ? "Required for collector accounts — households use this to reach you." : undefined}
+        helperText={isPhoneRequired ? "Required for collector accounts — individual users use this to reach you." : undefined}
         disabled={isSubmitting}
       />
       <Input
