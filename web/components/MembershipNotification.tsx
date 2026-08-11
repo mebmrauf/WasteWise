@@ -10,6 +10,7 @@ interface MembershipNotificationProps {
   goldNextDate?: string | null;
   platinumEligible?: boolean;
   platinumNextDate?: string | null;
+  isBusiness?: boolean;
 }
 
 export function MembershipNotification({
@@ -18,6 +19,7 @@ export function MembershipNotification({
   goldNextDate,
   platinumEligible,
   platinumNextDate,
+  isBusiness,
 }: MembershipNotificationProps) {
   const [isVisible, setIsVisible] = React.useState(true);
 
@@ -33,7 +35,7 @@ export function MembershipNotification({
       bgColor = "bg-orange-50 border-orange-200 text-orange-900";
       content = (
         <span>
-          You are currently a <strong>Bronze Member</strong>. Keep recycling to reach Silver (501 Green Points) and unlock 5% extra Green Points on every completed pickup!
+          You are currently a <strong>Bronze {isBusiness ? "Business " : ""}Member</strong>. Keep recycling to reach Silver ({isBusiness ? "1,501" : "501"} Green Points) and unlock 5% extra Green Points on every completed pickup!
         </span>
       );
       break;
@@ -42,20 +44,20 @@ export function MembershipNotification({
       bgColor = "bg-slate-100 border-slate-300 text-slate-900";
       content = (
         <span>
-          Congratulations! You are now a <strong>Silver Member</strong>. You now earn 5% extra Green Points on every completed pickup. Keep recycling to reach Gold and unlock even more rewards!
+          Congratulations! You are now a <strong>Silver {isBusiness ? "Business " : ""}Member</strong>. You now earn 5% extra Green Points on every completed pickup. Keep recycling to reach Gold ({isBusiness ? "3,001" : "1,501"} Green Points) and unlock even more rewards!
         </span>
       );
       break;
     case "GOLD":
       icon = <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-200 text-yellow-700 shrink-0"><Award className="w-5 h-5" /></div>;
       bgColor = "bg-yellow-50 border-yellow-200 text-yellow-900";
-      if (goldEligible) {
+      if (goldEligible && !isBusiness) {
         content = (
           <span>
             Your <strong>5% Eco Shop Discount</strong> is ready to claim!
           </span>
         );
-      } else if (goldNextDate) {
+      } else if (goldNextDate && !isBusiness) {
         const formattedDate = new Date(goldNextDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
         content = (
           <span>
@@ -65,7 +67,7 @@ export function MembershipNotification({
       } else {
         content = (
           <span>
-            You&apos;re a <strong>Gold Member</strong>! You now earn 10% extra Green Points and enjoy a 5% discount in the Eco Shop. Keep going to reach Platinum for exclusive gifts and higher bonuses!
+            You&apos;re a <strong>Gold {isBusiness ? "Business " : ""}Member</strong>! You now earn 10% extra Green Points{isBusiness ? " and have earned a Digital Sustainability Certificate" : " and enjoy a 5% discount in the Eco Shop"}. Keep going to reach Platinum ({isBusiness ? "4,500" : "3,000"} Green Points) for exclusive gifts and higher bonuses!
           </span>
         );
       }
@@ -76,20 +78,20 @@ export function MembershipNotification({
       if (platinumEligible) {
         content = (
           <span>
-            Your exclusive eco-friendly gift is ready to claim!
+            Your {isBusiness ? "Tree Plantation Reward" : "exclusive eco-friendly gift"} is ready to claim!
           </span>
         );
       } else if (platinumNextDate) {
         const formattedDate = new Date(platinumNextDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
         content = (
           <span>
-            Your next exclusive gift will be available on <strong>{formattedDate}</strong>.
+            Your next {isBusiness ? "Tree Plantation Reward" : "exclusive gift"} will be available on <strong>{formattedDate}</strong>.
           </span>
         );
       } else {
         content = (
           <span>
-            You are a <strong>Platinum Member</strong>! You earn 15% extra Green Points on every completed pickup.
+            You are a <strong>Platinum {isBusiness ? "Business " : ""}Member</strong>! You earn 15% extra Green Points on every completed pickup.
           </span>
         );
       }

@@ -4,6 +4,12 @@ import type { SimType } from "@/components/SimTypeToggle";
 import type { MobileRechargeStatus } from "@/lib/rechargeStatus";
 
 export interface RewardsBalance {
+  accountType: "INDIVIDUAL" | "BUSINESS" | null;
+  environmentalImpact?: {
+    totalWasteRecycledKg: number;
+    totalTreesSaved: number;
+    totalCo2ReducedKg: number;
+  };
   greenPointsBalance: number;
   totalGreenPoints: number;
   membershipLevel: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";

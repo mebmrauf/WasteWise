@@ -5,6 +5,7 @@ const pickupRequestItemSchema = z
   .object({
     category: z.nativeEnum(WasteCategory, { required_error: "category is required" }),
     loadSize: z.nativeEnum(LoadSize, { required_error: "loadSize is required" }),
+    exactWeightKg: z.number().positive().optional(),
   })
   .strict();
 
@@ -31,6 +32,8 @@ export const createPickupRequestSchema = z
     serviceArea: z.string().optional(),
     preferredCollectorId: z.string().cuid().optional(),
     isExclusiveToPreferred: z.boolean().default(false),
+    isBulk: z.boolean().default(false),
+    estimatedTotalWeight: z.number().positive().optional(),
   })
   .strict()
   .superRefine((data, ctx) => {

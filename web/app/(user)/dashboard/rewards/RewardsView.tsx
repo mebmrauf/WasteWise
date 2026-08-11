@@ -4,6 +4,7 @@ import * as React from "react";
 import { ClipboardList, Gift, Sparkles, ArrowDownRight, ArrowUpRight, Smartphone, CheckCircle2, Recycle, Users, Award, Target, Tag, ChevronDown, ChevronUp, History, Diamond } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
 import { MOBILE_OPERATOR_LABELS } from "@/components/OperatorSelector";
@@ -78,6 +79,9 @@ export function RewardsView() {
   
   const [isGiftModalOpen, setIsGiftModalOpen] = React.useState(false);
 
+  const [accountType, setAccountType] = React.useState<"INDIVIDUAL" | "BUSINESS" | null>(null);
+  const [environmentalImpact, setEnvironmentalImpact] = React.useState<any>(null);
+
   const [greenPointsTransactions, setGreenPointsTransactions] = React.useState<GreenPointsTransaction[]>([]);
   const [mobileRechargeTransactions, setMobileRechargeTransactions] = React.useState<MobileRechargeTransaction[]>([]);
 
@@ -94,6 +98,9 @@ export function RewardsView() {
         setMembershipLevel(balanceResult.membershipLevel);
         setMembershipBadge(balanceResult.membershipBadge);
         
+        setAccountType(balanceResult.accountType);
+        setEnvironmentalImpact(balanceResult.environmentalImpact);
+
         setLastDiscountClaimDate(balanceResult.lastDiscountClaimDate);
         setNextDiscountEligibleDate(balanceResult.nextDiscountEligibleDate);
         setDiscountCouponClaimed(balanceResult.discountCouponClaimed);
@@ -134,22 +141,24 @@ export function RewardsView() {
       .catch(() => {});
   }
 
+  const isBusiness = accountType === "BUSINESS";
+
   // Calculate membership progress
-  let nextLevelPoints = 501;
+  let nextLevelPoints = isBusiness ? 1501 : 501;
   let nextLevelName = "Silver";
   let progressPercentage = 0;
   if (membershipLevel === "BRONZE") {
-    nextLevelPoints = 501;
+    nextLevelPoints = isBusiness ? 1501 : 501;
     nextLevelName = "Silver";
-    progressPercentage = (totalPoints / 501) * 100;
+    progressPercentage = (totalPoints / nextLevelPoints) * 100;
   } else if (membershipLevel === "SILVER") {
-    nextLevelPoints = 1500;
+    nextLevelPoints = isBusiness ? 3001 : 1501;
     nextLevelName = "Gold";
-    progressPercentage = (totalPoints / 1500) * 100;
+    progressPercentage = (totalPoints / nextLevelPoints) * 100;
   } else if (membershipLevel === "GOLD") {
-    nextLevelPoints = 3000;
+    nextLevelPoints = isBusiness ? 4500 : 3000;
     nextLevelName = "Platinum";
-    progressPercentage = (totalPoints / 3000) * 100;
+    progressPercentage = (totalPoints / nextLevelPoints) * 100;
   } else {
     progressPercentage = 100;
   }
@@ -298,6 +307,7 @@ export function RewardsView() {
           goldNextDate={membershipLevel === "GOLD" && !isEligibleForDiscount ? nextDiscountEligibleDate : null}
           platinumEligible={membershipLevel === "PLATINUM" && isEligibleForGift}
           platinumNextDate={membershipLevel === "PLATINUM" && !isEligibleForGift ? nextGiftEligibleDate : null}
+          isBusiness={isBusiness}
         />
       </div>
 
@@ -365,8 +375,101 @@ export function RewardsView() {
               </div>
             </div>
             
-            {/* Gold Discount Section */}
-            {(membershipLevel === "GOLD" || membershipLevel === "PLATINUM") && (
+            {/* Environmental Impact (BUSINESS ONLY) */}
+            {isBusiness && environmentalImpact && (
+              <div className="p-6 md:p-8 bg-emerald-50 border-t border-emerald-100">
+                <h3 className="text-lg font-semibold text-emerald-900 mb-4 flex items-center gap-2">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-700"><Sparkles className="w-4 h-4" /></div> Environmental Impact
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-emerald-100">
+                    <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Total Recycled</p>
+                    <p className="text-2xl font-bold text-neutral-900">{environmentalImpact.totalWasteRecycledKg} kg</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-emerald-100">
+                    <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">CO₂ Reduced</p>
+                    <p className="text-2xl font-bold text-neutral-900">{environmentalImpact.totalCo2ReducedKg} kg</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-emerald-100">
+                    <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Trees Saved</p>
+                    <p className="text-2xl font-bold text-neutral-900">{environmentalImpact.totalTreesSaved}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sustainability Certificate (BUSINESS GOLD+) */}
+            {isBusiness && (membershipLevel === "GOLD" || membershipLevel === "PLATINUM") && (
+              <div className="p-6 md:p-8 bg-white border-t border-neutral-100">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-700"><Award className="w-4 h-4" /></div> Sustainability Certificate
+                    </h3>
+                    <p className="text-neutral-500 text-sm mt-1 max-w-md">
+                      This certificate recognizes your organization's commitment to sustainable recycling and environmental responsibility through WasteWise.
+                    </p>
+                  </div>
+                  <div>
+                    <Button onClick={() => alert("Downloading certificate...")} className="whitespace-nowrap bg-amber-600 hover:bg-amber-700 text-white border-none">
+                      Download Certificate
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tree Plantation (BUSINESS PLATINUM) */}
+            {isBusiness && membershipLevel === "PLATINUM" && (
+              <div className="p-6 md:p-8 bg-white border-t border-neutral-100">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-700"><CheckCircle2 className="w-4 h-4" /></div> Tree Plantation Reward
+                    </h3>
+                    <p className="text-neutral-500 text-sm mt-1 max-w-md">
+                      As a Platinum Business member, you are eligible to claim a Tree Plantation in your organization's name every 6 months.
+                    </p>
+                    
+                    {giftClaimDate && (
+                      <div className="mt-4 p-4 rounded-xl border border-neutral-100 bg-neutral-50 inline-block">
+                        <p className="text-sm font-semibold text-neutral-900 mb-2">Claim Status</p>
+                        <p className="text-sm text-neutral-700 flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-success-500" /> Tree Plantation Request
+                        </p>
+                        <div className="mt-2 text-xs text-neutral-500 grid grid-cols-2 gap-x-4 gap-y-1">
+                          <span>Claimed on:</span>
+                          <span className="font-medium text-neutral-700">{new Date(giftClaimDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                          {nextGiftEligibleDate && (
+                            <>
+                              <span>Next eligible claim:</span>
+                              <span className="font-medium text-neutral-700">{new Date(nextGiftEligibleDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <Button 
+                      onClick={() => setIsGiftModalOpen(true)} 
+                      disabled={!isEligibleForGift}
+                      className="whitespace-nowrap"
+                    >
+                      {isEligibleForGift ? "Claim Tree Plantation" : "Claimed"}
+                    </Button>
+                    {!isEligibleForGift && nextGiftEligibleDate && (
+                      <p className="text-xs text-neutral-500 text-center mt-2">
+                        Available again on {new Date(nextGiftEligibleDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Gold Discount Section (INDIVIDUAL ONLY) */}
+            {!isBusiness && (membershipLevel === "GOLD" || membershipLevel === "PLATINUM") && (
               <div className="p-6 md:p-8 bg-white border-t border-neutral-100">
                 <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                   <div>
@@ -414,8 +517,8 @@ export function RewardsView() {
               </div>
             )}
 
-            {/* Platinum Gift Section */}
-            {membershipLevel === "PLATINUM" && (
+            {/* Platinum Gift Section (INDIVIDUAL ONLY) */}
+            {!isBusiness && membershipLevel === "PLATINUM" && (
               <div className="p-6 md:p-8 bg-white border-t border-neutral-100">
                 <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                   <div>
@@ -480,19 +583,21 @@ export function RewardsView() {
                   <p className="font-data text-data-lg text-primary-200">pts</p>
                 </div>
               </div>
-              {mode === "overview" ? (
-                <Button onClick={() => setMode("redeem")} variant="secondary" className="mt-4 px-8 py-6 rounded-full shadow-lg hover:scale-105 transition-transform bg-white text-primary-800 hover:bg-neutral-50 border-0">
-                  Redeem Mobile Recharge
-                </Button>
-              ) : (
-                <Button onClick={() => setMode("overview")} variant="ghost" className="mt-4 text-white hover:bg-white/10 hover:text-white rounded-full">
-                  Cancel Redemption
-                </Button>
+              {!isBusiness && (
+                mode === "overview" ? (
+                  <Button onClick={() => setMode("redeem")} variant="secondary" className="mt-4 px-8 py-6 rounded-full shadow-lg hover:scale-105 transition-transform bg-white text-primary-800 hover:bg-neutral-50 border-0">
+                    Redeem Mobile Recharge
+                  </Button>
+                ) : (
+                  <Button onClick={() => setMode("overview")} variant="ghost" className="mt-4 text-white hover:bg-white/10 hover:text-white rounded-full">
+                    Cancel Redemption
+                  </Button>
+                )
               )}
             </div>
           </div>
 
-          {mode === "redeem" && (
+          {!isBusiness && mode === "redeem" && (
             <div className="animate-slide-up">
               <RedeemRechargeWizard
                 currentBalance={balance}
@@ -521,7 +626,9 @@ export function RewardsView() {
             ) : (
               <>
                 <div className="flex flex-wrap gap-2">
-                  {(["ALL", "PICKUP", "REFERRAL", "LOYALTY", "REDEMPTION", "BONUS"] as const).map(tab => (
+                  {(["ALL", "PICKUP", "REFERRAL", "LOYALTY", "REDEMPTION", "BONUS"] as const)
+                    .filter(tab => !(isBusiness && (tab === "REFERRAL" || tab === "REDEMPTION")))
+                    .map(tab => (
                     <button
                       key={tab}
                       onClick={() => setFilterTab(tab)}

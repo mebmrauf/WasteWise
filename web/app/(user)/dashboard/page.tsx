@@ -22,17 +22,20 @@ export default function UserDashboardPage() {
   const [membershipLevel, setMembershipLevel] = React.useState<"BRONZE" | "SILVER" | "GOLD" | "PLATINUM">((user?.membershipLevel as any) || "BRONZE");
   const [isLoading, setIsLoading] = React.useState(true);
 
+  const [rewardsData, setRewardsData] = React.useState<any>(null);
+
   const fetchData = React.useCallback(async () => {
     try {
-      const [pickupsData, rewardsData] = await Promise.all([
+      const [pickupsData, fetchedRewards] = await Promise.all([
         listPickups().catch(() => ({ pickups: [] })),
         getRewardsBalance().catch(() => ({ greenPointsBalance: 0, membershipLevel: user?.membershipLevel || "BRONZE" })),
       ]);
       setPickups(pickupsData.pickups);
-      setRewardsBalance(rewardsData.greenPointsBalance);
-      if (rewardsData.membershipLevel) {
-        setMembershipLevel(rewardsData.membershipLevel as any);
+      setRewardsBalance(fetchedRewards.greenPointsBalance);
+      if (fetchedRewards.membershipLevel) {
+        setMembershipLevel(fetchedRewards.membershipLevel as any);
       }
+      setRewardsData(fetchedRewards);
     } catch (err) {
       console.error("Failed to load dashboard stats", err);
     } finally {
@@ -131,21 +134,20 @@ export default function UserDashboardPage() {
   const co2Offset = co2OffsetBase.toFixed(1);
   const treesSaved = treesSavedBase.toFixed(2);
 
-  // Recent Pickups logic
-  const recentPickupsWithEarnings = [...completedPickups]
-    .sort((a, b) => new Date(b.timeSlotStart).getTime() - new Date(a.timeSlotStart).getTime())
-    .slice(0, 3)
-    .map(p => {
-      let weight = 0;
-      let earnings = 0;
-      p.items.forEach(item => {
-        const w = item.exactWeightKg || 0;
-        weight += w;
-        const bidPerKg = p.bidAmountsPerKg?.[item.category] || 0;
-        earnings += w * bidPerKg;
-      });
-      return { ...p, totalWeight: weight, totalEarnings: earnings };
+  // Calculate total earnings across all completed pickups
+  let totalEarningsCalc = 0;
+  completedPickups.forEach(p => {
+    p.items.forEach(item => {
+      const w = item.exactWeightKg || 0;
+      const bidPerKg = p.bidAmountsPerKg?.[item.category] || 0;
+      totalEarningsCalc += w * bidPerKg;
     });
+  });
+
+  // Recent Pickups logic (up to 4 most recent requests)
+  const recentPickupsList = [...pickups]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 4);
 
   // Active tracking banner logic
   const activePickupList = pickups.filter((p) => !["COMPLETED", "CANCELLED"].includes(p.status));
@@ -160,6 +162,13 @@ export default function UserDashboardPage() {
     return (statusPriority[b.status] || 0) - (statusPriority[a.status] || 0);
   });
   const nextActivePickup = sortedActivePickups.length > 0 ? sortedActivePickups[0] : null;
+
+  const isBusiness = user?.accountType === "BUSINESS";
+  const bulkPickups = pickups.filter(p => p.isBulk);
+  const openBulkRequests = bulkPickups.filter(p => p.status === "PENDING").length;
+  const activeBulkRequests = bulkPickups.filter(p => ["ASSIGNED", "EN_ROUTE", "ARRIVED", "VERIFYING_WEIGHTS"].includes(p.status)).length;
+  const completedBulkPickups = bulkPickups.filter(p => p.status === "COMPLETED").length;
+  const totalBulkRecycled = bulkPickups.filter(p => p.status === "COMPLETED").reduce((acc, p) => acc + p.items.reduce((sum, item) => sum + (item.exactWeightKg || 0), 0), 0);
 
   return (
     <PageContainer className="py-8 max-w-6xl">
@@ -187,44 +196,7 @@ export default function UserDashboardPage() {
         </div>
       ) : (
         <>
-          {/* Active Mission Widget (Glanceable) */}
-          {nextActivePickup && (
-            <div className="mb-8 animate-fade-in-up">
-              <h2 className="text-xl font-semibold text-neutral-900 mb-3 flex items-center gap-2">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                </span>
-                Active Request
-              </h2>
-              <Card className="p-0 border border-emerald-100 overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow">
-                <div className="p-5 md:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 shrink-0">
-                      <Icon icon={Truck} size="md" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-3 mb-1">
-                        <p className="font-semibold text-neutral-900">Your Pickup Request</p>
-                        <StatusPill tone={PICKUP_STATUS_TONE[nextActivePickup.status]} className="shadow-sm py-1 px-3 text-xs">
-                          {PICKUP_STATUS_LABEL[nextActivePickup.status]}
-                        </StatusPill>
-                      </div>
-                      <p className="text-sm text-neutral-500">
-                        {new Date(nextActivePickup.timeSlotStart).toLocaleDateString()} &bull; {new Date(nextActivePickup.timeSlotStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="flex flex-col sm:items-end">
-                    <Button href={`/dashboard/pickups?pickupId=${nextActivePickup.id}&view=${nextActivePickup.status === 'PENDING' ? 'offers' : 'track'}`} className="w-full sm:w-auto shadow-sm bg-emerald-600 hover:bg-emerald-700">
-                      {nextActivePickup.status === "PENDING" ? "Review Offers" : (["EN_ROUTE", "ARRIVED", "VERIFYING_WEIGHTS"].includes(nextActivePickup.status) ? "Track Live" : "View Details")}
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          )}
 
           <h2 className="text-xl font-semibold text-neutral-900 mb-4">Overview</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -327,24 +299,34 @@ export default function UserDashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 items-start">
-            {recentPickupsWithEarnings.length > 0 ? (
+            {recentPickupsList.length > 0 ? (
               <div className="flex flex-col gap-5">
-                <h2 className="text-xl font-semibold text-neutral-900">Recent Pickups</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-neutral-900">Recent Requests</h2>
+                  <Link href="/dashboard/pickups" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 hover:underline">
+                    View All &rarr;
+                  </Link>
+                </div>
                 <div className="flex flex-col gap-4">
-                  {recentPickupsWithEarnings.map(rp => (
+                  {recentPickupsList.map(rp => (
                     <Card key={rp.id} className="flex items-center justify-between p-6 rounded-2xl shadow-sm border border-neutral-100 bg-white hover:shadow-md transition-shadow">
-                      <div className="flex items-center gap-5">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 shrink-0">
-                          <Icon icon={Recycle} size="md" />
+                      <div className="flex items-center gap-5 min-w-0">
+                        <div className={`flex h-12 w-12 items-center justify-center rounded-full shrink-0 ${rp.isBulk ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                          <Icon icon={rp.isBulk ? Package : Truck} size="md" />
                         </div>
-                        <div>
-                          <div className="font-bold text-neutral-900 mb-1">{new Date(rp.timeSlotStart).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</div>
-                          <div className="text-sm font-medium text-neutral-500">{rp.items.length} {rp.items.length === 1 ? 'category' : 'categories'} &bull; {rp.totalWeight.toFixed(1)} kg</div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-neutral-900 mb-1 truncate">
+                            {rp.isBulk ? "Bulk Pickup" : "Smart Pickup"} &bull; {new Date(rp.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </div>
+                          <div className="text-sm font-medium text-neutral-500 truncate">
+                            {rp.items.map(i => i.category).join(', ')}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right flex flex-col justify-center">
-                        <div className="text-2xl font-black text-emerald-600">৳{rp.totalEarnings.toFixed(0)}</div>
-                        <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider mt-0.5">Earned</div>
+                      <div className="text-right shrink-0 ml-4">
+                        <StatusPill tone={PICKUP_STATUS_TONE[rp.status]} className="text-xs px-2.5 py-1">
+                          {PICKUP_STATUS_LABEL[rp.status]}
+                        </StatusPill>
                       </div>
                     </Card>
                   ))}
@@ -355,7 +337,7 @@ export default function UserDashboardPage() {
             )}
 
             <div className="flex flex-col gap-5">
-              <h2 className="text-xl font-semibold text-neutral-900">Balances & Rewards</h2>
+              <h2 className="text-xl font-semibold text-neutral-900">{isBusiness ? "Business Overview" : "Balances & Rewards"}</h2>
               <div className="flex flex-col gap-4">
                 
                 {/* Green Points Card (Primary) */}
@@ -369,21 +351,33 @@ export default function UserDashboardPage() {
                     </div>
                   </div>
                   <Link href="/dashboard/rewards" className="shrink-0 px-6 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-emerald-700 transition-colors w-full sm:w-auto text-center">
-                    Redeem Points
+                    {isBusiness ? "View Rewards" : "Redeem Points"}
                   </Link>
                 </Card>
 
                 {/* Grid for Total Sold & Membership */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Total Sold Card */}
-                  <Card className="flex flex-col p-6 rounded-2xl text-left shadow-sm hover:shadow-md transition-shadow bg-white border border-neutral-100">
-                    <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                      <Icon icon={Package} size="sm" className="text-neutral-400" /> Total Sold
-                    </span>
-                    <div className="text-3xl font-black text-neutral-900 tracking-tight mt-auto">
-                      {totalRecycled.toFixed(1)} <span className="text-lg font-medium text-neutral-400">kg</span>
-                    </div>
-                  </Card>
+                  {/* Left Card: Total Sold (Individual) OR Eco Impact (Business) */}
+                  {isBusiness ? (
+                    <Card className="flex flex-col p-6 rounded-2xl text-left shadow-sm hover:shadow-md transition-shadow bg-white border border-neutral-100">
+                      <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <Icon icon={Leaf} size="sm" className="text-emerald-500" /> Eco Impact
+                      </span>
+                      <div className="flex flex-col gap-2 mt-auto">
+                        <div className="text-sm font-medium text-neutral-600"><span className="font-bold text-neutral-900">{rewardsData?.environmentalImpact?.totalWasteRecycledKg || 0}kg</span> Recycled</div>
+                        <div className="text-sm font-medium text-neutral-600"><span className="font-bold text-neutral-900">{rewardsData?.environmentalImpact?.totalCo2ReducedKg || 0}kg</span> CO₂ Saved</div>
+                      </div>
+                    </Card>
+                  ) : (
+                    <Card className="flex flex-col p-6 rounded-2xl text-left shadow-sm hover:shadow-md transition-shadow bg-white border border-neutral-100">
+                      <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <Icon icon={Package} size="sm" className="text-neutral-400" /> Total Sold
+                      </span>
+                      <div className="text-3xl font-black text-neutral-900 tracking-tight mt-auto">
+                        {totalRecycled.toFixed(1)} <span className="text-lg font-medium text-neutral-400">kg</span>
+                      </div>
+                    </Card>
+                  )}
 
                   {/* Membership Card */}
                   {user && (
@@ -396,7 +390,7 @@ export default function UserDashboardPage() {
                                 membershipLevel === "PLATINUM" ? "text-indigo-500" :
                                   "text-neutral-400"
                         } /> 
-                        Membership Tier
+                        {isBusiness ? "Business Tier" : "Membership Tier"}
                       </span>
                       <div className="text-3xl font-black text-neutral-900 tracking-tight mb-5">
                         {membershipLevel.charAt(0) + membershipLevel.slice(1).toLowerCase()}
