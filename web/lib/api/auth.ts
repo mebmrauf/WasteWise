@@ -11,7 +11,7 @@ export type PlatinumGift = "TREE_SAPLING" | "ECO_TOTE_BAG" | "REUSABLE_WATER_BOT
 
 export interface AuthUser {
   id: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   fullName: string;
   role: Role;
@@ -112,7 +112,7 @@ export function readCsrfToken(): string {
 }
 
 export interface SignupInput {
-  email: string;
+  email?: string;
   phone?: string;
   password: string;
   fullName: string;

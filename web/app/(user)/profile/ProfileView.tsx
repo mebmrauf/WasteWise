@@ -285,6 +285,7 @@ export function ProfileView() {
       const { user: updated } = await updateMyProfile({ phone: newValue });
       setPhone(updated.phone ?? "");
       setPhoneSave({ isSaving: false, error: null });
+      void refetchUser();
     } catch (err) {
       setPhoneSave({
         isSaving: false,
@@ -365,7 +366,7 @@ export function ProfileView() {
                 className="items-center text-center mb-4"
               />
               <h2 className="text-h3 font-heading text-neutral-900">{user.fullName}</h2>
-              <p className="text-body text-neutral-500">{user.email}</p>
+              <p className="text-body text-neutral-500">{user.email ?? user.phone ?? "No contact info on file"}</p>
               <div className="mt-6 w-full flex items-center justify-center gap-2 text-caption text-primary-700 bg-primary-50 px-4 py-2 rounded-full font-medium">
                 <Icon icon={User} size="sm" /> User Account
               </div>

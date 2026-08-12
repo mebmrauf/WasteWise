@@ -1,12 +1,11 @@
 import { z } from "zod";
 import { VehicleType } from "@prisma/client";
-
-const phoneRegex = /^\+?[0-9]{7,15}$/;
+import { bdPhoneRegex } from "./auth.schemas";
 
 export const updateProfileSchema = z
   .object({
     fullName: z.string().trim().min(1, "Full name is required").max(120).optional(),
-    phone: z.string().trim().regex(phoneRegex, "Enter a valid phone number").nullable().optional(),
+    phone: z.string().trim().regex(bdPhoneRegex, "Enter a valid Bangladesh mobile number").optional(),
     placeId: z.string().trim().min(1, "placeId cannot be empty").max(300).optional(),
     formattedAddress: z.string().optional(),
     latitude: z.number().optional(),

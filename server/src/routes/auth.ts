@@ -95,12 +95,12 @@ authRouter.post(
     let user: User;
     try {
       user = await prisma.user.create({
-        data: { 
-          email, 
-          phone, 
-          passwordHash, 
-          fullName, 
-          role, 
+        data: {
+          email,
+          phone,
+          passwordHash,
+          fullName,
+          role,
           accountType,
           referralCode: newReferralCode,
           referredById,
@@ -260,6 +260,8 @@ async function findOrCreateOAuthUser(
   const user = await prisma.user.create({
     data: {
       email: profile.email,
+      // OAuth doesn't collect a phone — left blank; the profile page prompts
+      // the user to add and verify one afterward.
       fullName: profile.fullName,
       passwordHash: null,
       role: "USER",

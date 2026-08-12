@@ -80,7 +80,7 @@ export default function AdminDashboardPage() {
                       <StatusPill tone="warning">Pending Verification</StatusPill>
                     </div>
                     <div className="text-body-sm text-neutral-600 flex flex-col sm:flex-row gap-x-6 gap-y-1">
-                      <span><strong className="font-medium">Email:</strong> {c.user.email}</span>
+                      <span><strong className="font-medium">Email:</strong> {c.user.email || "N/A"}</span>
                       <span><strong className="font-medium">Phone:</strong> {c.user.phone || "N/A"}</span>
                     </div>
                     <div className="text-body-sm text-neutral-600 flex flex-col sm:flex-row gap-x-6 gap-y-1">
@@ -122,7 +122,7 @@ export default function AdminDashboardPage() {
                       </StatusPill>
                     </div>
                     <div className="text-body-sm text-neutral-600 flex flex-col sm:flex-row gap-x-6 gap-y-1">
-                      <span><strong className="font-medium">Email:</strong> {c.user.email}</span>
+                      <span><strong className="font-medium">Email:</strong> {c.user.email || "N/A"}</span>
                       <span><strong className="font-medium">Phone:</strong> {c.user.phone || "N/A"}</span>
                     </div>
                     <div className="text-body-sm text-neutral-600 flex flex-col sm:flex-row gap-x-6 gap-y-1">
