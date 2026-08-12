@@ -50,6 +50,7 @@ rewardsRouter.get(
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: req.user!.id },
       select: { 
+        accountType: true,
         greenPointsBalance: true,
         totalGreenPoints: true,
         lastDiscountClaimDate: true,
@@ -59,14 +60,47 @@ rewardsRouter.get(
         giftClaimDate: true,
         nextGiftEligibleDate: true,
         giftClaimed: true,
+        lastTreePlantationClaimDate: true,
+        nextTreePlantationEligibleDate: true,
+        treePlantationClaimed: true,
+        sustainabilityCertificateUrl: true,
       },
     });
 
     const lifetimePoints = Math.max(user.totalGreenPoints, user.greenPointsBalance);
-    const membershipLevel = calculateMembershipLevel(lifetimePoints);
+    const membershipLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
     const membershipBadge = getMembershipBadge(membershipLevel);
 
+    let environmentalImpact = undefined;
+    if (user.accountType === "BUSINESS") {
+      const completedPickups = await prisma.pickupRequest.findMany({
+        where: { requesterId: req.user!.id, status: "COMPLETED" },
+        include: { items: true },
+      });
+
+      let totalWasteRecycledKg = 0;
+      let totalTreesSaved = 0;
+      let totalCo2ReducedKg = 0;
+
+      for (const pickup of completedPickups) {
+        for (const item of pickup.items) {
+          const weight = item.exactWeightKg ?? 0;
+          totalWasteRecycledKg += weight;
+          if (item.category === "PAPER") totalTreesSaved += weight * 0.017;
+          totalCo2ReducedKg += weight * 1.5;
+        }
+      }
+
+      environmentalImpact = {
+        totalWasteRecycledKg,
+        totalTreesSaved: Math.floor(totalTreesSaved),
+        totalCo2ReducedKg: Math.floor(totalCo2ReducedKg),
+      };
+    }
+
     sendData(res, 200, { 
+      accountType: user.accountType,
+      environmentalImpact,
       greenPointsBalance: user.greenPointsBalance,
       totalGreenPoints: lifetimePoints,
       membershipLevel,
@@ -78,6 +112,11 @@ rewardsRouter.get(
       giftClaimDate: user.giftClaimDate,
       nextGiftEligibleDate: user.nextGiftEligibleDate,
       giftClaimed: user.giftClaimed,
+
+      lastTreePlantationClaimDate: user.lastTreePlantationClaimDate,
+      nextTreePlantationEligibleDate: user.nextTreePlantationEligibleDate,
+      treePlantationClaimed: user.treePlantationClaimed,
+      sustainabilityCertificateUrl: user.sustainabilityCertificateUrl,
     });
   }),
 );
@@ -235,11 +274,11 @@ rewardsRouter.post(
 
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: req.user!.id },
-      select: { greenPointsBalance: true, totalGreenPoints: true, giftClaimDate: true },
+      select: { greenPointsBalance: true, totalGreenPoints: true, giftClaimDate: true, accountType: true },
     });
 
     const lifetimePoints = Math.max(user.totalGreenPoints, user.greenPointsBalance);
-    const membershipLevel = calculateMembershipLevel(lifetimePoints);
+    const membershipLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
 
     if (membershipLevel !== "PLATINUM") {
       sendError(res, 403, "FORBIDDEN", "Only Platinum members can claim exclusive gifts.");
@@ -306,11 +345,11 @@ rewardsRouter.post(
   asyncHandler(async (req, res) => {
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: req.user!.id },
-      select: { greenPointsBalance: true, totalGreenPoints: true, lastDiscountClaimDate: true },
+      select: { greenPointsBalance: true, totalGreenPoints: true, lastDiscountClaimDate: true, accountType: true },
     });
 
     const lifetimePoints = Math.max(user.totalGreenPoints, user.greenPointsBalance);
-    const membershipLevel = calculateMembershipLevel(lifetimePoints);
+    const membershipLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
 
     if (membershipLevel !== "GOLD" && membershipLevel !== "PLATINUM") {
       sendError(res, 403, "FORBIDDEN", "Only Gold and Platinum members can claim Eco Shop discounts.");
@@ -362,6 +401,79 @@ rewardsRouter.post(
       lastDiscountClaimDate: updatedUser.lastDiscountClaimDate,
       nextDiscountEligibleDate: updatedUser.nextDiscountEligibleDate,
       discountCouponClaimed: updatedUser.discountCouponClaimed,
+    });
+  }),
+);
+
+rewardsRouter.post(
+  "/claim-tree-plantation",
+  requireAuth,
+  requireRole("USER"),
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: req.user!.id },
+      select: { greenPointsBalance: true, totalGreenPoints: true, lastTreePlantationClaimDate: true, accountType: true },
+    });
+
+    if (user.accountType !== "BUSINESS") {
+      sendError(res, 403, "FORBIDDEN", "Only Business accounts can claim Tree Plantations.");
+      return;
+    }
+
+    const lifetimePoints = Math.max(user.totalGreenPoints, user.greenPointsBalance);
+    const membershipLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
+
+    if (membershipLevel !== "PLATINUM") {
+      sendError(res, 403, "FORBIDDEN", "Only Platinum Business members can claim Tree Plantations.");
+      return;
+    }
+
+    // Enforce 6-month rule
+    if (user.lastTreePlantationClaimDate) {
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      if (user.lastTreePlantationClaimDate > sixMonthsAgo) {
+        sendError(res, 409, "NOT_ELIGIBLE", "You have already claimed a tree plantation within the last 6 months.");
+        return;
+      }
+    }
+
+    const nextTreePlantationEligibleDate = new Date();
+    nextTreePlantationEligibleDate.setMonth(nextTreePlantationEligibleDate.getMonth() + 6);
+
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id: req.user!.id },
+        data: {
+          lastTreePlantationClaimDate: new Date(),
+          nextTreePlantationEligibleDate,
+          treePlantationClaimed: true,
+        },
+        select: {
+          lastTreePlantationClaimDate: true,
+          nextTreePlantationEligibleDate: true,
+          treePlantationClaimed: true,
+        },
+      });
+
+      await tx.greenPointsTransaction.create({
+        data: {
+          userId: req.user!.id,
+          points: 0,
+          type: "REDEEMED",
+          category: "REDEMPTION",
+          description: "Tree Plantation Reward Claimed",
+        }
+      });
+
+      return updated;
+    });
+
+    sendData(res, 200, {
+      lastTreePlantationClaimDate: updatedUser.lastTreePlantationClaimDate,
+      nextTreePlantationEligibleDate: updatedUser.nextTreePlantationEligibleDate,
+      treePlantationClaimed: updatedUser.treePlantationClaimed,
     });
   }),
 );

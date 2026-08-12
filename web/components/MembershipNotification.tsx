@@ -10,6 +10,7 @@ interface MembershipNotificationProps {
   goldNextDate?: string | null;
   platinumEligible?: boolean;
   platinumNextDate?: string | null;
+  
 }
 
 export function MembershipNotification({
@@ -18,6 +19,7 @@ export function MembershipNotification({
   goldNextDate,
   platinumEligible,
   platinumNextDate,
+  
 }: MembershipNotificationProps) {
   const [isVisible, setIsVisible] = React.useState(true);
 
@@ -42,20 +44,20 @@ export function MembershipNotification({
       bgColor = "bg-slate-100 border-slate-300 text-slate-900";
       content = (
         <span>
-          Congratulations! You are now a <strong>Silver Member</strong>. You now earn 5% extra Green Points on every completed pickup. Keep recycling to reach Gold and unlock even more rewards!
+          Congratulations! You are now a <strong>Silver Member</strong>. You now earn 5% extra Green Points on every completed pickup. Keep recycling to reach Gold (1,501 Green Points) and unlock even more rewards!
         </span>
       );
       break;
     case "GOLD":
       icon = <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-200 text-yellow-700 shrink-0"><Award className="w-5 h-5" /></div>;
       bgColor = "bg-yellow-50 border-yellow-200 text-yellow-900";
-      if (goldEligible) {
+      if (goldEligible ) {
         content = (
           <span>
             Your <strong>5% Eco Shop Discount</strong> is ready to claim!
           </span>
         );
-      } else if (goldNextDate) {
+      } else if (goldNextDate ) {
         const formattedDate = new Date(goldNextDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
         content = (
           <span>
@@ -65,7 +67,7 @@ export function MembershipNotification({
       } else {
         content = (
           <span>
-            You&apos;re a <strong>Gold Member</strong>! You now earn 10% extra Green Points and enjoy a 5% discount in the Eco Shop. Keep going to reach Platinum for exclusive gifts and higher bonuses!
+            You&apos;re a <strong>Gold Member</strong>! You now earn 10% extra Green Points and enjoy a 5% discount in the Eco Shop. Keep going to reach Platinum (3,000 Green Points) for exclusive gifts and higher bonuses!
           </span>
         );
       }

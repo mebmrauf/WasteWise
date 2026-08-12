@@ -14,7 +14,7 @@ import {
   resolveAddressFromPlaceId,
 } from "../lib/geocoding";
 import { isCloudinaryConfigured, uploadAvatarImage } from "../lib/cloudinary";
-import { updateProfileSchema, updateCollectorProfileSchema } from "./users.schemas";
+import { updateProfileSchema, updateCollectorProfileSchema, updateRecyclingProfileSchema } from "./users.schemas";
 
 export const usersRouter = Router();
 
@@ -30,7 +30,19 @@ export function toPublicCollectorProfile(profile: CollectorProfile) {
   };
 }
 
-function toPublicProfile(user: User & { collectorProfile?: CollectorProfile | null }) {
+export function toPublicRecyclingProfile(profile: any) {
+  return {
+    companyName: profile.companyName,
+    tradeLicenseNumber: profile.tradeLicenseNumber,
+    district: profile.district,
+    serviceAreas: profile.serviceAreas,
+    acceptedWasteMaterials: profile.acceptedWasteMaterials,
+    currentInventoryKg: profile.currentInventoryKg,
+    verificationStatus: profile.verificationStatus,
+  };
+}
+
+function toPublicProfile(user: User & { collectorProfile?: CollectorProfile | null; recyclingCompanyProfile?: any | null }) {
   return {
     id: user.id,
     email: user.email,
@@ -49,6 +61,7 @@ function toPublicProfile(user: User & { collectorProfile?: CollectorProfile | nu
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
     collectorProfile: user.collectorProfile ? toPublicCollectorProfile(user.collectorProfile) : null,
+    recyclingCompanyProfile: user.recyclingCompanyProfile ? toPublicRecyclingProfile(user.recyclingCompanyProfile) : null,
   };
 }
 
@@ -113,7 +126,7 @@ usersRouter.get(
   asyncHandler(async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.id },
-      include: { collectorProfile: true },
+      include: { collectorProfile: true, recyclingCompanyProfile: true },
     });
     if (!user) {
       clearAuthCookies(res);
@@ -161,6 +174,43 @@ usersRouter.patch(
 );
 
 usersRouter.patch(
+  "/me/recycling-profile",
+  requireAuth,
+  requireRole("RECYCLING_COMPANY"),
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const parsed = updateRecyclingProfileSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
+      return;
+    }
+    const { companyName, tradeLicenseNumber, district, serviceAreas, acceptedWasteMaterials } = parsed.data;
+
+    const recyclingProfile = await prisma.recyclingCompanyProfile.upsert({
+      where: { userId: req.user!.id },
+      create: {
+        userId: req.user!.id,
+        companyName: companyName || "",
+        tradeLicenseNumber,
+        district: district || "",
+        serviceAreas: serviceAreas || [],
+        acceptedWasteMaterials: (acceptedWasteMaterials || []) as any,
+        verificationStatus: "PENDING",
+      },
+      update: {
+        companyName,
+        tradeLicenseNumber,
+        district,
+        serviceAreas,
+        acceptedWasteMaterials: acceptedWasteMaterials as any,
+      },
+    });
+
+    sendData(res, 200, { recyclingProfile: toPublicRecyclingProfile(recyclingProfile) });
+  }),
+);
+
+usersRouter.patch(
   "/me",
   requireAuth,
   requireCsrf,
@@ -183,6 +233,10 @@ usersRouter.patch(
 
     const { placeId, formattedAddress, latitude, longitude, ...rest } = parsed.data;
     let updateData: Prisma.UserUpdateInput = rest;
+
+    if (formattedAddress !== undefined && placeId === undefined) {
+      updateData.formattedAddress = formattedAddress;
+    }
 
     if (placeId !== undefined) {
       if (formattedAddress && latitude !== undefined && longitude !== undefined) {

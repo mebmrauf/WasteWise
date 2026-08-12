@@ -5,7 +5,7 @@ import { Menu, X } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { cn } from "@/lib/utils";
 
-export type RoleAccent = "user" | "collector" | "recyclingCompany" | "admin";
+export type RoleAccent = "user" | "business" | "collector" | "recyclingCompany" | "admin";
 
 interface NavLink {
   label: string;
@@ -22,24 +22,27 @@ export interface NavBarProps {
 }
 
 const accentActiveTextClasses: Record<RoleAccent, string> = {
-  user: "text-role-user-700",
-  collector: "text-role-collector-700",
-  recyclingCompany: "text-role-recycler-700",
-  admin: "text-role-admin-700",
+  user: "text-primary-700",
+  business: "text-primary-700",
+  collector: "text-collector-700",
+  recyclingCompany: "text-recycling-700",
+  admin: "text-admin-700",
 };
 
 const accentUnderlineClasses: Record<RoleAccent, string> = {
-  user: "border-role-user-500",
-  collector: "border-role-collector-500",
-  recyclingCompany: "border-role-recycler-500",
-  admin: "border-role-admin-500",
+  user: "bg-primary-500",
+  business: "bg-primary-500",
+  collector: "bg-collector-500",
+  recyclingCompany: "bg-recycling-500",
+  admin: "bg-admin-500",
 };
 
 const accentHoverTextClasses: Record<RoleAccent, string> = {
-  user: "hover:text-role-user-700",
-  collector: "hover:text-role-collector-700",
-  recyclingCompany: "hover:text-role-recycler-700",
-  admin: "hover:text-role-admin-700",
+  user: "hover:text-primary-600",
+  business: "hover:text-primary-600",
+  collector: "hover:text-collector-600",
+  recyclingCompany: "hover:text-recycling-600",
+  admin: "hover:text-admin-600",
 };
 
 export function NavBar({ brand, links = [], actions, accent = "user", className }: NavBarProps) {

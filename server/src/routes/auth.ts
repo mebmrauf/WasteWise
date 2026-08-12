@@ -63,6 +63,10 @@ function toPublicUser(user: User) {
     nextGiftEligibleDate: user.nextGiftEligibleDate,
     discountCouponClaimed: user.discountCouponClaimed,
     nextDiscountEligibleDate: user.nextDiscountEligibleDate,
+    lastTreePlantationClaimDate: user.lastTreePlantationClaimDate,
+    nextTreePlantationEligibleDate: user.nextTreePlantationEligibleDate,
+    treePlantationClaimed: user.treePlantationClaimed,
+    sustainabilityCertificateUrl: user.sustainabilityCertificateUrl,
     createdAt: user.createdAt,
   };
 }
@@ -110,6 +114,13 @@ authRouter.post(
               vehicleNumber: "",
               licenseNumber: "",
               serviceArea: "",
+              verificationStatus: "PENDING",
+            }
+          } : undefined,
+          recyclingCompanyProfile: role === "RECYCLING_COMPANY" ? {
+            create: {
+              companyName: fullName,
+              district: "Dhaka",
               verificationStatus: "PENDING",
             }
           } : undefined

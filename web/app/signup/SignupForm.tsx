@@ -18,10 +18,10 @@ const roleChoiceOptions: { value: SignupRoleChoice; label: string }[] = [
   { value: "RECYCLING_COMPANY", label: "Recycling Company" },
 ];
 
-function resolveRoleChoice(
-  choice: SignupRoleChoice
+function resolveRoleAndAccountType(
+  roleChoice: SignupRoleChoice
 ): { role: SelectableRole; accountType?: AccountType } {
-  switch (choice) {
+  switch (roleChoice) {
     case "HOUSEHOLD":
       return { role: "USER", accountType: "HOUSEHOLD" };
     case "BUSINESS":
@@ -75,7 +75,7 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
         const phone = String(formData.get("phone") ?? "").trim();
         const password = String(formData.get("password") ?? "");
         const referralCode = String(formData.get("referralCode") ?? "").trim();
-        const { role, accountType } = resolveRoleChoice(roleChoice);
+        const { role, accountType: resolvedAccountType } = resolveRoleAndAccountType(roleChoice);
 
         setIsSubmitting(true);
         void signup({
@@ -84,11 +84,11 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
           fullName,
           role,
           ...(phone ? { phone } : {}),
-          ...(accountType ? { accountType } : {}),
+          ...(resolvedAccountType ? { accountType: resolvedAccountType } : {}),
           ...(referralCode ? { referralCode } : {}),
         })
           .then(() => {
-            router.push("/");
+            if (role === "COLLECTOR") { router.push("/collector"); } else if (role === "RECYCLING_COMPANY") { router.push("/recycling/dashboard"); } else if (role === "USER" && resolvedAccountType === "BUSINESS") { router.push("/business/dashboard"); } else { router.push("/dashboard"); } router.refresh();
           })
           .catch((err: unknown) => {
             setErrorMessage(resolveSignupErrorMessage(err));
@@ -123,7 +123,7 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
         autoComplete="tel"
         placeholder="+8801700000000"
         required={isPhoneRequired}
-        helperText={isPhoneRequired ? "Required for collector accounts — households use this to reach you." : undefined}
+        helperText={isPhoneRequired ? "Required for collector accounts — individual users use this to reach you." : undefined}
         disabled={isSubmitting}
       />
       <Input

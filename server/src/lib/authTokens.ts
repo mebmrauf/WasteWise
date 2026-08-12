@@ -30,7 +30,7 @@ export async function issueTokenPair(user: Pick<User, "id" | "role">): Promise<T
   return { accessToken, refreshToken };
 }
 
-export class RefreshTokenError extends Error {}
+export class RefreshTokenError extends Error { }
 
 export async function rotateRefreshToken(rawToken: string): Promise<TokenPair> {
   let payload;

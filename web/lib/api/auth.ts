@@ -24,9 +24,16 @@ export interface AuthUser {
   giftClaimed: boolean;
   selectedGift: PlatinumGift | null;
   nextGiftEligibleDate: string | null;
-  discountCouponClaimed: boolean;
-  nextDiscountEligibleDate: string | null;
+  discountCouponClaimed?: boolean;
+  nextDiscountEligibleDate?: string | null;
+  lastTreePlantationClaimDate?: string | null;
+  nextTreePlantationEligibleDate?: string | null;
+  treePlantationClaimed?: boolean;
+  sustainabilityCertificateUrl?: string | null;
   createdAt: string;
+  formattedAddress?: string;
+  recyclingCompanyProfile?: any;
+  collectorProfile?: any;
 }
 
 export interface ApiError {

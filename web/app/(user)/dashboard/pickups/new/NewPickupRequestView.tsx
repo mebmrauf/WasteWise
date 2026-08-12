@@ -7,7 +7,7 @@ import { AddressAutocomplete, type AddressSuggestion } from "@/components/Addres
 import { Icon } from "@/components/Icon";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
-import { CategoryQuantityRow } from "@/components/CategoryQuantityRow";
+
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Input } from "@/components/Input";
 import { PageContainer } from "@/components/PageContainer";
@@ -18,7 +18,7 @@ import { ALL_SERVICE_AREAS } from "@/lib/areas";
 import { getVerifiedCollectors, type CollectorDirectoryEntry } from "@/lib/api/collectors";
 import { SummaryPanel, SummaryRow } from "@/components/SummaryPanel";
 import { TimeSlotPicker, type TimeSlot } from "@/components/TimeSlotPicker";
-import { WasteCategoryQuantityPicker } from "@/components/WasteCategoryQuantityPicker";
+
 import { WasteCategorySelector, type WasteCategory } from "@/components/WasteCategorySelector";
 import { AuthApiError } from "@/lib/api/auth";
 import { fetchAddressSuggestions, fetchPlaceDetails, PlacesConfigError, fetchReverseGeocode, type PlaceDetails } from "@/lib/api/places";
@@ -26,9 +26,6 @@ import { getMyProfile, type UserProfile } from "@/lib/api/users";
 import { cn } from "@/lib/utils";
 import {
   createPickupRequest,
-  LOAD_SIZE_KG_RANGES,
-  LOAD_SIZE_LABELS,
-  formatKgRange,
   type LoadSize,
 } from "@/lib/api/pickups";
 
@@ -61,13 +58,7 @@ const TIME_WINDOWS: TimeWindow[] = [
   { id: "16:00-18:00", label: "04:00 PM - 06:00 PM", startHour: 16, endHour: 18 },
 ];
 
-const LOAD_SIZE_OPTIONS: SelectOption[] = [
-  { value: "", label: "Select an estimated quantity…", disabled: true },
-  ...(Object.keys(LOAD_SIZE_KG_RANGES) as LoadSize[]).map((size) => ({
-    value: size,
-    label: `${LOAD_SIZE_LABELS[size]} (${formatKgRange(size)})`,
-  })),
-];
+
 
 const ADDRESS_DEBOUNCE_MS = 300;
 const ADDRESS_MIN_QUERY_LENGTH = 3;
@@ -103,7 +94,8 @@ export function NewPickupRequestView() {
   const [isExclusiveToPreferred, setIsExclusiveToPreferred] = React.useState(true);
 
   const [categories, setCategories] = React.useState<WasteCategory[]>([]);
-  const [quantities, setQuantities] = React.useState<Partial<Record<WasteCategory, LoadSize>>>({});
+  const [estimatedTotalWeight, setEstimatedTotalWeight] = React.useState<number | "">("");
+  const [categoryWeights, setCategoryWeights] = React.useState<Record<string, string>>({});
   const [date, setDate] = React.useState("");
   const [timeWindowId, setTimeWindowId] = React.useState<string | null>(null);
 
@@ -303,29 +295,37 @@ export function NewPickupRequestView() {
     : addressMode === "current" ? (currentLocationPlace?.formattedAddress ?? null) 
     : (selectedCustomPlace?.description ?? null);
 
-  const hasQuantityForEveryCategory =
-    categories.length > 0 && categories.every((category) => quantities[category] !== undefined);
+  const isBusiness = false;
+
+  const computedTotalWeight = React.useMemo(() => {
+    if (!isBusiness) return typeof estimatedTotalWeight === "number" ? estimatedTotalWeight : 0;
+    
+    let total = 0;
+    for (const cat of categories) {
+      const weight = parseFloat(categoryWeights[cat] || "0");
+      if (!isNaN(weight)) total += weight;
+    }
+    return total;
+  }, [categories, categoryWeights, isBusiness, estimatedTotalWeight]);
 
   const canSubmit =
     !isSubmitting &&
-    hasQuantityForEveryCategory &&
+    categories.length > 0 &&
+    (isBusiness ? computedTotalWeight > 0 : estimatedTotalWeight !== "") &&
     date !== "" &&
     selectedWindow !== null &&
     !isSlotInPast &&
     resolvedPlaceId !== null &&
     serviceArea !== "";
 
-  function handleQuantityChange(category: WasteCategory, loadSize: LoadSize) {
-    setQuantities((prev) => ({ ...prev, [category]: loadSize }));
-  }
-
   function handleCategoriesChange(nextCategories: WasteCategory[]) {
     setCategories(nextCategories);
-    setQuantities((prev) => {
-      const nextSet = new Set(nextCategories);
-      const next: Partial<Record<WasteCategory, LoadSize>> = {};
-      for (const category of Object.keys(prev) as WasteCategory[]) {
-        if (nextSet.has(category)) next[category] = prev[category];
+    setCategoryWeights(prev => {
+      const next = { ...prev };
+      for (const key of Object.keys(next)) {
+        if (!nextCategories.includes(key as WasteCategory)) {
+          delete next[key];
+        }
       }
       return next;
     });
@@ -334,7 +334,16 @@ export function NewPickupRequestView() {
 
 
   async function handleSubmitPickupRequest() {
-    if (!date || !selectedWindow || !resolvedPlaceId || !hasQuantityForEveryCategory) return;
+    if (!date || !selectedWindow || !resolvedPlaceId || categories.length === 0 || (!isBusiness && estimatedTotalWeight === "")) return;
+
+    if (computedTotalWeight >= 50) {
+      setSubmitError("This request qualifies as a Bulk Waste Pickup. Please use the Bulk Waste Pickup feature instead.");
+      return;
+    }
+    if (computedTotalWeight < 1) {
+      setSubmitError("Please enter a valid weight of at least 1 kg.");
+      return;
+    }
 
     setSubmitError(null);
     setIsSubmitting(true);
@@ -361,7 +370,8 @@ export function NewPickupRequestView() {
       const payload = {
         items: categories.map((category) => ({
           category,
-          loadSize: quantities[category] as LoadSize,
+          loadSize: "SMALL" as LoadSize,
+          exactWeightKg: isBusiness && categoryWeights[category] ? parseFloat(categoryWeights[category]) : undefined,
         })),
         timeSlotStart: buildTimeSlotIso(date, selectedWindow.startHour),
         timeSlotEnd: buildTimeSlotIso(date, selectedWindow.endHour),
@@ -373,7 +383,8 @@ export function NewPickupRequestView() {
         ...(selectedCollectorId ? { 
           preferredCollectorId: selectedCollectorId, 
           isExclusiveToPreferred 
-        } : {})
+        } : {}),
+        estimatedTotalWeight: computedTotalWeight
       };
 
       await createPickupRequest(payload);
@@ -432,13 +443,54 @@ export function NewPickupRequestView() {
             </div>
             <div className="mt-8 flex flex-col gap-6">
               <div className="flex flex-col gap-3">
-                <p className="text-body font-semibold text-neutral-900">Estimated quantity</p>
-                <WasteCategoryQuantityPicker
-                  categories={categories}
-                  value={quantities}
-                  onChange={handleQuantityChange}
-                  loadSizeOptions={LOAD_SIZE_OPTIONS}
-                />
+                <div className="flex justify-between items-end mb-2">
+                  <p className="text-body font-semibold text-neutral-900">Estimated Weight</p>
+                  {isBusiness && computedTotalWeight > 0 && (
+                    <span className="text-body-sm font-semibold text-primary-600 bg-primary-50 px-3 py-1 rounded-full">
+                      Total: {computedTotalWeight} kg
+                    </span>
+                  )}
+                </div>
+
+                {isBusiness ? (
+                  categories.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 p-6 text-center">
+                      <p className="text-body-sm text-neutral-500">Select materials above to enter their weights.</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3 rounded-xl border border-neutral-100 bg-neutral-50/50 p-4">
+                      {categories.map((cat) => (
+                        <div key={cat} className="flex items-center justify-between gap-4">
+                          <label className="text-body-sm font-medium text-neutral-700 capitalize">
+                            {cat.toLowerCase()} Weight (kg)
+                          </label>
+                          <Input
+                            type="number"
+                            min="0.1"
+                            step="0.1"
+                            placeholder="e.g. 5"
+                            value={categoryWeights[cat] || ""}
+                            onChange={(e) => setCategoryWeights(prev => ({ ...prev, [cat]: e.target.value }))}
+                            className="bg-white w-32"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  <Input
+                    type="number"
+                    min="1"
+                    max="49"
+                    step="0.1"
+                    placeholder="e.g. 12.5"
+                    value={estimatedTotalWeight}
+                    onChange={(e) => setEstimatedTotalWeight(e.target.value === "" ? "" : Number(e.target.value))}
+                    className="bg-white"
+                  />
+                )}
+                
+                <p className="text-body-sm text-neutral-500 mt-1">For small recycling requests (1–49 kg). For 50 kg or more, use Bulk Waste Pickup.</p>
               </div>
 
               <div className="h-px w-full bg-neutral-100" />
@@ -674,23 +726,23 @@ export function NewPickupRequestView() {
           }
         >
           <div>
-            <p className="text-body-sm text-neutral-500">Categories & quantities</p>
+            <p className="text-body-sm text-neutral-500">Categories & estimated weight</p>
             <div className="mt-2 flex flex-col gap-2">
               {categories.length > 0 ? (
-                categories.map((category) => {
-                  const categoryLoadSize = quantities[category];
-                  return (
-                    <CategoryQuantityRow
-                      key={category}
-                      category={category}
-                      quantityLabel={
-                        categoryLoadSize
-                          ? `${LOAD_SIZE_LABELS[categoryLoadSize]} (${formatKgRange(categoryLoadSize)})`
-                          : null
-                      }
-                    />
-                  );
-                })
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    {categories.map((category) => (
+                      <span key={category} className="px-3 py-1 bg-neutral-100 rounded-full text-body-sm font-medium text-neutral-700">
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                  {estimatedTotalWeight !== "" && (
+                    <p className="text-body-sm font-semibold text-neutral-900 mt-2">
+                      Total Weight: {estimatedTotalWeight} kg
+                    </p>
+                  )}
+                </div>
               ) : (
                 <span className="text-body-sm text-neutral-500">Not selected yet</span>
               )}

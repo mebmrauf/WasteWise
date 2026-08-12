@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { NavBar } from "@/components/NavBar";
 import { NavAuthActions } from "@/components/NavAuthActions";
 import { DashboardShell } from "./DashboardShell";
-
 export default function UserLayout({ children }: { children: ReactNode }) {
   return (
     <>

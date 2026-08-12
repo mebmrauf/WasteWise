@@ -80,6 +80,23 @@ enum PickupStatus {
   CANCELLED
 }
 
+enum BulkRequestStatus {
+  OPEN_FOR_BIDDING
+  RECYCLING_COMPANY_ASSIGNED
+  EN_ROUTE
+  ARRIVED
+  IN_PROGRESS
+  VERIFYING_WEIGHTS
+  COMPLETED
+  CANCELLED
+}
+
+enum QuotationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 enum OfferStatus {
   PENDING
   ACCEPTED
@@ -167,6 +184,11 @@ model User {
   nextGiftEligibleDate DateTime?
   giftClaimed          Boolean       @default(false)
 
+  lastTreePlantationClaimDate    DateTime?
+  nextTreePlantationEligibleDate DateTime?
+  treePlantationClaimed          Boolean   @default(false)
+  sustainabilityCertificateUrl   String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -192,6 +214,10 @@ model User {
 
   pickupRequestsMade     PickupRequest[] @relation("PickupRequester")
   pickupRequestsAssigned PickupRequest[] @relation("AssignedCollector")
+
+  bulkRequestsMade       BulkMarketplaceRequest[] @relation("BusinessRequests")
+  bulkRequestsAssigned   BulkMarketplaceRequest[] @relation("AssignedCompany")
+  marketplaceQuotations  MarketplaceQuotation[]   @relation("CompanyQuotations")
 
   offers Offer[] @relation("CollectorOffers")
 
@@ -301,7 +327,10 @@ model RecyclingCompanyProfile {
   user   User   @relation("RecyclingCompanyProfileUser", fields: [userId], references: [id], onDelete: Cascade)
 
   companyName        String
+  tradeLicenseNumber String?
   district           String
+  serviceAreas       String[]
+  acceptedWasteMaterials WasteCategory[]
   currentInventoryKg Float  @default(0)
 
   verificationStatus            VerificationStatus @default(PENDING)
@@ -326,6 +355,7 @@ model PickupRequest {
 
   preferredCollectorId   String?
   isExclusiveToPreferred Boolean @default(false)
+  isBulk                 Boolean @default(false)
 
   items PickupRequestItem[]
 
@@ -429,8 +459,11 @@ model WeightRecord {
 model Rating {
   id String @id @default(cuid())
 
-  pickupRequestId String        @unique
-  pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+  pickupRequestId String?       @unique
+  pickupRequest   PickupRequest? @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+
+  bulkRequestId   String?       @unique
+  bulkRequest     BulkMarketplaceRequest? @relation(fields: [bulkRequestId], references: [id], onDelete: Cascade)
 
   raterId String
   rater   User   @relation("RaterRatings", fields: [raterId], references: [id])
@@ -563,4 +596,59 @@ model MobileRechargeTransaction {
   updatedAt DateTime @updatedAt
 
   @@index([userId, createdAt])
+}
+
+model BulkMarketplaceRequest {
+  id                 String   @id @default(cuid())
+  businessId         String
+  business           User     @relation("BusinessRequests", fields: [businessId], references: [id])
+  assignedCompanyId  String?
+  assignedCompany    User?    @relation("AssignedCompany", fields: [assignedCompanyId], references: [id])
+  
+  wasteTypes         Json
+  estimatedWeightKg  Float
+  pickupAddress      String
+  latitude           Float?
+  longitude          Float?
+  placeId            String?
+  preferredPickupDate DateTime
+  images             String[]
+  additionalNotes    String?
+  status             BulkRequestStatus @default(OPEN_FOR_BIDDING)
+  
+  verifiedWeights         Json?
+  verifiedTotalWeightKg   Float?
+  collectionPhotos        String[]
+  
+  quotations         MarketplaceQuotation[]
+  rating             Rating?
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([status])
+}
+
+model MarketplaceQuotation {
+  id                 String   @id @default(cuid())
+  requestId          String
+  request            BulkMarketplaceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  
+  companyId          String
+  company            User     @relation("CompanyQuotations", fields: [companyId], references: [id])
+  
+  purchasePrice      Float
+  vehicleType        VehicleType
+  estimatedPickupDate DateTime
+  estimatedPickupTime String?
+  additionalNotes    String?
+  
+  status             QuotationStatus @default(PENDING)
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  @@unique([requestId, companyId])
+  @@index([companyId])
 }
