@@ -63,6 +63,10 @@ function toPublicUser(user: User) {
     nextGiftEligibleDate: user.nextGiftEligibleDate,
     discountCouponClaimed: user.discountCouponClaimed,
     nextDiscountEligibleDate: user.nextDiscountEligibleDate,
+    lastTreePlantationClaimDate: user.lastTreePlantationClaimDate,
+    nextTreePlantationEligibleDate: user.nextTreePlantationEligibleDate,
+    treePlantationClaimed: user.treePlantationClaimed,
+    sustainabilityCertificateUrl: user.sustainabilityCertificateUrl,
     createdAt: user.createdAt,
   };
 }

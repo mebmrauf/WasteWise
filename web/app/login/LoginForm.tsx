@@ -47,7 +47,7 @@ export function LoginForm() {
               setIsSubmitting(false);
               return;
             }
-            router.push("/");
+            if (user.role === "COLLECTOR") { router.push("/collector"); } else if (user.role === "RECYCLING_COMPANY") { router.push("/recycling/dashboard"); } else if (user.role === "USER" && user.accountType === "BUSINESS") { router.push("/business/dashboard"); } else { router.push("/dashboard"); } router.refresh();
           })
           .catch((err: unknown) => {
             setErrorMessage(resolveLoginErrorMessage(err));

@@ -51,7 +51,7 @@ const CATEGORY_LABELS: Record<WasteScan["detectedCategory"], string> = {
 };
 
 export function WasteRecognitionView() {
-  const { user, isLoading } = useRequireRole(["USER"]);
+  const { user, isLoading } = useRequireRole(["USER"], { allowedAccountTypes: ["HOUSEHOLD"] });
 
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [isScanning, setIsScanning] = React.useState(false);

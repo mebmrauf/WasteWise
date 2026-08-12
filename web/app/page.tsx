@@ -81,14 +81,14 @@ export default async function Home() {
                 </Button>
               </div>
             </div>
-            
+
             <div className="relative">
               <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-green-900/10 border-4 border-white aspect-[4/3] bg-neutral-100 flex items-center justify-center group">
                 <div className="absolute inset-0 bg-[#114E29]/10 group-hover:bg-transparent transition-colors z-10" />
-                <Image 
-                  src="/images/hero.png" 
-                  alt="WasteWise Smart Logistics" 
-                  fill 
+                <Image
+                  src="/images/hero.png"
+                  alt="WasteWise Smart Logistics"
+                  fill
                   className="object-cover"
                   priority
                   sizes="(max-width: 1024px) 100vw, 50vw"
@@ -115,11 +115,11 @@ export default async function Home() {
               <p className="font-heading text-overline text-green-700 mb-2">Simple Process</p>
               <h2 className="text-h2 text-neutral-900">How WasteWise Works</h2>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
               {/* Connector line (desktop only) */}
               <div className="hidden md:block absolute top-12 left-1/6 right-1/6 h-0.5 bg-neutral-100 -z-10" />
-              
+
               <div className="flex flex-col items-center text-center group">
                 <div className="w-24 h-24 rounded-full bg-green-50 border-8 border-white shadow-sm flex items-center justify-center text-[#114E29] mb-6 group-hover:scale-110 transition-transform">
                   <Truck size={36} />
@@ -158,7 +158,7 @@ export default async function Home() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-6">
-              
+
               {/* Large Feature 1 */}
               <div className="md:col-span-2 bg-white rounded-3xl p-8 shadow-sm border border-neutral-200/60 overflow-hidden relative group">
                 <div className="relative z-10 w-2/3">
@@ -216,7 +216,7 @@ export default async function Home() {
         <section id="collectors" className="py-24 bg-white border-t border-neutral-100">
           <PageContainer>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-              
+
               <div>
                 <h2 className="text-h3 text-neutral-900 mb-6">For Households & Businesses</h2>
                 <ul className="space-y-6">

@@ -94,7 +94,7 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
           ...(referralCode ? { referralCode } : {}),
         })
           .then(() => {
-            router.push("/");
+            if (role === "COLLECTOR") { router.push("/collector"); } else if (role === "RECYCLING_COMPANY") { router.push("/recycling/dashboard"); } else if (role === "USER" && resolvedAccountType === "BUSINESS") { router.push("/business/dashboard"); } else { router.push("/dashboard"); } router.refresh();
           })
           .catch((err: unknown) => {
             setErrorMessage(resolveSignupErrorMessage(err));

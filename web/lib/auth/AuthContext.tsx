@@ -20,6 +20,7 @@ import {
   type LoginInput,
   type SignupInput,
   type Role,
+  type AccountType,
 } from "../api/auth";
 
 interface AuthContextValue {
@@ -108,15 +109,23 @@ function useRequireAuth(redirectTo = "/login"): AuthContextValue {
 
 export function useRequireRole(
   allowedRoles: Role[],
-  options?: { loginRedirectTo?: string; forbiddenRedirectTo?: string },
+  options?: { loginRedirectTo?: string; forbiddenRedirectTo?: string; allowedAccountTypes?: AccountType[] },
 ): AuthContextValue {
   const auth = useRequireAuth(options?.loginRedirectTo ?? "/login");
   const router = useRouter();
   const forbiddenRedirectTo = options?.forbiddenRedirectTo ?? "/";
 
   useEffect(() => {
-    if (!auth.isLoading && auth.user && !allowedRoles.includes(auth.user.role)) {
-      router.replace(forbiddenRedirectTo);
+    if (!auth.isLoading && auth.user) {
+      if (!allowedRoles.includes(auth.user.role)) {
+        router.replace(forbiddenRedirectTo);
+      } else if (
+        options?.allowedAccountTypes && 
+        auth.user.accountType && 
+        !options.allowedAccountTypes.includes(auth.user.accountType)
+      ) {
+        router.replace(forbiddenRedirectTo);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.isLoading, auth.user, forbiddenRedirectTo, router]);

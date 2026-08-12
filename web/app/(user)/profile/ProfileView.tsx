@@ -61,7 +61,7 @@ interface FieldSaveState {
 const idleSaveState: FieldSaveState = { isSaving: false, error: null };
 
 export function ProfileView() {
-  const { user, isLoading, refetchUser } = useRequireRole(["USER"]);
+  const { user, isLoading, refetchUser } = useRequireRole(["USER"], { allowedAccountTypes: ["HOUSEHOLD"] });
 
   const [fullName, setFullName] = React.useState(user?.fullName ?? "");
   const [phone, setPhone] = React.useState(user?.phone ?? "");

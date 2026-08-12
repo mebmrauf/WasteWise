@@ -25,3 +25,13 @@ export const updateCollectorProfileSchema = z
   })
   .strict();
 type UpdateCollectorProfileInput = z.infer<typeof updateCollectorProfileSchema>;
+
+export const updateRecyclingProfileSchema = z
+  .object({
+    companyName: z.string().trim().min(1, "Company name is required").optional(),
+    tradeLicenseNumber: z.string().trim().optional().nullable(),
+    district: z.string().trim().min(1, "District is required").optional(),
+    serviceAreas: z.array(z.string()).optional(),
+    acceptedWasteMaterials: z.array(z.string()).optional(), // Will map to WasteCategory
+  })
+  .strict();
