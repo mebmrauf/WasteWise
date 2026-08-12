@@ -5,7 +5,7 @@ import { Menu, X } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { cn } from "@/lib/utils";
 
-export type RoleAccent = "user" | "collector" | "recyclingCompany" | "admin";
+export type RoleAccent = "user" | "business" | "collector" | "recyclingCompany" | "admin";
 
 interface NavLink {
   label: string;
@@ -23,6 +23,7 @@ export interface NavBarProps {
 
 const accentActiveTextClasses: Record<RoleAccent, string> = {
   user: "text-role-user-700",
+  business: "text-role-business-700",
   collector: "text-role-collector-700",
   recyclingCompany: "text-role-recycler-700",
   admin: "text-role-admin-700",
@@ -30,6 +31,7 @@ const accentActiveTextClasses: Record<RoleAccent, string> = {
 
 const accentUnderlineClasses: Record<RoleAccent, string> = {
   user: "border-role-user-500",
+  business: "border-role-business-500",
   collector: "border-role-collector-500",
   recyclingCompany: "border-role-recycler-500",
   admin: "border-role-admin-500",
@@ -37,6 +39,7 @@ const accentUnderlineClasses: Record<RoleAccent, string> = {
 
 const accentHoverTextClasses: Record<RoleAccent, string> = {
   user: "hover:text-role-user-700",
+  business: "hover:text-role-business-700",
   collector: "hover:text-role-collector-700",
   recyclingCompany: "hover:text-role-recycler-700",
   admin: "hover:text-role-admin-700",

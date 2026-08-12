@@ -24,9 +24,16 @@ export interface AuthUser {
   giftClaimed: boolean;
   selectedGift: PlatinumGift | null;
   nextGiftEligibleDate: string | null;
-  discountCouponClaimed: boolean;
-  nextDiscountEligibleDate: string | null;
+  discountCouponClaimed?: boolean;
+  nextDiscountEligibleDate?: string | null;
+  lastTreePlantationClaimDate?: string | null;
+  nextTreePlantationEligibleDate?: string | null;
+  treePlantationClaimed?: boolean;
+  sustainabilityCertificateUrl?: string | null;
   createdAt: string;
+  formattedAddress?: string;
+  recyclingCompanyProfile?: any;
+  collectorProfile?: any;
 }
 
 export interface ApiError {
@@ -176,6 +183,21 @@ async function performRefresh(): Promise<boolean> {
     }
     throw err;
   }
+}
+
+export function verifyEmail(code: string): Promise<{ user: AuthUser }> {
+  return authFetch<{ user: AuthUser }>("/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export function resendVerificationEmail(): Promise<{ success: boolean }> {
+  return authFetch<{ success: boolean }>("/auth/resend-verification-email", {
+    method: "POST",
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
 }
 
 export function getGoogleOAuthUrl(): string {

@@ -22,6 +22,7 @@ import {
   uploadMyAvatar,
   resolveAvatarUrl,
   type CollectorProfileSummary,
+  type UpdateProfileInput,
 } from "@/lib/api/users";
 import { VEHICLE_TYPE_LABELS, type VehicleType } from "@/lib/vehicleType";
 import { VERIFICATION_STATUS_TONE, VERIFICATION_STATUS_LABEL } from "@/lib/verificationStatus";
@@ -52,7 +53,16 @@ const DEFAULT_VEHICLE_TYPE: VehicleType = "MOTORCYCLE_VAN";
 interface ProfileExtras {
   avatarUrl: string | null;
   collectorProfile: CollectorProfileSummary | null;
+  emailNotificationsEnabled: boolean;
+  smsNotificationsEnabled: boolean;
+  rewardsEmailNotificationsEnabled: boolean;
 }
+
+const notificationPreferenceKeys = {
+  email: "emailNotificationsEnabled",
+  sms: "smsNotificationsEnabled",
+  rewardsEmail: "rewardsEmailNotificationsEnabled",
+} as const;
 
 interface FieldSaveState {
   isSaving: boolean;
@@ -106,6 +116,9 @@ export function CollectorProfileView() {
         setExtras({
           avatarUrl: resolveAvatarUrl(profile.avatarUrl),
           collectorProfile: profile.collectorProfile,
+          emailNotificationsEnabled: profile.emailNotificationsEnabled,
+          smsNotificationsEnabled: profile.smsNotificationsEnabled,
+          rewardsEmailNotificationsEnabled: profile.rewardsEmailNotificationsEnabled,
         });
         setDetails(draftFromProfile(profile.collectorProfile));
       })
@@ -123,6 +136,7 @@ export function CollectorProfileView() {
 
   const [fullNameSave, setFullNameSave] = React.useState<FieldSaveState>(idleSaveState);
   const [phoneSave, setPhoneSave] = React.useState<FieldSaveState>(idleSaveState);
+  const [notificationError, setNotificationError] = React.useState<string | null>(null);
   const [avatarUploadState, setAvatarUploadState] = React.useState<{
     isUploading: boolean;
     error: string | null;
@@ -140,6 +154,20 @@ export function CollectorProfileView() {
     details.vehicleNumber.trim().length > 0 &&
     details.licenseNumber.trim().length > 0 &&
     details.serviceArea.trim().length > 0;
+
+  async function handleToggleNotification(kind: keyof typeof notificationPreferenceKeys, checked: boolean) {
+    if (!extras) return;
+    const previous = extras;
+    const key = notificationPreferenceKeys[kind];
+    setNotificationError(null);
+    setExtras({ ...extras, [key]: checked });
+    try {
+      await updateMyProfile({ [key]: checked } as UpdateProfileInput);
+    } catch (err) {
+      setExtras(previous);
+      setNotificationError(resolveProfileErrorMessage(err, "Couldn't save that preference. Try again."));
+    }
+  }
 
   async function handleSaveFullName(newValue: string) {
     setFullNameSave({ isSaving: true, error: null });
@@ -249,6 +277,8 @@ export function CollectorProfileView() {
               Tied to your account — can&apos;t be changed here.
             </p>
           </div>
+
+          <FieldDisplayRow label="Account Type" value="🚚 Collector" />
         </div>
 
         <Divider label="Profile details" className="my-6" />
@@ -351,6 +381,46 @@ export function CollectorProfileView() {
             </Button>
           </div>
         </div>
+      </Card>
+
+      <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all w-full">
+        <h3 className="text-xl font-bold text-neutral-900 mb-6">Notification Preferences</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+            <input
+              type="checkbox"
+              className="h-5 w-5 accent-primary-600 rounded shrink-0"
+              checked={extras?.emailNotificationsEnabled ?? false}
+              disabled={!extras}
+              onChange={(event) => void handleToggleNotification("email", event.target.checked)}
+            />
+            Email me about job offers &amp; pickup updates
+          </label>
+          <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+            <input
+              type="checkbox"
+              className="h-5 w-5 accent-primary-600 rounded shrink-0"
+              checked={extras?.smsNotificationsEnabled ?? false}
+              disabled={!extras}
+              onChange={(event) => void handleToggleNotification("sms", event.target.checked)}
+            />
+            Text me about job offers &amp; pickup updates
+          </label>
+          <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+            <input
+              type="checkbox"
+              className="h-5 w-5 accent-primary-600 rounded shrink-0"
+              checked={extras?.rewardsEmailNotificationsEnabled ?? false}
+              disabled={!extras}
+              onChange={(event) => void handleToggleNotification("rewardsEmail", event.target.checked)}
+            />
+            Email me about ratings &amp; recognition
+          </label>
+        </div>
+        {!extras && (
+          <p className="text-caption text-neutral-500 mt-4">Loading your saved preferences…</p>
+        )}
+        {notificationError && <ErrorBanner className="mt-4">{notificationError}</ErrorBanner>}
       </Card>
       </div>
     </PageContainer>

@@ -6,7 +6,7 @@ import { requireAuth, requireRole } from "../lib/rbac";
 import { requireCsrf } from "../lib/csrf";
 import { sendData, sendError } from "../lib/apiResponse";
 import { VerificationStatus } from "@prisma/client";
-import { toPublicCollectorProfile } from "./users";
+import { toPublicCollectorProfile, toPublicRecyclingProfile, toPublicBusinessProfile } from "./users";
 
 export const adminRouter = Router();
 
@@ -91,5 +91,167 @@ adminRouter.patch(
     };
 
     sendData(res, 200, { collector: publicCollector });
+  }),
+);
+
+adminRouter.get(
+  "/recycling-companies",
+  requireAuth,
+  requireRole("ADMIN"),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const companies = await prisma.recyclingCompanyProfile.findMany({
+      include: {
+        user: true,
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    });
+
+    const publicCompanies = companies.map((c) => ({
+      ...toPublicRecyclingProfile(c),
+      userId: c.userId,
+      user: {
+        id: c.user.id,
+        email: c.user.email,
+        phone: c.user.phone,
+        fullName: c.user.fullName,
+      },
+    }));
+
+    sendData(res, 200, { recyclingCompanies: publicCompanies });
+  }),
+);
+
+adminRouter.patch(
+  "/recycling-companies/:id/verify",
+  requireAuth,
+  requireRole("ADMIN"),
+  requireCsrf,
+  asyncHandler(async (req: Request, res: Response) => {
+    const parsed = verifySchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
+      return;
+    }
+
+    const { action, rejectionReason } = parsed.data;
+    const { id } = req.params;
+
+    const company = await prisma.recyclingCompanyProfile.findUnique({
+      where: { userId: id },
+    });
+
+    if (!company) {
+      sendError(res, 404, "NOT_FOUND", "Recycling company not found.");
+      return;
+    }
+
+    const updated = await prisma.recyclingCompanyProfile.update({
+      where: { userId: id },
+      data: {
+        verificationStatus: action === "APPROVE" ? VerificationStatus.APPROVED : VerificationStatus.REJECTED,
+        verificationRejectionReason: action === "REJECT" ? rejectionReason : null,
+        verificationReviewedAt: new Date(),
+        verificationReviewedByAdminId: req.user!.id,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    const publicCompany = {
+      ...toPublicRecyclingProfile(updated),
+      userId: updated.userId,
+      user: {
+        id: updated.user.id,
+        email: updated.user.email,
+        phone: updated.user.phone,
+        fullName: updated.user.fullName,
+      },
+    };
+
+    sendData(res, 200, { recyclingCompany: publicCompany });
+  }),
+);
+
+adminRouter.get(
+  "/businesses",
+  requireAuth,
+  requireRole("ADMIN"),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const businesses = await prisma.businessProfile.findMany({
+      include: {
+        user: true,
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    });
+
+    const publicBusinesses = businesses.map((b) => ({
+      ...toPublicBusinessProfile(b),
+      userId: b.userId,
+      user: {
+        id: b.user.id,
+        email: b.user.email,
+        phone: b.user.phone,
+        fullName: b.user.fullName,
+      },
+    }));
+
+    sendData(res, 200, { businesses: publicBusinesses });
+  }),
+);
+
+adminRouter.patch(
+  "/businesses/:id/verify",
+  requireAuth,
+  requireRole("ADMIN"),
+  requireCsrf,
+  asyncHandler(async (req: Request, res: Response) => {
+    const parsed = verifySchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
+      return;
+    }
+
+    const { action, rejectionReason } = parsed.data;
+    const { id } = req.params;
+
+    const business = await prisma.businessProfile.findUnique({
+      where: { userId: id },
+    });
+
+    if (!business) {
+      sendError(res, 404, "NOT_FOUND", "Business not found.");
+      return;
+    }
+
+    const updated = await prisma.businessProfile.update({
+      where: { userId: id },
+      data: {
+        verificationStatus: action === "APPROVE" ? VerificationStatus.APPROVED : VerificationStatus.REJECTED,
+        verificationRejectionReason: action === "REJECT" ? rejectionReason : null,
+        verificationReviewedAt: new Date(),
+        verificationReviewedByAdminId: req.user!.id,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    const publicBusiness = {
+      ...toPublicBusinessProfile(updated),
+      userId: updated.userId,
+      user: {
+        id: updated.user.id,
+        email: updated.user.email,
+        phone: updated.user.phone,
+        fullName: updated.user.fullName,
+      },
+    };
+
+    sendData(res, 200, { business: publicBusiness });
   }),
 );

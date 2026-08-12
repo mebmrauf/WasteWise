@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomInt } from "node:crypto";
 import { Router } from "express";
 import { Prisma, type User } from "@prisma/client";
 import { prisma } from "../lib/prisma";
@@ -22,7 +22,8 @@ import { sendData, sendError } from "../lib/apiResponse";
 import { authRateLimiter, secureCookieOptions } from "../middleware/security";
 import { env } from "../lib/env";
 import { logger } from "../lib/logger";
-import { registerSchema, loginSchema } from "./auth.schemas";
+import { registerSchema, loginSchema, verifyEmailSchema } from "./auth.schemas";
+import { sendEmail, buildVerificationCodeEmail } from "../lib/mailer";
 import {
   buildGoogleAuthorizationUrl,
   exchangeGoogleCode,
@@ -67,6 +68,26 @@ function toPublicUser(user: User) {
   };
 }
 
+const EMAIL_VERIFICATION_CODE_TTL_MS = 30 * 60 * 1000;
+
+async function issueEmailVerificationCode(userId: string, email: string, fullName: string): Promise<void> {
+  const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
+  await prisma.emailVerificationCode.create({
+    data: {
+      userId,
+      code,
+      expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_CODE_TTL_MS),
+    },
+  });
+
+  try {
+    const { subject, html, text } = buildVerificationCodeEmail(fullName, code);
+    await sendEmail({ to: email, subject, html, text });
+  } catch (err) {
+    logger.error({ err, userId }, "Failed to send email verification code");
+  }
+}
+
 authRouter.post(
   "/register",
   authRateLimiter,
@@ -98,6 +119,19 @@ authRouter.post(
               serviceArea: "",
               verificationStatus: "PENDING",
             }
+          } : undefined,
+          recyclingCompanyProfile: role === "RECYCLING_COMPANY" ? {
+            create: {
+              companyName: fullName,
+              district: "Dhaka",
+              verificationStatus: "PENDING",
+            }
+          } : undefined,
+          businessProfile: role === "USER" && accountType === "BUSINESS" ? {
+            create: {
+              businessName: fullName,
+              verificationStatus: "PENDING",
+            }
           } : undefined
         },
       });
@@ -114,9 +148,90 @@ authRouter.post(
       throw err;
     }
 
+    if (user.email) {
+      await issueEmailVerificationCode(user.id, user.email, user.fullName);
+    }
+
     const tokens = await issueTokenPair(user);
     setAuthCookies(res, tokens);
     sendData(res, 201, { user: toPublicUser(user) });
+  }),
+);
+
+authRouter.post(
+  "/verify-email",
+  requireAuth,
+  authRateLimiter,
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const dbUser = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!dbUser) {
+      sendError(res, 401, "UNAUTHENTICATED", "Sign in to continue.");
+      return;
+    }
+    if (dbUser.isEmailVerified) {
+      sendData(res, 200, { user: toPublicUser(dbUser) });
+      return;
+    }
+
+    const parsed = verifyEmailSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
+      return;
+    }
+
+    const matchingCode = await prisma.emailVerificationCode.findFirst({
+      where: {
+        userId: dbUser.id,
+        code: parsed.data.code,
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!matchingCode) {
+      sendError(res, 400, "INVALID_CODE", "That code is invalid or has expired.");
+      return;
+    }
+
+    const [, updatedUser] = await prisma.$transaction([
+      prisma.emailVerificationCode.update({
+        where: { id: matchingCode.id },
+        data: { consumedAt: new Date() },
+      }),
+      prisma.user.update({
+        where: { id: dbUser.id },
+        data: { isEmailVerified: true, emailVerificationReminderSentAt: null },
+      }),
+    ]);
+
+    sendData(res, 200, { user: toPublicUser(updatedUser) });
+  }),
+);
+
+authRouter.post(
+  "/resend-verification-email",
+  requireAuth,
+  authRateLimiter,
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const dbUser = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!dbUser) {
+      sendError(res, 401, "UNAUTHENTICATED", "Sign in to continue.");
+      return;
+    }
+    if (dbUser.isEmailVerified) {
+      sendError(res, 400, "ALREADY_VERIFIED", "Your email is already verified.");
+      return;
+    }
+    if (!dbUser.email) {
+      sendError(res, 400, "NO_EMAIL", "There is no email address on this account.");
+      return;
+    }
+
+    await issueEmailVerificationCode(dbUser.id, dbUser.email, dbUser.fullName);
+    sendData(res, 200, { success: true });
   }),
 );
 

@@ -15,6 +15,8 @@ export interface RewardsBalance {
   giftClaimDate: string | null;
   nextGiftEligibleDate: string | null;
   giftClaimed: boolean;
+  accountType: "HOUSEHOLD" | "BUSINESS" | null;
+  environmentalImpact: { totalWasteRecycledKg: number; totalCo2ReducedKg: number; totalTreesSaved: number } | null;
 }
 
 export function getRewardsBalance(): Promise<RewardsBalance> {
@@ -29,6 +31,8 @@ export interface RewardReason {
   totalPoints: number;
 }
 
+export type TransactionCategory = "PICKUP" | "BONUS" | "REFERRAL" | "LOYALTY" | "REDEMPTION" | "OTHER";
+
 export interface GreenPointsTransaction {
   id: string;
   pickupRequestId: string | null;
@@ -36,6 +40,7 @@ export interface GreenPointsTransaction {
   basePoints: number | null;
   bonusPoints: number | null;
   totalPoints: number | null;
+  category?: TransactionCategory;
   rewardReason: RewardReason | null;
   type: "EARNED" | "REDEEMED";
   description: string;

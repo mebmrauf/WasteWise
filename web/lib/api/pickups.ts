@@ -86,6 +86,7 @@ export interface PickupRequestSummary {
   serviceArea: string | null;
   preferredCollectorId: string | null;
   isExclusiveToPreferred: boolean;
+  isBulk: boolean;
   bidAmountsPerKg: Record<string, number> | null;
   hasRating: boolean;
   createdAt: string;

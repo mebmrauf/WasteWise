@@ -47,7 +47,21 @@ export function LoginForm() {
               setIsSubmitting(false);
               return;
             }
-            router.push("/");
+            const destination =
+              user.role === "COLLECTOR"
+                ? "/collector"
+                : user.role === "RECYCLING_COMPANY"
+                  ? "/recycling/dashboard"
+                  : user.role === "USER" && user.accountType === "BUSINESS"
+                    ? "/business/dashboard"
+                    : "/dashboard";
+
+            if (!user.isEmailVerified) {
+              router.push(`/verify-email?redirect=${encodeURIComponent(destination)}`);
+              return;
+            }
+            router.push(destination);
+            router.refresh();
           })
           .catch((err: unknown) => {
             setErrorMessage(resolveLoginErrorMessage(err));

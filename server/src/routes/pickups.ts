@@ -44,6 +44,7 @@ function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], o
     serviceArea: pickup.serviceArea,
     preferredCollectorId: pickup.preferredCollectorId,
     isExclusiveToPreferred: pickup.isExclusiveToPreferred,
+    isBulk: pickup.isBulk,
     bidAmountsPerKg: acceptedOffer?.bidAmountsPerKg ?? null,
     hasRating: !!pickup.rating,
     createdAt: pickup.createdAt,

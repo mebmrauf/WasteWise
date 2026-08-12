@@ -23,6 +23,7 @@ function toGreenPointsTransactionSummary(txn: GreenPointsTransaction) {
     basePoints: txn.basePoints,
     bonusPoints: txn.bonusPoints,
     totalPoints: txn.totalPoints,
+    category: txn.category,
     rewardReason: txn.rewardReason,
     createdAt: txn.createdAt,
   };
@@ -48,7 +49,7 @@ rewardsRouter.get(
   asyncHandler(async (req, res) => {
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: req.user!.id },
-      select: { 
+      select: {
         greenPointsBalance: true,
         totalGreenPoints: true,
         lastDiscountClaimDate: true,
@@ -58,6 +59,7 @@ rewardsRouter.get(
         giftClaimDate: true,
         nextGiftEligibleDate: true,
         giftClaimed: true,
+        accountType: true,
       },
     });
 
@@ -65,7 +67,7 @@ rewardsRouter.get(
     const membershipLevel = calculateMembershipLevel(lifetimePoints);
     const membershipBadge = getMembershipBadge(membershipLevel);
 
-    sendData(res, 200, { 
+    sendData(res, 200, {
       greenPointsBalance: user.greenPointsBalance,
       totalGreenPoints: lifetimePoints,
       membershipLevel,
@@ -77,6 +79,8 @@ rewardsRouter.get(
       giftClaimDate: user.giftClaimDate,
       nextGiftEligibleDate: user.nextGiftEligibleDate,
       giftClaimed: user.giftClaimed,
+      accountType: user.accountType,
+      environmentalImpact: null,
     });
   }),
 );
