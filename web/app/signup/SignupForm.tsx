@@ -18,10 +18,10 @@ const roleChoiceOptions: { value: SignupRoleChoice; label: string }[] = [
   { value: "RECYCLING_COMPANY", label: "Recycling Company" },
 ];
 
-function resolveRoleChoice(
-  choice: SignupRoleChoice
+function resolveRoleAndAccountType(
+  roleChoice: SignupRoleChoice
 ): { role: SelectableRole; accountType?: AccountType } {
-  switch (choice) {
+  switch (roleChoice) {
     case "HOUSEHOLD":
       return { role: "USER", accountType: "HOUSEHOLD" };
     case "BUSINESS":
@@ -35,11 +35,9 @@ function resolveRoleChoice(
 
 const signupErrorMessages: Record<string, string> = {
   VALIDATION_ERROR:
-    "Please check your details — make sure your email/phone is valid and your password is at least 8 characters.",
+    "Please check your details — make sure your email is valid and your password is at least 8 characters.",
   ACCOUNT_EXISTS: "An account with that email or phone number already exists. Try logging in instead.",
 };
-
-const CONTACT_METHOD_REQUIRED_MESSAGE = "Provide an email address, a phone number, or both, to continue.";
 
 function resolveSignupErrorMessage(err: unknown): string {
   if (err instanceof AuthApiError) {
@@ -60,6 +58,7 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [roleChoice, setRoleChoice] = React.useState<SignupRoleChoice>(defaultRoleChoice);
   const [clearedReferral, setClearedReferral] = React.useState(false);
+  const isPhoneRequired = roleChoice === "COLLECTOR";
   const defaultReferralCode = searchParams.get("ref") ?? "";
   const isReferralReadOnly = Boolean(defaultReferralCode) && !clearedReferral;
 
@@ -72,25 +71,20 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
 
         const formData = new FormData(event.currentTarget);
         const fullName = String(formData.get("fullName") ?? "");
-        const email = String(formData.get("email") ?? "").trim();
+        const email = String(formData.get("email") ?? "");
         const phone = String(formData.get("phone") ?? "").trim();
         const password = String(formData.get("password") ?? "");
         const referralCode = String(formData.get("referralCode") ?? "").trim();
-        const { role, accountType } = resolveRoleChoice(roleChoice);
-
-        if (!email && !phone) {
-          setErrorMessage(CONTACT_METHOD_REQUIRED_MESSAGE);
-          return;
-        }
+        const { role, accountType: resolvedAccountType } = resolveRoleAndAccountType(roleChoice);
 
         setIsSubmitting(true);
         void signup({
-          ...(email ? { email } : {}),
-          ...(phone ? { phone } : {}),
+          email,
           password,
           fullName,
           role,
-          ...(accountType ? { accountType } : {}),
+          ...(phone ? { phone } : {}),
+          ...(resolvedAccountType ? { accountType: resolvedAccountType } : {}),
           ...(referralCode ? { referralCode } : {}),
         })
           .then(() => {
@@ -119,19 +113,19 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
         name="email"
         type="email"
         autoComplete="email"
-        helperText="Optional if you provide a phone number below — provide at least one."
+        required
         disabled={isSubmitting}
       />
       <Input
-        label="Phone"
+        label={isPhoneRequired ? "Phone" : "Phone (optional)"}
         name="phone"
         type="tel"
         autoComplete="tel"
-        placeholder="01712345678"
-        helperText="Bangladesh mobile number."
+        placeholder="+8801700000000"
+        required={isPhoneRequired}
+        helperText={isPhoneRequired ? "Required for collector accounts — individual users use this to reach you." : undefined}
         disabled={isSubmitting}
       />
-
       <Input
         label="Password"
         name="password"

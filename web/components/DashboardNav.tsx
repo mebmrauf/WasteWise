@@ -29,6 +29,7 @@ export interface DashboardNavProps {
 
 const sidebarFillClasses: Record<RoleAccent, string> = {
   user: "bg-role-user-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
+  business: "bg-role-business-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
   collector: "bg-role-collector-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
   recyclingCompany: "bg-role-recycler-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
   admin: "bg-role-admin-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
@@ -36,6 +37,7 @@ const sidebarFillClasses: Record<RoleAccent, string> = {
 
 const activePillFillClasses: Record<RoleAccent, string> = {
   user: "bg-role-user-500",
+  business: "bg-role-business-500",
   collector: "bg-role-collector-500",
   recyclingCompany: "bg-role-recycler-500",
   admin: "bg-role-admin-500",
@@ -43,6 +45,7 @@ const activePillFillClasses: Record<RoleAccent, string> = {
 
 const ringOffsetClasses: Record<RoleAccent, string> = {
   user: "focus-visible:ring-offset-role-user-900",
+  business: "focus-visible:ring-offset-role-business-900",
   collector: "focus-visible:ring-offset-role-collector-900",
   recyclingCompany: "focus-visible:ring-offset-role-recycler-900",
   admin: "focus-visible:ring-offset-role-admin-900",
@@ -50,6 +53,7 @@ const ringOffsetClasses: Record<RoleAccent, string> = {
 
 const mobileActiveTextClasses: Record<RoleAccent, string> = {
   user: "text-role-user-500",
+  business: "text-role-business-500",
   collector: "text-role-collector-500",
   recyclingCompany: "text-role-recycler-500",
   admin: "text-role-admin-500",

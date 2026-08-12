@@ -162,7 +162,6 @@ export function CollectorProfileView() {
       const { user: updated } = await updateMyProfile({ phone: newValue });
       setPhone(updated.phone ?? "");
       setPhoneSave({ isSaving: false, error: null });
-      void refetchUser();
     } catch (err) {
       setPhoneSave({
         isSaving: false,
@@ -241,9 +240,9 @@ export function CollectorProfileView() {
           />
 
           <div>
-            <FieldDisplayRow label="Email" value={user.email ?? ""} placeholder="Not set" />
+            <FieldDisplayRow label="Email" value={user.email} />
             <p className="mt-1 text-caption text-neutral-500">
-              {user.email ? "Tied to your account — can't be changed here." : "You signed up with just a phone number."}
+              Tied to your account — can&apos;t be changed here.
             </p>
           </div>
         </div>

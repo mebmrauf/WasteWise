@@ -221,6 +221,16 @@ usersRouter.patch(
       return;
     }
 
+    if (req.user!.role === "COLLECTOR" && parsed.data.phone === null) {
+      sendError(
+        res,
+        400,
+        "VALIDATION_ERROR",
+        "Phone number is required for collector accounts and can't be cleared.",
+      );
+      return;
+    }
+
     const { placeId, formattedAddress, latitude, longitude, ...rest } = parsed.data;
     let updateData: Prisma.UserUpdateInput = rest;
 

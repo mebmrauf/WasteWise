@@ -1,8 +1,7 @@
 import { z } from "zod";
 import { Role, AccountType } from "@prisma/client";
 
-// Bangladesh mobile numbers in E.164 format, e.g. +8801712345678
-export const bdPhoneRegex = /^\+8801[3-9]\d{8}$/;
+const phoneRegex = /^\+?[0-9]{7,15}$/;
 
 const selectableRole = z.enum([Role.USER, Role.COLLECTOR, Role.RECYCLING_COMPANY]);
 
@@ -10,8 +9,8 @@ const selectableAccountType = z.enum([AccountType.HOUSEHOLD, AccountType.BUSINES
 
 export const registerSchema = z
   .object({
-    email: z.string().trim().toLowerCase().email("Enter a valid email address").optional(),
-    phone: z.string().trim().regex(bdPhoneRegex, "Enter a valid Bangladesh mobile number").optional(),
+    email: z.string().trim().toLowerCase().email("Enter a valid email address"),
+    phone: z.string().trim().regex(phoneRegex, "Enter a valid phone number").optional(),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters")
@@ -38,11 +37,11 @@ export const registerSchema = z
       });
     }
 
-    if (data.email === undefined && data.phone === undefined) {
+    if (data.role === Role.COLLECTOR && data.phone === undefined) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["email"],
-        message: "Provide an email address, a phone number, or both",
+        path: ["phone"],
+        message: "Phone number is required for collector accounts",
       });
     }
   });

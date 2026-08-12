@@ -17,7 +17,7 @@ export interface CollectorProfileSummary {
 
 export interface UserProfile {
   id: string;
-  email: string | null;
+  email: string;
   phone: string | null;
   fullName: string;
   role: Role;

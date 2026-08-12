@@ -30,7 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
         {user && user.role === "ADMIN" && (
           <div className="flex items-center gap-4 text-body-sm text-neutral-500">
-            <span>Logged in as <span className="font-medium text-neutral-900">{user.email ?? user.phone}</span></span>
+            <span>Logged in as <span className="font-medium text-neutral-900">{user.email}</span></span>
             <Button
               variant="secondary"
               size="sm"

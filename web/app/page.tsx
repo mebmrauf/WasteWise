@@ -28,6 +28,8 @@ export default async function Home() {
           redirect("/collector");
         } else if (payload.role === "ADMIN") {
           redirect("/admin");
+        } else if (payload.role === "RECYCLING_COMPANY") {
+          redirect("/recycling/dashboard");
         } else {
           redirect("/dashboard");
         }

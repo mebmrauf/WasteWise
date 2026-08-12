@@ -99,12 +99,12 @@ authRouter.post(
     let user: User;
     try {
       user = await prisma.user.create({
-        data: {
-          email,
-          phone,
-          passwordHash,
-          fullName,
-          role,
+        data: { 
+          email, 
+          phone, 
+          passwordHash, 
+          fullName, 
+          role, 
           accountType,
           referralCode: newReferralCode,
           referredById,
@@ -114,6 +114,13 @@ authRouter.post(
               vehicleNumber: "",
               licenseNumber: "",
               serviceArea: "",
+              verificationStatus: "PENDING",
+            }
+          } : undefined,
+          recyclingCompanyProfile: role === "RECYCLING_COMPANY" ? {
+            create: {
+              companyName: fullName,
+              district: "Dhaka",
               verificationStatus: "PENDING",
             }
           } : undefined
@@ -264,8 +271,6 @@ async function findOrCreateOAuthUser(
   const user = await prisma.user.create({
     data: {
       email: profile.email,
-      // OAuth doesn't collect a phone — left blank; the profile page prompts
-      // the user to add and verify one afterward.
       fullName: profile.fullName,
       passwordHash: null,
       role: "USER",
