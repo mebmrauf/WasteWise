@@ -86,7 +86,6 @@ export interface PickupRequestSummary {
   serviceArea: string | null;
   preferredCollectorId: string | null;
   isExclusiveToPreferred: boolean;
-  isBulk: boolean;
   bidAmountsPerKg: Record<string, number> | null;
   hasRating: boolean;
   createdAt: string;
@@ -135,8 +134,6 @@ export interface CreatePickupRequestInput {
   serviceArea?: string;
   preferredCollectorId?: string;
   isExclusiveToPreferred?: boolean;
-  isBulk?: boolean;
-  estimatedTotalWeight?: number;
 }
 
 export function createPickupRequest(input: CreatePickupRequestInput): Promise<{ pickup: PickupRequestDetail }> {

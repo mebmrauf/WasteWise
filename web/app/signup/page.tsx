@@ -4,8 +4,7 @@ import { SignupForm, type SignupRoleChoice } from "./SignupForm";
 
 
 const roleParamToChoice: Record<string, SignupRoleChoice> = {
-  USER: "HOUSEHOLD",
-  INDIVIDUAL: "HOUSEHOLD",
+  HOUSEHOLD: "HOUSEHOLD",
   BUSINESS: "BUSINESS",
   COLLECTOR: "COLLECTOR",
   RECYCLING_COMPANY: "RECYCLING_COMPANY",

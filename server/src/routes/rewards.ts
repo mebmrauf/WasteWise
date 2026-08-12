@@ -50,7 +50,6 @@ rewardsRouter.get(
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: req.user!.id },
       select: { 
-        accountType: true,
         greenPointsBalance: true,
         totalGreenPoints: true,
         lastDiscountClaimDate: true,
@@ -64,39 +63,10 @@ rewardsRouter.get(
     });
 
     const lifetimePoints = Math.max(user.totalGreenPoints, user.greenPointsBalance);
-    const membershipLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
+    const membershipLevel = calculateMembershipLevel(lifetimePoints);
     const membershipBadge = getMembershipBadge(membershipLevel);
 
-    let environmentalImpact = undefined;
-    if (user.accountType === "BUSINESS") {
-      const completedPickups = await prisma.pickupRequest.findMany({
-        where: { requesterId: req.user!.id, status: "COMPLETED" },
-        include: { items: true },
-      });
-
-      let totalWasteRecycledKg = 0;
-      let totalTreesSaved = 0;
-      let totalCo2ReducedKg = 0;
-
-      for (const pickup of completedPickups) {
-        for (const item of pickup.items) {
-          const weight = item.exactWeightKg ?? 0;
-          totalWasteRecycledKg += weight;
-          if (item.category === "PAPER") totalTreesSaved += weight * 0.017;
-          totalCo2ReducedKg += weight * 1.5;
-        }
-      }
-
-      environmentalImpact = {
-        totalWasteRecycledKg,
-        totalTreesSaved: Math.floor(totalTreesSaved),
-        totalCo2ReducedKg: Math.floor(totalCo2ReducedKg),
-      };
-    }
-
     sendData(res, 200, { 
-      accountType: user.accountType,
-      environmentalImpact,
       greenPointsBalance: user.greenPointsBalance,
       totalGreenPoints: lifetimePoints,
       membershipLevel,
@@ -265,11 +235,11 @@ rewardsRouter.post(
 
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: req.user!.id },
-      select: { greenPointsBalance: true, totalGreenPoints: true, giftClaimDate: true, accountType: true },
+      select: { greenPointsBalance: true, totalGreenPoints: true, giftClaimDate: true },
     });
 
     const lifetimePoints = Math.max(user.totalGreenPoints, user.greenPointsBalance);
-    const membershipLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
+    const membershipLevel = calculateMembershipLevel(lifetimePoints);
 
     if (membershipLevel !== "PLATINUM") {
       sendError(res, 403, "FORBIDDEN", "Only Platinum members can claim exclusive gifts.");
@@ -336,11 +306,11 @@ rewardsRouter.post(
   asyncHandler(async (req, res) => {
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: req.user!.id },
-      select: { greenPointsBalance: true, totalGreenPoints: true, lastDiscountClaimDate: true, accountType: true },
+      select: { greenPointsBalance: true, totalGreenPoints: true, lastDiscountClaimDate: true },
     });
 
     const lifetimePoints = Math.max(user.totalGreenPoints, user.greenPointsBalance);
-    const membershipLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
+    const membershipLevel = calculateMembershipLevel(lifetimePoints);
 
     if (membershipLevel !== "GOLD" && membershipLevel !== "PLATINUM") {
       sendError(res, 403, "FORBIDDEN", "Only Gold and Platinum members can claim Eco Shop discounts.");

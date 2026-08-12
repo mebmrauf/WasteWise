@@ -4,7 +4,7 @@ export type Role = "USER" | "COLLECTOR" | "RECYCLING_COMPANY" | "ADMIN";
 
 export type SelectableRole = Extract<Role, "USER" | "COLLECTOR" | "RECYCLING_COMPANY">;
 
-export type AccountType = "INDIVIDUAL" | "BUSINESS";
+export type AccountType = "HOUSEHOLD" | "BUSINESS";
 
 export type MembershipLevel = "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
 export type PlatinumGift = "TREE_SAPLING" | "ECO_TOTE_BAG" | "REUSABLE_WATER_BOTTLE";

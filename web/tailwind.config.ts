@@ -43,7 +43,6 @@ const config: Config = {
         info: colors.semantic.info,
         // Role accents — one per WasteWise role, see docs/design-system.md §1.4
         "role-user": colors.role.user,
-        "role-business": colors.role.business,
         "role-collector": colors.role.collector,
         "role-recycler": colors.role.recyclingCompany,
         "role-admin": colors.role.admin,

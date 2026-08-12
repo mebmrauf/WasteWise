@@ -100,18 +100,11 @@ export function calculateBonusPoints(
   return { totalBonusPoints, bonusesBreakdown };
 }
 
-export function calculateMembershipLevel(totalPoints: number, accountType: string | null = "INDIVIDUAL"): MembershipLevel {
-  if (accountType === "BUSINESS") {
-    if (totalPoints >= 4500) return "PLATINUM";
-    if (totalPoints >= 3001) return "GOLD";
-    if (totalPoints >= 1501) return "SILVER";
-    return "BRONZE";
-  } else {
-    if (totalPoints >= 3000) return "PLATINUM";
-    if (totalPoints >= 1501) return "GOLD";
-    if (totalPoints >= 501) return "SILVER";
-    return "BRONZE";
-  }
+export function calculateMembershipLevel(totalPoints: number): MembershipLevel {
+  if (totalPoints >= 3000) return "PLATINUM";
+  if (totalPoints >= 1501) return "GOLD";
+  if (totalPoints >= 501) return "SILVER";
+  return "BRONZE";
 }
 
 export function getMembershipBonusPercentage(level: MembershipLevel): number {
@@ -180,9 +173,9 @@ export async function calculateGreenPointsForPickup(
 
   // Apply Membership Bonus
   const db = tx ?? prisma;
-  const user = await db.user.findUnique({ where: { id: userId }, select: { greenPointsBalance: true, totalGreenPoints: true, accountType: true } });
+  const user = await db.user.findUnique({ where: { id: userId }, select: { greenPointsBalance: true, totalGreenPoints: true } });
   const lifetimePoints = Math.max(user?.totalGreenPoints ?? 0, user?.greenPointsBalance ?? 0);
-  const currentLevel = calculateMembershipLevel(lifetimePoints, user?.accountType ?? null);
+  const currentLevel = calculateMembershipLevel(lifetimePoints);
   const membershipBonusPercentage = getMembershipBonusPercentage(currentLevel);
   
   const subtotal = totalBasePoints + totalBonusPoints;
