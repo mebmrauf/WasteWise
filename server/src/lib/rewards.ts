@@ -102,7 +102,7 @@ export function calculateBonusPoints(
 
 export function calculateMembershipLevel(totalPoints: number, accountType: string | null = "HOUSEHOLD"): MembershipLevel {
   if (accountType === "BUSINESS") {
-    if (totalPoints >= 4500) return "PLATINUM";
+    if (totalPoints >= 4501) return "PLATINUM";
     if (totalPoints >= 3001) return "GOLD";
     if (totalPoints >= 1501) return "SILVER";
     return "BRONZE";

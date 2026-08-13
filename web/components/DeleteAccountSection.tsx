@@ -60,38 +60,35 @@ export function DeleteAccountSection({ hasPassword }: DeleteAccountSectionProps)
   }
 
   return (
-    <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-error-200 transition-all">
-      <h3 className="text-xl font-bold text-error-700 mb-2 flex items-center gap-2">
-        <Icon icon={Trash2} size="sm" className="text-error-600" /> Danger Zone
-      </h3>
-      <p className="text-body-sm text-neutral-600 mb-6 max-w-form">
+    <Card className="p-6 md:p-8 bg-rose-50/30 rounded-2xl shadow-sm border border-rose-200 transition-all">
+      <p className="text-body-sm text-neutral-800 font-medium mb-4 max-w-form">
         Deleting your account is permanent and can&apos;t be undone.
       </p>
 
-      <div className="mb-6 flex flex-col gap-2">
-        <div className="flex items-start gap-2 text-body-sm text-neutral-600">
-          <Icon icon={X} size="sm" className="mt-0.5 shrink-0 text-error-500" />
+      <div className="mb-8 flex flex-col gap-3">
+        <div className="flex items-start gap-3 text-sm text-neutral-700 bg-white/50 p-3 rounded-lg border border-rose-100/50">
+          <Icon icon={X} size="sm" className="mt-0.5 shrink-0 text-rose-500" />
           <span>Your login access, password, and saved preferences</span>
         </div>
-        <div className="flex items-start gap-2 text-body-sm text-neutral-600">
-          <Icon icon={X} size="sm" className="mt-0.5 shrink-0 text-error-500" />
+        <div className="flex items-start gap-3 text-sm text-neutral-700 bg-white/50 p-3 rounded-lg border border-rose-100/50">
+          <Icon icon={X} size="sm" className="mt-0.5 shrink-0 text-rose-500" />
           <span>Personal details, address, and profile photo</span>
         </div>
-        <div className="flex items-start gap-2 text-body-sm text-neutral-600">
-          <Icon icon={Check} size="sm" className="mt-0.5 shrink-0 text-success-500" />
+        <div className="flex items-start gap-3 text-sm text-neutral-700 bg-white/50 p-3 rounded-lg border border-rose-100/50">
+          <Icon icon={Check} size="sm" className="mt-0.5 shrink-0 text-emerald-600" />
           <span>
             Records shared with others (past pickups, offers, ratings, marketplace requests) stay
-            on their end, but show you as a deleted user
+            on their end, but show you as a deleted user.
           </span>
         </div>
       </div>
 
       {!isConfirming ? (
         <Button variant="destructive" onClick={handleOpen}>
-          Delete my account
+          Delete My Account
         </Button>
       ) : (
-        <div className="flex flex-col gap-4 max-w-sm">
+        <div className="flex flex-col gap-5 max-w-md bg-white p-5 rounded-xl border border-rose-200 shadow-sm">
           {hasPassword && (
             <Input
               type="password"
@@ -100,18 +97,22 @@ export function DeleteAccountSection({ hasPassword }: DeleteAccountSectionProps)
               autoComplete="current-password"
               onChange={(event) => setPassword(event.target.value)}
               disabled={isDeleting}
+              required
             />
           )}
+
           {error && <ErrorBanner>{error}</ErrorBanner>}
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-3 pt-2">
             <Button
               variant="destructive"
-              disabled={isDeleting || (hasPassword && password.trim().length === 0)}
               onClick={() => void handleDelete()}
+              disabled={isDeleting || (hasPassword && password.length === 0)}
+              className="flex-1"
             >
-              {isDeleting ? "Deleting…" : "Permanently delete my account"}
+              {isDeleting ? "Deleting…" : "Confirm Deletion"}
             </Button>
-            <Button variant="ghost" disabled={isDeleting} onClick={handleCancel}>
+            <Button variant="ghost" onClick={handleCancel} disabled={isDeleting} className="flex-1">
               Cancel
             </Button>
           </div>

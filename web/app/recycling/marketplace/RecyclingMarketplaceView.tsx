@@ -104,10 +104,26 @@ export function RecyclingMarketplaceView() {
               <div className="text-right mb-2">
                 <span className="text-body-sm text-neutral-500">{req._count?.quotations || 0} quotes so far</span>
               </div>
-              <Button onClick={() => setSelectedRequest(req)} className="w-full justify-between group">
-                Submit Quotation
-                <Icon icon={ChevronRight} size="sm" className="opacity-70 group-hover:opacity-100 transition-opacity" />
-              </Button>
+              {req.quotations && req.quotations.length > 0 ? (
+                req.quotations[0].status === "ACCEPTED" ? (
+                  <Button disabled variant="secondary" className="w-full bg-emerald-100 text-emerald-800 border-emerald-200">
+                    Quotation Accepted
+                  </Button>
+                ) : req.quotations[0].status === "REJECTED" ? (
+                  <Button disabled variant="secondary" className="w-full bg-red-100 text-red-800 border-red-200">
+                    Quotation Rejected
+                  </Button>
+                ) : (
+                  <Button disabled variant="secondary" className="w-full">
+                    Quotation Submitted
+                  </Button>
+                )
+              ) : (
+                <Button onClick={() => setSelectedRequest(req)} className="w-full justify-between group">
+                  Submit Quotation
+                  <Icon icon={ChevronRight} size="sm" className="opacity-70 group-hover:opacity-100 transition-opacity" />
+                </Button>
+              )}
             </div>
           </div>
         );
@@ -128,7 +144,22 @@ export function RecyclingMarketplaceView() {
 }
 
 function SubmitQuotationModal({ request, onClose, onSuccess }: { request: BulkMarketplaceRequest; onClose: () => void; onSuccess: () => void }) {
-  const [price, setPrice] = React.useState("");
+  const materials: { category: string; weightKg: number }[] = React.useMemo(() => {
+    if (typeof request.wasteTypes === 'string') {
+      try { return JSON.parse(request.wasteTypes); } catch (e) { return []; }
+    }
+    return (request.wasteTypes as any) || [];
+  }, [request.wasteTypes]);
+
+  const [prices, setPrices] = React.useState<Record<string, number>>({});
+  
+  const grandTotal = React.useMemo(() => {
+    return materials.reduce((sum, mat) => {
+      const pricePerKg = prices[mat.category] || 0;
+      return sum + (mat.weightKg * pricePerKg);
+    }, 0);
+  }, [materials, prices]);
+
   const [date, setDate] = React.useState("");
   const [time, setTime] = React.useState("");
   const [vehicle, setVehicle] = React.useState("PICKUP_TRUCK");
@@ -143,7 +174,8 @@ function SubmitQuotationModal({ request, onClose, onSuccess }: { request: BulkMa
       setSubmitting(true);
       setErrorMsg(null);
       await submitQuotation(request.id, {
-        purchasePrice: Number(price),
+        purchasePrice: grandTotal,
+        pricesPerKg: prices,
         vehicleType: vehicle,
         estimatedPickupDate: new Date(date).toISOString(),
         estimatedPickupTime: time || undefined,
@@ -187,19 +219,51 @@ function SubmitQuotationModal({ request, onClose, onSuccess }: { request: BulkMa
             </div>
           </div>
 
-          <div>
-            <label className="block text-body-sm font-medium text-neutral-700 mb-2">
-              Purchase Price (BDT)
-            </label>
-            <input
-              type="number"
-              required
-              min="0"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-              placeholder="e.g. 5000"
-            />
+          <div className="space-y-3">
+            <h4 className="font-medium text-neutral-900">Price Breakdown</h4>
+            <div className="border border-neutral-200 rounded-xl overflow-hidden">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-neutral-50 text-neutral-500 border-b border-neutral-200">
+                  <tr>
+                    <th className="px-4 py-2 font-medium">Material</th>
+                    <th className="px-4 py-2 font-medium">Weight</th>
+                    <th className="px-4 py-2 font-medium">Price/kg (BDT)</th>
+                    <th className="px-4 py-2 font-medium text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100">
+                  {materials.map((mat, i) => (
+                    <tr key={i}>
+                      <td className="px-4 py-3 capitalize">{mat.category.toLowerCase()}</td>
+                      <td className="px-4 py-3 text-neutral-600">{mat.weightKg} kg</td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="number"
+                          required
+                          min="0"
+                          step="0.01"
+                          value={prices[mat.category] === undefined ? "" : prices[mat.category]}
+                          onChange={(e) => setPrices(p => ({ ...p, [mat.category]: Number(e.target.value) }))}
+                          className="w-24 rounded border border-neutral-300 px-2 py-1 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                          placeholder="e.g. 50"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium">
+                        ৳{((prices[mat.category] || 0) * mat.weightKg).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-neutral-50 border-t border-neutral-200">
+                  <tr>
+                    <td colSpan={3} className="px-4 py-3 text-right font-medium text-neutral-600">Grand Total:</td>
+                    <td className="px-4 py-3 text-right text-lg font-bold text-emerald-600">
+                      ৳{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

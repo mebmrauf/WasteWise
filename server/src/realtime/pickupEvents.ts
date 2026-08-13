@@ -359,11 +359,11 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
 
     const userToUpdate = await tx.user.findUniqueOrThrow({
       where: { id: access.pickup.requesterId },
-      select: { greenPointsBalance: true, referredById: true, referralRewardClaimed: true, totalGreenPoints: true },
+      select: { greenPointsBalance: true, referredById: true, referralRewardClaimed: true, totalGreenPoints: true, accountType: true },
     });
 
     const lifetimePointsBefore = Math.max(userToUpdate.totalGreenPoints ?? 0, userToUpdate.greenPointsBalance ?? 0);
-    const oldMembership = calculateMembershipLevel(lifetimePointsBefore);
+    const oldMembership = calculateMembershipLevel(lifetimePointsBefore, userToUpdate.accountType);
 
     await tx.user.update({
       where: { id: access.pickup.requesterId },
@@ -374,7 +374,7 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
     });
 
     const lifetimePointsAfter = lifetimePointsBefore + totalPoints;
-    const newMembership = calculateMembershipLevel(lifetimePointsAfter);
+    const newMembership = calculateMembershipLevel(lifetimePointsAfter, userToUpdate.accountType);
 
     if (newMembership !== oldMembership) {
       await tx.greenPointsTransaction.create({
@@ -504,6 +504,8 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
       }
     }
 
+    const hasLoyaltyBonus = rewardReason.bonuses.some((b: any) => b.name.includes("Member Bonus"));
+
     return {
       updated,
       tracking,
@@ -513,6 +515,8 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
       totalPoints,
       membershipChanged: newMembership !== oldMembership,
       newMembership,
+      hasLoyaltyBonus,
+      loyaltyBonusPoints: hasLoyaltyBonus ? rewardReason.bonuses.find((b: any) => b.name.includes("Member Bonus"))?.points : 0,
     };
   });
 
@@ -542,6 +546,17 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
       type: "GENERIC",
       title: "Green Points Earned",
       message: `You earned ${result.totalPoints} Green Points for this pickup!`,
+      relatedPickupRequestId: pickupRequestId,
+      emailPreference: "rewardsEmailNotificationsEnabled",
+    });
+  }
+
+  if (result.hasLoyaltyBonus && result.loyaltyBonusPoints) {
+    void createNotification({
+      userId: access.pickup.requesterId,
+      type: "GENERIC",
+      title: "Loyalty Bonus Earned",
+      message: `You earned an extra ${result.loyaltyBonusPoints} Green Points as a ${result.newMembership.charAt(0).toUpperCase() + result.newMembership.slice(1).toLowerCase()} member!`,
       relatedPickupRequestId: pickupRequestId,
       emailPreference: "rewardsEmailNotificationsEnabled",
     });

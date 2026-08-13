@@ -100,7 +100,7 @@ export async function authFetch<T>(
       }
     }
     if (res.status !== 401) {
-      console.error("AuthApiError Debug:", { status: res.status, body });
+      console.warn("AuthApiError Debug for path " + path + ": status " + res.status, JSON.stringify(body));
     }
 
     throw new AuthApiError(

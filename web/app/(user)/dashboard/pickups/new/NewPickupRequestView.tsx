@@ -295,23 +295,19 @@ export function NewPickupRequestView() {
     : addressMode === "current" ? (currentLocationPlace?.formattedAddress ?? null) 
     : (selectedCustomPlace?.description ?? null);
 
-  const isBusiness = false;
-
   const computedTotalWeight = React.useMemo(() => {
-    if (!isBusiness) return typeof estimatedTotalWeight === "number" ? estimatedTotalWeight : 0;
-    
     let total = 0;
     for (const cat of categories) {
       const weight = parseFloat(categoryWeights[cat] || "0");
       if (!isNaN(weight)) total += weight;
     }
     return total;
-  }, [categories, categoryWeights, isBusiness, estimatedTotalWeight]);
+  }, [categories, categoryWeights]);
 
   const canSubmit =
     !isSubmitting &&
     categories.length > 0 &&
-    (isBusiness ? computedTotalWeight > 0 : estimatedTotalWeight !== "") &&
+    computedTotalWeight > 0 &&
     date !== "" &&
     selectedWindow !== null &&
     !isSlotInPast &&
@@ -334,7 +330,7 @@ export function NewPickupRequestView() {
 
 
   async function handleSubmitPickupRequest() {
-    if (!date || !selectedWindow || !resolvedPlaceId || categories.length === 0 || (!isBusiness && estimatedTotalWeight === "")) return;
+    if (!date || !selectedWindow || !resolvedPlaceId || categories.length === 0 || computedTotalWeight === 0) return;
 
     if (computedTotalWeight >= 50) {
       setSubmitError("This request qualifies as a Bulk Waste Pickup. Please use the Bulk Waste Pickup feature instead.");
@@ -370,8 +366,8 @@ export function NewPickupRequestView() {
       const payload = {
         items: categories.map((category) => ({
           category,
-          loadSize: "SMALL" as LoadSize,
-          exactWeightKg: isBusiness && categoryWeights[category] ? parseFloat(categoryWeights[category]) : undefined,
+          loadSize: "SMALL" as LoadSize, // Keeping enum for backward compatibility, although not really used for calculation anymore
+          exactWeightKg: categoryWeights[category] ? parseFloat(categoryWeights[category]) : undefined,
         })),
         timeSlotStart: buildTimeSlotIso(date, selectedWindow.startHour),
         timeSlotEnd: buildTimeSlotIso(date, selectedWindow.endHour),
@@ -445,49 +441,36 @@ export function NewPickupRequestView() {
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-end mb-2">
                   <p className="text-body font-semibold text-neutral-900">Estimated Weight</p>
-                  {isBusiness && computedTotalWeight > 0 && (
+                  {computedTotalWeight > 0 && (
                     <span className="text-body-sm font-semibold text-primary-600 bg-primary-50 px-3 py-1 rounded-full">
                       Total: {computedTotalWeight} kg
                     </span>
                   )}
                 </div>
 
-                {isBusiness ? (
-                  categories.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 p-6 text-center">
-                      <p className="text-body-sm text-neutral-500">Select materials above to enter their weights.</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-3 rounded-xl border border-neutral-100 bg-neutral-50/50 p-4">
-                      {categories.map((cat) => (
-                        <div key={cat} className="flex items-center justify-between gap-4">
-                          <label className="text-body-sm font-medium text-neutral-700 capitalize">
-                            {cat.toLowerCase()} Weight (kg)
-                          </label>
-                          <Input
-                            type="number"
-                            min="0.1"
-                            step="0.1"
-                            placeholder="e.g. 5"
-                            value={categoryWeights[cat] || ""}
-                            onChange={(e) => setCategoryWeights(prev => ({ ...prev, [cat]: e.target.value }))}
-                            className="bg-white w-32"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )
+                {categories.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 p-6 text-center">
+                    <p className="text-body-sm text-neutral-500">Select materials above to enter their weights.</p>
+                  </div>
                 ) : (
-                  <Input
-                    type="number"
-                    min="1"
-                    max="49"
-                    step="0.1"
-                    placeholder="e.g. 12.5"
-                    value={estimatedTotalWeight}
-                    onChange={(e) => setEstimatedTotalWeight(e.target.value === "" ? "" : Number(e.target.value))}
-                    className="bg-white"
-                  />
+                  <div className="flex flex-col gap-3 rounded-xl border border-neutral-100 bg-neutral-50/50 p-4">
+                    {categories.map((cat) => (
+                      <div key={cat} className="flex items-center justify-between gap-4">
+                        <label className="text-body-sm font-medium text-neutral-700 capitalize">
+                          {cat.toLowerCase().replace(/_/g, " ")} Weight (kg)
+                        </label>
+                        <Input
+                          type="number"
+                          min="0.1"
+                          step="0.1"
+                          placeholder="e.g. 5"
+                          value={categoryWeights[cat] || ""}
+                          onChange={(e) => setCategoryWeights(prev => ({ ...prev, [cat]: e.target.value }))}
+                          className="bg-white w-32"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
 

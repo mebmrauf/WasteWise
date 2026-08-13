@@ -61,8 +61,6 @@ export function MyPickupsView() {
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [pickups, setPickups] = React.useState<PickupRequestSummary[]>([]);
 
-  // Filtering states
-  const [typeFilter, setTypeFilter] = React.useState<"ALL" | "SMART" | "BULK">("ALL");
   const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
   const [searchQuery, setSearchQuery] = React.useState("");
 
@@ -202,8 +200,7 @@ export function MyPickupsView() {
   const filteredPickups = React.useMemo(() => {
     const sorted = [...pickups].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return sorted.filter((p) => {
-      if (typeFilter === "SMART" && p.isBulk) return false;
-      if (typeFilter === "BULK" && !p.isBulk) return false;
+      if (p.isBulk) return false; // Force only Smart Pickups
       
       if (statusFilter !== "ALL" && p.status !== statusFilter) return false;
       
@@ -217,14 +214,13 @@ export function MyPickupsView() {
       }
       return true;
     });
-  }, [pickups, typeFilter, statusFilter, searchQuery]);
+  }, [pickups, statusFilter, searchQuery]);
 
   // Statistics
-  const totalRequests = pickups.length;
-  const smartPickups = pickups.filter(p => !p.isBulk).length;
-  const bulkPickups = pickups.filter(p => p.isBulk).length;
-  const completedCount = pickups.filter(p => p.status === "COMPLETED").length;
-  const pendingCount = pickups.filter(p => p.status === "PENDING").length;
+  const smartPickupsOnly = pickups.filter(p => !p.isBulk);
+  const totalRequests = smartPickupsOnly.length;
+  const completedCount = smartPickupsOnly.filter(p => p.status === "COMPLETED").length;
+  const pendingCount = smartPickupsOnly.filter(p => p.status === "PENDING").length;
 
   const renderProgressTimeline = (pickup: PickupRequestSummary) => {
     const isBulk = pickup.isBulk;
@@ -494,18 +490,10 @@ export function MyPickupsView() {
       {loadState === "ready" && pickups.length > 0 && (
         <div className="mt-8">
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-3 gap-4 mb-8">
             <Card className="p-4 bg-white border border-neutral-100 shadow-sm text-center">
-              <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Total</p>
+              <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Total Pickups</p>
               <p className="text-3xl font-black text-neutral-900 mt-2">{totalRequests}</p>
-            </Card>
-            <Card className="p-4 bg-white border border-neutral-100 shadow-sm text-center">
-              <p className="text-xs font-bold text-emerald-700 uppercase tracking-widest">Smart Pickups</p>
-              <p className="text-3xl font-black text-emerald-900 mt-2">{smartPickups}</p>
-            </Card>
-            <Card className="p-4 bg-white border border-neutral-100 shadow-sm text-center">
-              <p className="text-xs font-bold text-blue-700 uppercase tracking-widest">Bulk Pickups</p>
-              <p className="text-3xl font-black text-blue-900 mt-2">{bulkPickups}</p>
             </Card>
             <Card className="p-4 bg-white border border-neutral-100 shadow-sm text-center">
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Completed</p>
@@ -518,53 +506,30 @@ export function MyPickupsView() {
           </div>
 
           {/* Filters & Search */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <div className="flex bg-neutral-100 rounded-xl p-1 shrink-0 overflow-x-auto w-full md:w-auto">
-              <button 
-                onClick={() => setTypeFilter("ALL")}
-                className={cn("px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors flex-1 md:flex-none", typeFilter === "ALL" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
-              >
-                All
-              </button>
-              <button 
-                onClick={() => setTypeFilter("SMART")}
-                className={cn("px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors flex-1 md:flex-none", typeFilter === "SMART" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
-              >
-                Smart Pickup
-              </button>
-              <button 
-                onClick={() => setTypeFilter("BULK")}
-                className={cn("px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors flex-1 md:flex-none", typeFilter === "BULK" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
-              >
-                Bulk Pickup
-              </button>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-              <select 
-                value={statusFilter} 
-                onChange={e => setStatusFilter(e.target.value)}
-                className="bg-white border border-neutral-200 text-sm font-medium rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 shrink-0 w-full sm:w-auto"
-              >
-                <option value="ALL">All Statuses</option>
-                <option value="PENDING">Pending &amp; Bidding</option>
-                <option value="ASSIGNED">Collector Assigned</option>
-                <option value="EN_ROUTE">En Route</option>
-                <option value="ARRIVED">Arrived</option>
-                <option value="VERIFYING_WEIGHTS">Verifying Weights</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
-              <div className="relative w-full sm:w-64">
-                <Icon icon={Search} size="sm" className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-                <input 
-                  type="text" 
-                  placeholder="Search material, ID, location..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="bg-white border border-neutral-200 text-sm rounded-xl pl-9 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 w-full"
-                />
-              </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8 w-full">
+            <select 
+              value={statusFilter} 
+              onChange={e => setStatusFilter(e.target.value)}
+              className="bg-white border border-neutral-200 text-sm font-medium rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-[200px] shrink-0"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="PENDING">Pending &amp; Bidding</option>
+              <option value="ASSIGNED">Collector Assigned</option>
+              <option value="EN_ROUTE">En Route</option>
+              <option value="ARRIVED">Arrived</option>
+              <option value="VERIFYING_WEIGHTS">Verifying Weights</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+            <div className="relative w-full sm:w-[360px] shrink-0">
+              <Icon icon={Search} size="sm" className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+              <input 
+                type="text" 
+                placeholder="Search material, ID, location..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="bg-white border border-neutral-200 text-sm font-medium rounded-xl pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+              />
             </div>
           </div>
 

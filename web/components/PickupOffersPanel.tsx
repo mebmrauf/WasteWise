@@ -119,11 +119,18 @@ export function PickupOffersPanel({
             ? pickup.items.reduce(
                 (acc, item) => {
                   const bid = offer.bidAmountsPerKg?.[item.category] ?? 0;
-                  const range = LOAD_SIZE_KG_RANGES[item.loadSize];
-                  return {
-                    min: acc.min + bid * range.minKg,
-                    max: acc.max + bid * range.maxKg,
-                  };
+                  if (typeof item.exactWeightKg === "number") {
+                    return {
+                      min: acc.min + bid * item.exactWeightKg,
+                      max: acc.max + bid * item.exactWeightKg,
+                    };
+                  } else {
+                    const range = LOAD_SIZE_KG_RANGES[item.loadSize];
+                    return {
+                      min: acc.min + bid * range.minKg,
+                      max: acc.max + bid * range.maxKg,
+                    };
+                  }
                 },
                 { min: 0, max: 0 }
               )
