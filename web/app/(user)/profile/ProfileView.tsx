@@ -447,36 +447,6 @@ export function ProfileView() {
             </div>
           </Card>
 
-          <Card className="glass-panel border-0 shadow-xl rounded-3xl animate-slide-up p-8" style={{ animationDelay: '200ms' }}>
-            <h3 className="text-h4 font-heading text-neutral-900 mb-6">Notification Preferences</h3>
-            <div className="flex flex-col gap-4">
-              <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
-                <input
-                  type="checkbox"
-                  className="h-5 w-5 accent-primary-600 rounded"
-                  checked={extras?.emailNotificationsEnabled ?? false}
-                  disabled={!extras}
-                  onChange={(event) => void handleToggleNotification("email", event.target.checked)}
-                />
-                Email me about pickup updates
-              </label>
-              <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
-                <input
-                  type="checkbox"
-                  className="h-5 w-5 accent-primary-600 rounded"
-                  checked={extras?.smsNotificationsEnabled ?? false}
-                  disabled={!extras}
-                  onChange={(event) => void handleToggleNotification("sms", event.target.checked)}
-                />
-                Text me about pickup updates
-              </label>
-
-              {!extras && (
-                <p className="text-caption text-neutral-500 pl-3">Loading your saved preferences…</p>
-              )}
-              {notificationError && <ErrorBanner>{notificationError}</ErrorBanner>}
-            </div>
-          </Card>
         </div>
       </div>
 
