@@ -10,6 +10,7 @@ import {
   revokeRefreshToken,
   RefreshTokenError,
 } from "../lib/authTokens";
+import { calculateMembershipLevel, getMembershipBadge } from "../lib/rewards";
 import {
   setAuthCookies,
   clearAuthCookies,
@@ -54,6 +55,10 @@ function loginErrorRedirect(reason: string): string {
 }
 
 function toPublicUser(user: User) {
+  const lifetimePoints = Math.max(user.totalGreenPoints ?? 0, user.greenPointsBalance ?? 0);
+  const computedMembershipLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
+  const computedMembershipBadge = getMembershipBadge(computedMembershipLevel);
+
   return {
     id: user.id,
     email: user.email,
@@ -64,8 +69,8 @@ function toPublicUser(user: User) {
     isEmailVerified: user.isEmailVerified,
     hasPassword: Boolean(user.passwordHash),
     avatarUrl: user.avatarUrl,
-    membershipLevel: user.membershipLevel,
-    membershipBadge: user.membershipBadge,
+    membershipLevel: computedMembershipLevel,
+    membershipBadge: computedMembershipBadge,
     totalGreenPoints: user.totalGreenPoints,
     giftClaimed: user.giftClaimed,
     selectedGift: user.selectedGift,

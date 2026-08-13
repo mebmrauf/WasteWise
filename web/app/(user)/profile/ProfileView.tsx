@@ -344,158 +344,172 @@ export function ProfileView() {
   }
 
   return (
-    <PageContainer className="py-8 lg:py-12">
-      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 p-8 mb-8 rounded-2xl shadow-sm">
-        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Your Profile</h1>
+    <PageContainer className="py-8 lg:py-12 max-w-5xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Profile &amp; Settings</h1>
         <p className="mt-2 text-neutral-600">
           Manage your contact details, address, avatar, and notification preferences.
         </p>
-      </Card>
+      </div>
 
       {extrasError && (
-        <ErrorBanner className="mt-6 max-w-form">{extrasError}</ErrorBanner>
+        <ErrorBanner className="mb-8">{extrasError}</ErrorBanner>
       )}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8 items-start">
-        {/* Left Column: Profile Snapshot */}
-        <div className="lg:col-span-1 self-stretch">
-          <Card className="h-full p-0 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all flex flex-col items-center justify-center text-center overflow-hidden">
-            <div className="p-6 flex flex-col items-center w-full">
-              <AvatarUpload
-                name={user.fullName}
-                currentSrc={extras?.avatarUrl ?? null}
-                accent="user"
-                size="lg"
-                isUploading={avatarUploadState.isUploading}
-                error={avatarUploadState.error}
-                onFileSelected={handleAvatarFileSelected}
-                className="items-center text-center mb-3"
-              />
-              <h2 className="text-h3 font-heading text-neutral-900">{user.fullName}</h2>
-              <p className="text-body text-neutral-500">{user.email}</p>
-              <div className="mt-4 w-full flex flex-col items-center justify-center gap-2">
-                <div className="text-caption text-primary-700 bg-primary-50 px-4 py-2 rounded-full font-medium flex items-center gap-2">
-                  <Icon icon={User} size="sm" /> {user.accountType === "BUSINESS" ? "Business Account" : "User Account"}
-                </div>
-                {user.accountType === "BUSINESS" && (
-                  <div className="text-caption text-amber-700 bg-amber-50 px-4 py-2 rounded-full font-medium flex items-center gap-2">
-                    <Icon icon={Award} size="sm" /> Business Loyalty
+      
+      <div className="flex flex-col gap-10">
+        <section>
+          <div className="flex items-center justify-between mb-4 px-1">
+            <h2 className="text-lg font-bold text-neutral-900">Profile Information</h2>
+          </div>
+
+          <Card className="p-0 bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-neutral-100">
+              {/* Left Column: Profile Snapshot */}
+              <div className="p-6 md:p-8 flex flex-col items-center justify-center text-center bg-neutral-50/30">
+                <AvatarUpload
+                  name={user.fullName}
+                  currentSrc={extras?.avatarUrl ?? null}
+                  accent="user"
+                  size="lg"
+                  isUploading={avatarUploadState.isUploading}
+                  error={avatarUploadState.error}
+                  onFileSelected={handleAvatarFileSelected}
+                  className="items-center text-center mb-3"
+                />
+                <h2 className="text-h3 font-heading text-neutral-900">{user.fullName}</h2>
+                <p className="text-body text-neutral-500">{user.email}</p>
+                <div className="mt-4 w-full flex flex-col items-center justify-center gap-2">
+                  <div className="text-caption text-primary-700 bg-primary-50 px-4 py-2 rounded-full font-medium flex items-center gap-2">
+                    <Icon icon={User} size="sm" /> {user.accountType === "BUSINESS" ? "Business Account" : "User Account"}
                   </div>
-                )}
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Right Column: Personal Details */}
-        <div className="lg:col-span-2">
-          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
-            <h3 className="text-xl font-bold text-neutral-900 mb-6">Personal Details</h3>
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col">
-                <span className="text-label text-neutral-800 mb-1">Account Type</span>
-                <div className="text-body text-neutral-900 font-medium">
-                  {user.accountType === "BUSINESS" ? "🏢 Business" : "🏠 Household"}
+                  {user.accountType === "BUSINESS" && (
+                    <div className="text-caption text-amber-700 bg-amber-50 px-4 py-2 rounded-full font-medium flex items-center gap-2">
+                      <Icon icon={Award} size="sm" /> Business Loyalty
+                    </div>
+                  )}
                 </div>
               </div>
-              <EditableField
-                label="Full name"
-                value={fullName}
-                onSave={handleSaveFullName}
-                isSaving={fullNameSave.isSaving}
-                errorText={fullNameSave.error}
-              />
-              <EditableField
-                label="Phone"
-                value={phone}
-                type="tel"
-                placeholder="Not set"
-                onSave={handleSavePhone}
-                isSaving={phoneSave.isSaving}
-                errorText={phoneSave.error}
-              />
-              <div>
-                {!isEditingAddress ? (
-                  <FieldDisplayRow
-                    label="Address"
-                    value={extras?.formattedAddress ?? ""}
-                    placeholder={extras ? "Not set" : "Loading…"}
-                    onEdit={handleEditAddress}
-                    editDisabled={!extras}
-                    editButtonRef={addressEditButtonRef}
-                  />
-                ) : (
-                  <>
-                    <AddressAutocomplete
-                      label="Address"
-                      name="address"
-                      placeholder="Start typing your address…"
-                      value={addressQuery}
-                      onChange={handleAddressQueryChange}
-                      suggestions={addressSuggestions}
-                      onSelectSuggestion={(suggestion) => void handleSelectAddressSuggestion(suggestion)}
-                      isLoading={isLoadingAddressSuggestions}
-                      error={addressSuggestionsError ?? addressSave.error}
-                      disabled={addressSave.isSaving}
-                    />
-                    <div className="mt-2 flex items-center gap-2">
-                      <Button variant="ghost" size="sm" disabled={addressSave.isSaving} onClick={handleCancelAddress}>
-                        Cancel
-                      </Button>
-                      {addressSave.isSaving && <span className="text-caption text-neutral-500">Saving…</span>}
+
+              {/* Right Column: Personal Details */}
+              <div className="lg:col-span-2 p-6 md:p-8 flex flex-col gap-8">
+                <div>
+                  <h3 className="text-base font-bold text-neutral-900 mb-6 uppercase tracking-wider">Personal Details</h3>
+                  <div className="flex flex-col gap-6">
+                    <div className="flex flex-col">
+                      <span className="text-label text-neutral-800 mb-1">Account Type</span>
+                      <div className="text-body text-neutral-900 font-medium">
+                        {user.accountType === "BUSINESS" ? "🏢 Business" : "🏠 Household"}
+                      </div>
                     </div>
-                  </>
-                )}
+                    <EditableField
+                      label="Full name"
+                      value={fullName}
+                      onSave={handleSaveFullName}
+                      isSaving={fullNameSave.isSaving}
+                      errorText={fullNameSave.error}
+                    />
+                    <EditableField
+                      label="Phone"
+                      value={phone}
+                      type="tel"
+                      placeholder="Not set"
+                      onSave={handleSavePhone}
+                      isSaving={phoneSave.isSaving}
+                      errorText={phoneSave.error}
+                    />
+                    <div>
+                      {!isEditingAddress ? (
+                        <FieldDisplayRow
+                          label="Address"
+                          value={extras?.formattedAddress ?? ""}
+                          placeholder={extras ? "Not set" : "Loading…"}
+                          onEdit={handleEditAddress}
+                          editDisabled={!extras}
+                          editButtonRef={addressEditButtonRef}
+                        />
+                      ) : (
+                        <>
+                          <AddressAutocomplete
+                            label="Address"
+                            name="address"
+                            placeholder="Start typing your address…"
+                            value={addressQuery}
+                            onChange={handleAddressQueryChange}
+                            suggestions={addressSuggestions}
+                            onSelectSuggestion={(suggestion) => void handleSelectAddressSuggestion(suggestion)}
+                            isLoading={isLoadingAddressSuggestions}
+                            error={addressSuggestionsError ?? addressSave.error}
+                            disabled={addressSave.isSaving}
+                          />
+                          <div className="mt-2 flex items-center gap-2">
+                            <Button variant="ghost" size="sm" disabled={addressSave.isSaving} onClick={handleCancelAddress}>
+                              Cancel
+                            </Button>
+                            {addressSave.isSaving && <span className="text-caption text-neutral-500">Saving…</span>}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </Card>
-        </div>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-bold text-neutral-900 mb-4 px-1">Security</h2>
+          <ChangePasswordSection hasPassword={user.hasPassword} />
+        </section>
+
+        <section>
+          <h2 className="text-lg font-bold text-neutral-900 mb-4 px-1">Notification Preferences</h2>
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-200 transition-all">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+                <input
+                  type="checkbox"
+                  className="h-5 w-5 accent-primary-600 rounded shrink-0"
+                  checked={extras?.emailNotificationsEnabled ?? false}
+                  disabled={!extras}
+                  onChange={(event) => void handleToggleNotification("email", event.target.checked)}
+                />
+                Email me about pickup updates
+              </label>
+              <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+                <input
+                  type="checkbox"
+                  className="h-5 w-5 accent-primary-600 rounded shrink-0"
+                  checked={extras?.smsNotificationsEnabled ?? false}
+                  disabled={!extras}
+                  onChange={(event) => void handleToggleNotification("sms", event.target.checked)}
+                />
+                Text me about pickup updates
+              </label>
+              <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+                <input
+                  type="checkbox"
+                  className="h-5 w-5 accent-primary-600 rounded shrink-0"
+                  checked={extras?.rewardsEmailNotificationsEnabled ?? false}
+                  disabled={!extras}
+                  onChange={(event) => void handleToggleNotification("rewardsEmail", event.target.checked)}
+                />
+                Email me about rewards &amp; referral updates
+              </label>
+            </div>
+
+            {!extras && (
+              <p className="text-caption text-neutral-500 mt-4">Loading your saved preferences…</p>
+            )}
+            {notificationError && <ErrorBanner className="mt-4">{notificationError}</ErrorBanner>}
+          </Card>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-bold text-rose-600 mb-4 px-1">Danger Zone</h2>
+          <DeleteAccountSection hasPassword={user.hasPassword} />
+        </section>
       </div>
-
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-        <ChangePasswordSection hasPassword={user.hasPassword} />
-        <DeleteAccountSection hasPassword={user.hasPassword} />
-      </div>
-
-      <Card className="mt-8 p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
-        <h3 className="text-xl font-bold text-neutral-900 mb-6">Notification Preferences</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
-            <input
-              type="checkbox"
-              className="h-5 w-5 accent-primary-600 rounded shrink-0"
-              checked={extras?.emailNotificationsEnabled ?? false}
-              disabled={!extras}
-              onChange={(event) => void handleToggleNotification("email", event.target.checked)}
-            />
-            Email me about pickup updates
-          </label>
-          <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
-            <input
-              type="checkbox"
-              className="h-5 w-5 accent-primary-600 rounded shrink-0"
-              checked={extras?.smsNotificationsEnabled ?? false}
-              disabled={!extras}
-              onChange={(event) => void handleToggleNotification("sms", event.target.checked)}
-            />
-            Text me about pickup updates
-          </label>
-          <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
-            <input
-              type="checkbox"
-              className="h-5 w-5 accent-primary-600 rounded shrink-0"
-              checked={extras?.rewardsEmailNotificationsEnabled ?? false}
-              disabled={!extras}
-              onChange={(event) => void handleToggleNotification("rewardsEmail", event.target.checked)}
-            />
-            Email me about rewards &amp; referral updates
-          </label>
-        </div>
-
-        {!extras && (
-          <p className="text-caption text-neutral-500 mt-4">Loading your saved preferences…</p>
-        )}
-        {notificationError && <ErrorBanner className="mt-4">{notificationError}</ErrorBanner>}
-      </Card>
     </PageContainer>
   );
 }

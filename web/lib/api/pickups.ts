@@ -177,6 +177,10 @@ export function listAssignedPickups(): Promise<{ pickups: PickupRequestSummary[]
   return authFetch<{ pickups: PickupRequestSummary[] }>("/pickups/assigned", { method: "GET" });
 }
 
+export function listCollectorHistory(): Promise<{ pickups: PickupRequestSummary[] }> {
+  return authFetch<{ pickups: PickupRequestSummary[] }>("/pickups/collector-history", { method: "GET" });
+}
+
 export interface PickupOffer {
   id: string;
   pickupRequestId: string;
