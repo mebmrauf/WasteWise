@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/Button";
 import Link from "next/link";
 import { ErrorBanner } from "@/components/ErrorBanner";
+import { RecyclingVerificationGate } from "../RecyclingVerificationGate";
 
 export default function AcceptedCollectionsPage() {
   const [requests, setRequests] = React.useState<BulkMarketplaceRequest[]>([]);
@@ -45,6 +46,8 @@ export default function AcceptedCollectionsPage() {
         </div>
 
         {errorMsg && <ErrorBanner>{errorMsg}</ErrorBanner>}
+
+        <RecyclingVerificationGate pendingMessage="Your recycling company account needs to be verified by an admin before you can manage collections. Check back once your profile has been approved.">
 
         {isLoading ? (
           <p className="text-neutral-500">Loading...</p>
@@ -122,6 +125,7 @@ export default function AcceptedCollectionsPage() {
             })}
           </div>
         )}
+        </RecyclingVerificationGate>
       </div>
     </PageContainer>
   );

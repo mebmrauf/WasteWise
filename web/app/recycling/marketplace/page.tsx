@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { PageContainer } from "@/components/PageContainer";
+import { RecyclingVerificationGate } from "../RecyclingVerificationGate";
 import { RecyclingMarketplaceView } from "./RecyclingMarketplaceView";
 
 export const metadata: Metadata = {
@@ -13,8 +14,10 @@ export default function RecyclingMarketplacePage() {
       <p className="text-body-lg text-neutral-500 mb-8">
         Browse open bulk requests from businesses and submit your quotations.
       </p>
-      
-      <RecyclingMarketplaceView />
+
+      <RecyclingVerificationGate pendingMessage="Your recycling company account needs to be verified by an admin before you can browse the marketplace or submit quotations. Check back once your profile has been approved.">
+        <RecyclingMarketplaceView />
+      </RecyclingVerificationGate>
     </PageContainer>
   );
 }

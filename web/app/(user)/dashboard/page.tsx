@@ -333,7 +333,16 @@ export default function UserDashboardPage() {
                 </div>
               </div>
             ) : (
-              <div />
+              <div className="flex flex-col gap-5 self-stretch">
+                <h2 className="text-xl font-semibold text-neutral-900">Recent Requests</h2>
+                <Card className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+                  <Icon icon={ClipboardList} size="lg" className="text-neutral-400" aria-hidden />
+                  <div>
+                    <p className="text-h4 text-neutral-900">No recent requests</p>
+                    <p className="mt-1 text-body-sm text-neutral-500">Your pickup requests will show up here.</p>
+                  </div>
+                </Card>
+              </div>
             )}
 
             <div className="flex flex-col gap-5">

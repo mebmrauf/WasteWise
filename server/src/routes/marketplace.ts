@@ -5,6 +5,7 @@ import { requireAuth, requireRole } from "../lib/rbac";
 import { asyncHandler } from "../lib/asyncHandler";
 import { sendData, sendError } from "../lib/apiResponse";
 import { WasteCategory, VehicleType, Prisma, Role } from "@prisma/client";
+import { createNotification } from "../lib/notifications";
 
 export const marketplaceRouter = Router();
 
@@ -41,6 +42,14 @@ marketplaceRouter.post(
     const dbUser = await prisma.user.findUnique({ where: { id: req.user!.id } });
     if (!dbUser || dbUser.accountType !== "BUSINESS") {
       sendError(res, 403, "FORBIDDEN", "Only Business accounts can create Bulk Marketplace Requests.");
+      return;
+    }
+
+    const businessProfile = await prisma.businessProfile.findUnique({
+      where: { userId: req.user!.id },
+    });
+    if (businessProfile?.verificationStatus !== "APPROVED") {
+      sendError(res, 403, "FORBIDDEN", "Your business account must be verified to post Bulk Marketplace Requests.");
       return;
     }
 
@@ -292,15 +301,15 @@ marketplaceRouter.post(
         }
       });
       
-      // Notify Recycling Company
-      await tx.notification.create({
-        data: {
-          userId: quotation.companyId,
-          type: "PICKUP_STATUS_UPDATE",
-          title: "Quotation Accepted",
-          message: `Your quotation for request ${requestId.slice(0,8)} has been accepted! You are now assigned to this collection.`,
-        }
-      });
+    });
+
+    // Notify Recycling Company
+    void createNotification({
+      userId: quotation.companyId,
+      type: "PICKUP_STATUS_UPDATE",
+      title: "Quotation Accepted",
+      message: `Your quotation for request ${requestId.slice(0,8)} has been accepted! You are now assigned to this collection.`,
+      emailPreference: "emailNotificationsEnabled",
     });
 
     sendData(res, 200, { success: true });
@@ -387,13 +396,12 @@ marketplaceRouter.post(
       }
     });
 
-    await prisma.notification.create({
-      data: {
-        userId: request.businessId,
-        type: "PICKUP_STATUS_UPDATE",
-        title: "Collection Proof Submitted",
-        message: `The Recycling Company has submitted the collection proof. Please review and confirm.`,
-      }
+    void createNotification({
+      userId: request.businessId,
+      type: "PICKUP_STATUS_UPDATE",
+      title: "Collection Proof Submitted",
+      message: `The Recycling Company has submitted the collection proof. Please review and confirm.`,
+      emailPreference: "emailNotificationsEnabled",
     });
 
     sendData(res, 200, { success: true });
@@ -424,13 +432,12 @@ marketplaceRouter.post(
       data: { status: "COMPLETED" }
     });
     
-    await prisma.notification.create({
-      data: {
-        userId: request.assignedCompanyId!,
-        type: "PICKUP_STATUS_UPDATE",
-        title: "Collection Confirmed",
-        message: `The business has confirmed the collection for request ${id.slice(0,8)}.`,
-      }
+    void createNotification({
+      userId: request.assignedCompanyId!,
+      type: "PICKUP_STATUS_UPDATE",
+      title: "Collection Confirmed",
+      message: `The business has confirmed the collection for request ${id.slice(0,8)}.`,
+      emailPreference: "emailNotificationsEnabled",
     });
     
     // Also award points to business (simplified here)
@@ -494,13 +501,12 @@ marketplaceRouter.post(
       }
     });
 
-    await prisma.notification.create({
-      data: {
-        userId: request.assignedCompanyId,
-        type: "GENERIC",
-        title: "New Rating Received",
-        message: `You received a ${rating}-star rating for your bulk collection.`,
-      }
+    void createNotification({
+      userId: request.assignedCompanyId,
+      type: "GENERIC",
+      title: "New Rating Received",
+      message: `You received a ${rating}-star rating for your bulk collection.`,
+      emailPreference: "emailNotificationsEnabled",
     });
 
     sendData(res, 200, { success: true, rating: ratingRecord });

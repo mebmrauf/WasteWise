@@ -7,6 +7,7 @@ import { MapPin, CheckCircle2, Star } from "lucide-react";
 import { format } from "date-fns";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
+import { RecyclingVerificationGate } from "../RecyclingVerificationGate";
 
 export default function CollectionHistoryPage() {
   const [requests, setRequests] = React.useState<BulkMarketplaceRequest[]>([]);
@@ -45,6 +46,8 @@ export default function CollectionHistoryPage() {
         </div>
 
         {errorMsg && <ErrorBanner>{errorMsg}</ErrorBanner>}
+
+        <RecyclingVerificationGate pendingMessage="Your recycling company account needs to be verified by an admin before you can view collection history. Check back once your profile has been approved.">
 
         {isLoading ? (
           <p className="text-neutral-500">Loading...</p>
@@ -120,6 +123,7 @@ export default function CollectionHistoryPage() {
             })}
           </div>
         )}
+        </RecyclingVerificationGate>
       </div>
     </PageContainer>
   );

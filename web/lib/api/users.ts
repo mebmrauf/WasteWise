@@ -15,6 +15,22 @@ export interface CollectorProfileSummary {
   totalRatings: number;
 }
 
+export interface RecyclingCompanyProfileSummary {
+  companyName: string;
+  tradeLicenseNumber: string | null;
+  district: string;
+  serviceAreas: string[];
+  acceptedWasteMaterials: string[];
+  currentInventoryKg: number;
+  verificationStatus: VerificationStatus;
+}
+
+export interface BusinessProfileSummary {
+  businessName: string;
+  tradeLicenseNumber: string | null;
+  verificationStatus: VerificationStatus;
+}
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -30,9 +46,12 @@ export interface UserProfile {
   avatarUrl: string | null;
   emailNotificationsEnabled: boolean;
   smsNotificationsEnabled: boolean;
+  rewardsEmailNotificationsEnabled: boolean;
   createdAt: string;
   updatedAt: string;
   collectorProfile: CollectorProfileSummary | null;
+  recyclingCompanyProfile: RecyclingCompanyProfileSummary | null;
+  businessProfile: BusinessProfileSummary | null;
 }
 
 export function getMyProfile(): Promise<{ user: UserProfile }> {
@@ -48,6 +67,7 @@ export interface UpdateProfileInput {
   longitude?: number;
   emailNotificationsEnabled?: boolean;
   smsNotificationsEnabled?: boolean;
+  rewardsEmailNotificationsEnabled?: boolean;
 }
 
 export function updateMyProfile(input: UpdateProfileInput): Promise<{ user: UserProfile }> {
@@ -86,6 +106,21 @@ export function updateCollectorProfile(
   input: UpdateCollectorProfileInput,
 ): Promise<{ collectorProfile: CollectorProfileSummary }> {
   return authFetch<{ collectorProfile: CollectorProfileSummary }>("/users/me/collector-profile", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export interface UpdateBusinessProfileInput {
+  businessName?: string;
+  tradeLicenseNumber?: string | null;
+}
+
+export function updateBusinessProfile(
+  input: UpdateBusinessProfileInput,
+): Promise<{ businessProfile: BusinessProfileSummary }> {
+  return authFetch<{ businessProfile: BusinessProfileSummary }>("/users/me/business-profile", {
     method: "PATCH",
     body: JSON.stringify(input),
     headers: { "x-csrf-token": readCsrfToken() },

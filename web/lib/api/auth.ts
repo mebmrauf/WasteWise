@@ -189,6 +189,21 @@ async function performRefresh(): Promise<boolean> {
   }
 }
 
+export function verifyEmail(code: string): Promise<{ user: AuthUser }> {
+  return authFetch<{ user: AuthUser }>("/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export function resendVerificationEmail(): Promise<{ success: boolean }> {
+  return authFetch<{ success: boolean }>("/auth/resend-verification-email", {
+    method: "POST",
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
 export function getGoogleOAuthUrl(): string {
   return `${API_BASE_URL}/auth/google`;
 }

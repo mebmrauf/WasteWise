@@ -28,3 +28,59 @@ export function verifyCollector(id: string, action: "APPROVE" | "REJECT", reject
     headers: { "x-csrf-token": readCsrfToken() },
   });
 }
+
+export interface PublicRecyclingCompanyProfile {
+  companyName: string;
+  tradeLicenseNumber: string | null;
+  district: string;
+  serviceAreas: string[];
+  acceptedWasteMaterials: string[];
+  currentInventoryKg: number;
+  verificationStatus: VerificationStatus;
+}
+
+export interface RecyclingCompanyWithUser extends PublicRecyclingCompanyProfile {
+  user: Pick<AuthUser, "id" | "email" | "phone" | "fullName">;
+}
+
+export function getRecyclingCompanies(): Promise<{ recyclingCompanies: RecyclingCompanyWithUser[] }> {
+  return authFetch<{ recyclingCompanies: RecyclingCompanyWithUser[] }>("/admin/recycling-companies");
+}
+
+export function verifyRecyclingCompany(
+  id: string,
+  action: "APPROVE" | "REJECT",
+  rejectionReason?: string,
+): Promise<{ recyclingCompany: RecyclingCompanyWithUser }> {
+  return authFetch<{ recyclingCompany: RecyclingCompanyWithUser }>(`/admin/recycling-companies/${id}/verify`, {
+    method: "PATCH",
+    body: JSON.stringify({ action, rejectionReason }),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export interface PublicBusinessProfile {
+  businessName: string;
+  tradeLicenseNumber: string | null;
+  verificationStatus: VerificationStatus;
+}
+
+export interface BusinessWithUser extends PublicBusinessProfile {
+  user: Pick<AuthUser, "id" | "email" | "phone" | "fullName">;
+}
+
+export function getBusinesses(): Promise<{ businesses: BusinessWithUser[] }> {
+  return authFetch<{ businesses: BusinessWithUser[] }>("/admin/businesses");
+}
+
+export function verifyBusiness(
+  id: string,
+  action: "APPROVE" | "REJECT",
+  rejectionReason?: string,
+): Promise<{ business: BusinessWithUser }> {
+  return authFetch<{ business: BusinessWithUser }>(`/admin/businesses/${id}/verify`, {
+    method: "PATCH",
+    body: JSON.stringify({ action, rejectionReason }),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}

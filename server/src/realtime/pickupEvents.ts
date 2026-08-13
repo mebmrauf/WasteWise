@@ -270,6 +270,7 @@ async function handleStatusUpdate(socket: Socket, payload: unknown): Promise<voi
     title: "Pickup Status Updated",
     message: `Your pickup is now ${status.replace("_", " ")}.`,
     relatedPickupRequestId: pickupRequestId,
+    emailPreference: "emailNotificationsEnabled",
   });
 }
 
@@ -319,6 +320,7 @@ async function handleSubmitWeights(socket: Socket, payload: unknown): Promise<vo
     title: "Weights Submitted",
     message: `The collector has submitted the exact weights for your pickup. Please verify them.`,
     relatedPickupRequestId: pickupRequestId,
+    emailPreference: "emailNotificationsEnabled",
   });
 }
 
@@ -354,10 +356,10 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
 
     const updated = await tx.pickupRequest.update({ where: { id: pickupRequestId }, data: { status: PickupStatus.COMPLETED } });
     const tracking = await tx.pickupTrackingEvent.create({ data: { pickupRequestId, status: PickupStatus.COMPLETED } });
-    
-    const userToUpdate = await tx.user.findUniqueOrThrow({ 
-      where: { id: access.pickup.requesterId }, 
-      select: { greenPointsBalance: true, referredById: true, referralRewardClaimed: true, totalGreenPoints: true } 
+
+    const userToUpdate = await tx.user.findUniqueOrThrow({
+      where: { id: access.pickup.requesterId },
+      select: { greenPointsBalance: true, referredById: true, referralRewardClaimed: true, totalGreenPoints: true },
     });
 
     const lifetimePointsBefore = Math.max(userToUpdate.totalGreenPoints ?? 0, userToUpdate.greenPointsBalance ?? 0);
@@ -365,7 +367,7 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
 
     await tx.user.update({
       where: { id: access.pickup.requesterId },
-      data: { 
+      data: {
         greenPointsBalance: { increment: totalPoints },
         totalGreenPoints: { increment: totalPoints },
       },
@@ -386,7 +388,7 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
         }
       });
     }
-    
+
     await tx.greenPointsTransaction.create({
       data: {
         userId: access.pickup.requesterId,
@@ -416,13 +418,13 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
 
     let referralRewardsProcessed = false;
     let referrerId: string | null = null;
-    let newMilestones: number[] = [];
+    const newMilestones: number[] = [];
 
     const totalVerifiedWeight = validItems.reduce((sum, i) => sum + i.exactWeightKg, 0);
     if (userToUpdate.referredById && !userToUpdate.referralRewardClaimed && totalVerifiedWeight >= 5) {
       referralRewardsProcessed = true;
       referrerId = userToUpdate.referredById;
-      
+
       await tx.user.update({
         where: { id: access.pickup.requesterId },
         data: {
@@ -486,7 +488,7 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
               } : {})
             }
           });
-          
+
           if (m.points) {
             await tx.greenPointsTransaction.create({
               data: {
@@ -502,7 +504,16 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
       }
     }
 
-    return { updated, tracking, referralRewardsProcessed, referrerId, newMilestones };
+    return {
+      updated,
+      tracking,
+      referralRewardsProcessed,
+      referrerId,
+      newMilestones,
+      totalPoints,
+      membershipChanged: newMembership !== oldMembership,
+      newMembership,
+    };
   });
 
   const updatedPickup = result.updated;
@@ -513,7 +524,7 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
     status: updatedPickup.status,
     createdAt: trackingEvent.createdAt,
   });
-  
+
   if (updatedPickup.assignedCollectorId) {
     void createNotification({
       userId: updatedPickup.assignedCollectorId,
@@ -521,6 +532,29 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
       title: "Pickup Completed",
       message: `The household has verified the weights and the pickup is now completed!`,
       relatedPickupRequestId: pickupRequestId,
+      emailPreference: "emailNotificationsEnabled",
+    });
+  }
+
+  if (result.totalPoints > 0) {
+    void createNotification({
+      userId: access.pickup.requesterId,
+      type: "GENERIC",
+      title: "Green Points Earned",
+      message: `You earned ${result.totalPoints} Green Points for this pickup!`,
+      relatedPickupRequestId: pickupRequestId,
+      emailPreference: "rewardsEmailNotificationsEnabled",
+    });
+  }
+
+  if (result.membershipChanged) {
+    const levelLabel = result.newMembership.charAt(0).toUpperCase() + result.newMembership.slice(1).toLowerCase();
+    void createNotification({
+      userId: access.pickup.requesterId,
+      type: "GENERIC",
+      title: "Membership Tier Upgraded",
+      message: `🎉 Congratulations! You've been upgraded to ${levelLabel} membership.`,
+      emailPreference: "rewardsEmailNotificationsEnabled",
     });
   }
 
@@ -530,6 +564,7 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
       type: "GENERIC",
       title: "Referral Reward",
       message: `🎉 Welcome! You earned 50 Green Points for joining through a referral and completing your first verified pickup.`,
+      emailPreference: "rewardsEmailNotificationsEnabled",
     });
 
     if (result.referrerId) {
@@ -538,14 +573,16 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
         type: "GENERIC",
         title: "Referral Reward",
         message: `🎉 Congratulations! Your referred friend completed their first verified pickup. You earned 100 Green Points.`,
+        emailPreference: "rewardsEmailNotificationsEnabled",
       });
-      
+
       for (const m of result.newMilestones) {
         void createNotification({
           userId: result.referrerId,
           type: "GENERIC",
           title: "Referral Milestone Reached",
           message: `🎉 You reached a new referral milestone (${m} friends)!`,
+          emailPreference: "rewardsEmailNotificationsEnabled",
         });
       }
     }
@@ -585,6 +622,7 @@ async function handleRejectWeights(socket: Socket, payload: unknown): Promise<vo
       title: "Weights Rejected",
       message: `The household has rejected the submitted weights. Please re-verify and submit again.`,
       relatedPickupRequestId: pickupRequestId,
+      emailPreference: "emailNotificationsEnabled",
     });
   }
 }

@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { PageContainer } from "@/components/PageContainer";
+import { RecyclingVerificationGate } from "../RecyclingVerificationGate";
 import { RecyclingQuotationsView } from "./RecyclingQuotationsView";
 
 export const metadata: Metadata = {
@@ -13,8 +14,10 @@ export default function RecyclingQuotationsPage() {
       <p className="text-body-lg text-neutral-500 mb-8">
         Track the status of your submitted quotations.
       </p>
-      
-      <RecyclingQuotationsView />
+
+      <RecyclingVerificationGate pendingMessage="Your recycling company account needs to be verified by an admin before you can track quotations. Check back once your profile has been approved.">
+        <RecyclingQuotationsView />
+      </RecyclingVerificationGate>
     </PageContainer>
   );
 }

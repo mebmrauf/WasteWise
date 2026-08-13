@@ -120,8 +120,8 @@ export function useRequireRole(
       if (!allowedRoles.includes(auth.user.role)) {
         router.replace(forbiddenRedirectTo);
       } else if (
-        options?.allowedAccountTypes && 
-        auth.user.accountType && 
+        options?.allowedAccountTypes &&
+        auth.user.accountType &&
         !options.allowedAccountTypes.includes(auth.user.accountType)
       ) {
         router.replace(forbiddenRedirectTo);

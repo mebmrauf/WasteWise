@@ -51,6 +51,7 @@ interface ProfileExtras {
   avatarUrl: string | null;
   emailNotificationsEnabled: boolean;
   smsNotificationsEnabled: boolean;
+  rewardsEmailNotificationsEnabled: boolean;
 }
 
 interface FieldSaveState {
@@ -92,6 +93,7 @@ export function ProfileView() {
           avatarUrl: resolveAvatarUrl(profile.avatarUrl),
           emailNotificationsEnabled: profile.emailNotificationsEnabled,
           smsNotificationsEnabled: profile.smsNotificationsEnabled,
+          rewardsEmailNotificationsEnabled: profile.rewardsEmailNotificationsEnabled,
         });
       })
       .catch((err: unknown) => {
@@ -307,18 +309,20 @@ export function ProfileView() {
     }
   }
 
-  async function handleToggleNotification(kind: "email" | "sms", checked: boolean) {
+  const notificationPreferenceKeys = {
+    email: "emailNotificationsEnabled",
+    sms: "smsNotificationsEnabled",
+    rewardsEmail: "rewardsEmailNotificationsEnabled",
+  } as const;
+
+  async function handleToggleNotification(kind: keyof typeof notificationPreferenceKeys, checked: boolean) {
     if (!extras) return;
     const previous = extras;
-    const key = kind === "email" ? "emailNotificationsEnabled" : "smsNotificationsEnabled";
+    const key = notificationPreferenceKeys[kind];
     setNotificationError(null);
     setExtras({ ...extras, [key]: checked });
     try {
-      const payload: UpdateProfileInput =
-        key === "emailNotificationsEnabled"
-          ? { emailNotificationsEnabled: checked }
-          : { smsNotificationsEnabled: checked };
-      await updateMyProfile(payload);
+      await updateMyProfile({ [key]: checked } as UpdateProfileInput);
     } catch (err) {
       setExtras(previous);
       setNotificationError(resolveProfileErrorMessage(err, "Couldn't save that preference. Try again."));
@@ -348,25 +352,25 @@ export function ProfileView() {
 
       {extrasError && (
         <ErrorBanner className="mt-6 max-w-form">{extrasError}</ErrorBanner>
-      )}      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+      )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8 items-start">
         {/* Left Column: Profile Snapshot */}
-        <div className="lg:col-span-1">
-          <Card className="p-0 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all flex flex-col items-center text-center relative overflow-hidden">
-            <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-br from-emerald-400 to-emerald-700" />
-            <div className="relative z-10 mt-16 p-8 flex flex-col items-center w-full">
+        <div className="lg:col-span-1 self-stretch">
+          <Card className="h-full p-0 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all flex flex-col items-center text-center overflow-hidden">
+            <div className="p-6 flex flex-col items-center w-full">
               <AvatarUpload
                 name={user.fullName}
                 currentSrc={extras?.avatarUrl ?? null}
                 accent="user"
-                size="xl"
+                size="lg"
                 isUploading={avatarUploadState.isUploading}
                 error={avatarUploadState.error}
                 onFileSelected={handleAvatarFileSelected}
-                className="items-center text-center mb-4"
+                className="items-center text-center mb-3"
               />
               <h2 className="text-h3 font-heading text-neutral-900">{user.fullName}</h2>
               <p className="text-body text-neutral-500">{user.email}</p>
-              <div className="mt-6 w-full flex flex-col items-center justify-center gap-2">
+              <div className="mt-4 w-full flex flex-col items-center justify-center gap-2">
                 <div className="text-caption text-primary-700 bg-primary-50 px-4 py-2 rounded-full font-medium flex items-center gap-2">
                   <Icon icon={User} size="sm" /> {user.accountType === "BUSINESS" ? "Business Account" : "User Account"}
                 </div>
@@ -380,15 +384,15 @@ export function ProfileView() {
           </Card>
         </div>
 
-        {/* Right Column: Settings */}
-        <div className="lg:col-span-2 flex flex-col gap-8">
+        {/* Right Column: Personal Details */}
+        <div className="lg:col-span-2">
           <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
             <h3 className="text-xl font-bold text-neutral-900 mb-6">Personal Details</h3>
             <div className="flex flex-col gap-6">
               <div className="flex flex-col">
                 <span className="text-label text-neutral-800 mb-1">Account Type</span>
                 <div className="text-body text-neutral-900 font-medium">
-                  {user.accountType === "BUSINESS" ? "🏢 Business" : "👤 Individual"}
+                  {user.accountType === "BUSINESS" ? "🏢 Business" : "🏠 Household"}
                 </div>
               </div>
               <EditableField
@@ -443,8 +447,8 @@ export function ProfileView() {
             </div>
           </Card>
 
-          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
-            <h3 className="text-xl font-bold text-neutral-900 mb-6">Notification Preferences</h3>
+          <Card className="glass-panel border-0 shadow-xl rounded-3xl animate-slide-up p-8" style={{ animationDelay: '200ms' }}>
+            <h3 className="text-h4 font-heading text-neutral-900 mb-6">Notification Preferences</h3>
             <div className="flex flex-col gap-4">
               <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
                 <input
@@ -475,6 +479,47 @@ export function ProfileView() {
           </Card>
         </div>
       </div>
+
+      <Card className="mt-8 p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
+        <h3 className="text-xl font-bold text-neutral-900 mb-6">Notification Preferences</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+            <input
+              type="checkbox"
+              className="h-5 w-5 accent-primary-600 rounded shrink-0"
+              checked={extras?.emailNotificationsEnabled ?? false}
+              disabled={!extras}
+              onChange={(event) => void handleToggleNotification("email", event.target.checked)}
+            />
+            Email me about pickup updates
+          </label>
+          <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+            <input
+              type="checkbox"
+              className="h-5 w-5 accent-primary-600 rounded shrink-0"
+              checked={extras?.smsNotificationsEnabled ?? false}
+              disabled={!extras}
+              onChange={(event) => void handleToggleNotification("sms", event.target.checked)}
+            />
+            Text me about pickup updates
+          </label>
+          <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+            <input
+              type="checkbox"
+              className="h-5 w-5 accent-primary-600 rounded shrink-0"
+              checked={extras?.rewardsEmailNotificationsEnabled ?? false}
+              disabled={!extras}
+              onChange={(event) => void handleToggleNotification("rewardsEmail", event.target.checked)}
+            />
+            Email me about rewards &amp; referral updates
+          </label>
+        </div>
+
+        {!extras && (
+          <p className="text-caption text-neutral-500 mt-4">Loading your saved preferences…</p>
+        )}
+        {notificationError && <ErrorBanner className="mt-4">{notificationError}</ErrorBanner>}
+      </Card>
     </PageContainer>
   );
 }

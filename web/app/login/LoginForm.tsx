@@ -47,7 +47,21 @@ export function LoginForm() {
               setIsSubmitting(false);
               return;
             }
-            if (user.role === "COLLECTOR") { router.push("/collector"); } else if (user.role === "RECYCLING_COMPANY") { router.push("/recycling/dashboard"); } else if (user.role === "USER" && user.accountType === "BUSINESS") { router.push("/business/dashboard"); } else { router.push("/dashboard"); } router.refresh();
+            const destination =
+              user.role === "COLLECTOR"
+                ? "/collector"
+                : user.role === "RECYCLING_COMPANY"
+                  ? "/recycling/dashboard"
+                  : user.role === "USER" && user.accountType === "BUSINESS"
+                    ? "/business/dashboard"
+                    : "/dashboard";
+
+            if (!user.isEmailVerified) {
+              router.push(`/verify-email?redirect=${encodeURIComponent(destination)}`);
+              return;
+            }
+            router.push(destination);
+            router.refresh();
           })
           .catch((err: unknown) => {
             setErrorMessage(resolveLoginErrorMessage(err));

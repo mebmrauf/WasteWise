@@ -3,17 +3,60 @@
 import * as React from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { authFetch } from "@/lib/api/auth";
-import { Loader2, Camera, MapPin, Building, FileText, Phone, Mail, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, Camera, MapPin, Building, FileText, Phone, Mail, CheckCircle2, AlertCircle, Bell } from "lucide-react";
 import { Button } from "@/components/Button";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
+import { getMyProfile, updateMyProfile, type UpdateProfileInput } from "@/lib/api/users";
+
+interface NotificationPrefs {
+  emailNotificationsEnabled: boolean;
+  smsNotificationsEnabled: boolean;
+  rewardsEmailNotificationsEnabled: boolean;
+}
+
+const notificationPreferenceKeys = {
+  email: "emailNotificationsEnabled",
+  sms: "smsNotificationsEnabled",
+  rewardsEmail: "rewardsEmailNotificationsEnabled",
+} as const;
 
 export function RecyclingSettingsView() {
   const { user, refetchUser } = useAuth();
-  
+
   const [loading, setLoading] = React.useState(false);
   const [successMsg, setSuccessMsg] = React.useState<string | null>(null);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+
+  const [notificationPrefs, setNotificationPrefs] = React.useState<NotificationPrefs | null>(null);
+  const [notificationError, setNotificationError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!user) return;
+    getMyProfile()
+      .then(({ user: profile }) => {
+        setNotificationPrefs({
+          emailNotificationsEnabled: profile.emailNotificationsEnabled,
+          smsNotificationsEnabled: profile.smsNotificationsEnabled,
+          rewardsEmailNotificationsEnabled: profile.rewardsEmailNotificationsEnabled,
+        });
+      })
+      .catch(() => setNotificationPrefs(null));
+  }, [user]);
+
+  async function handleToggleNotification(kind: keyof typeof notificationPreferenceKeys, checked: boolean) {
+    if (!notificationPrefs) return;
+    const previous = notificationPrefs;
+    const key = notificationPreferenceKeys[kind];
+    setNotificationError(null);
+    setNotificationPrefs({ ...notificationPrefs, [key]: checked });
+    try {
+      await updateMyProfile({ [key]: checked } as UpdateProfileInput);
+    } catch (err: any) {
+      setNotificationPrefs(previous);
+      setNotificationError(err.message || "Couldn't save that preference. Try again.");
+    }
+  }
 
   // Form states
   const profile = user?.recyclingCompanyProfile || {};
@@ -154,6 +197,10 @@ export function RecyclingSettingsView() {
               <input type="email" disabled value={user?.email || ""} className="w-full rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-500 px-4 py-2.5 cursor-not-allowed" />
             </div>
             <div>
+              <label className="block text-body-sm font-medium text-neutral-700 mb-2">Account Type (Read-only)</label>
+              <input type="text" disabled value="♻️ Recycling Company" className="w-full rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-500 px-4 py-2.5 cursor-not-allowed" />
+            </div>
+            <div>
               <label className="block text-body-sm font-medium text-neutral-700 mb-2">Phone Number</label>
               <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
             </div>
@@ -174,6 +221,53 @@ export function RecyclingSettingsView() {
           </Button>
         </div>
       </form>
+
+      <div className="rounded-2xl border border-neutral-200 bg-neutral-0 shadow-sm overflow-hidden">
+        <div className="border-b border-neutral-100 p-6 bg-neutral-50/50">
+          <h3 className="text-h5 text-neutral-900 flex items-center gap-2">
+            <Icon icon={Bell} className="w-5 h-5 text-neutral-400" />
+            Notification Preferences
+          </h3>
+        </div>
+        <div className="p-6">
+          {notificationError && <ErrorBanner className="mb-4">{notificationError}</ErrorBanner>}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+              <input
+                type="checkbox"
+                className="h-5 w-5 accent-emerald-600 rounded shrink-0"
+                checked={notificationPrefs?.emailNotificationsEnabled ?? false}
+                disabled={!notificationPrefs}
+                onChange={(e) => void handleToggleNotification("email", e.target.checked)}
+              />
+              Email me about collection updates
+            </label>
+            <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+              <input
+                type="checkbox"
+                className="h-5 w-5 accent-emerald-600 rounded shrink-0"
+                checked={notificationPrefs?.smsNotificationsEnabled ?? false}
+                disabled={!notificationPrefs}
+                onChange={(e) => void handleToggleNotification("sms", e.target.checked)}
+              />
+              Text me about collection updates
+            </label>
+            <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+              <input
+                type="checkbox"
+                className="h-5 w-5 accent-emerald-600 rounded shrink-0"
+                checked={notificationPrefs?.rewardsEmailNotificationsEnabled ?? false}
+                disabled={!notificationPrefs}
+                onChange={(e) => void handleToggleNotification("rewardsEmail", e.target.checked)}
+              />
+              Email me about ratings &amp; performance updates
+            </label>
+          </div>
+          {!notificationPrefs && (
+            <p className="text-caption text-neutral-500 mt-4">Loading your saved preferences…</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

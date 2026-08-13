@@ -2,10 +2,12 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Gift, HandCoins, MapPin, Megaphone, Truck, User, Camera, LayoutDashboard, Users, Package } from "lucide-react";
+import { ClipboardList, Gift, HandCoins, MapPin, Megaphone, Truck, User, Camera, LayoutDashboard, Users, Package, BadgeCheck } from "lucide-react";
 import { DashboardNav, type DashboardNavItem } from "@/components/DashboardNav";
 import { PageContainer } from "@/components/PageContainer";
 import { useRequireRole } from "@/lib/auth/AuthContext";
+import { useSidebarCollapsed } from "@/lib/hooks/useSidebarCollapsed";
+import { cn } from "@/lib/utils";
 
 function isPickupDetailRoute(pathname: string | null, segment: "track" | "offers"): boolean {
   if (!pathname) return false;
@@ -16,6 +18,7 @@ function isPickupDetailRoute(pathname: string | null, segment: "track" | "offers
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useRequireRole(["USER"], { allowedAccountTypes: ["HOUSEHOLD"] });
   const pathname = usePathname();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useSidebarCollapsed();
   const onTrackDetail = isPickupDetailRoute(pathname, "track");
   const onOffersDetail = isPickupDetailRoute(pathname, "offers");
 
@@ -31,6 +34,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           icon: ClipboardList,
           active: onTrackDetail || onOffersDetail ? true : undefined,
         },
+        { label: "Verified Collectors", href: "/dashboard/collectors", icon: BadgeCheck },
         { label: "Waste Recognition", href: "/waste-recognition", icon: Camera },
         { label: "Green Rewards", href: "/dashboard/rewards", icon: Gift },
         { label: "Referral Program", href: "/referrals", icon: Users },
@@ -58,8 +62,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         accent="user"
         roleLabel="USER PORTAL"
         items={dashboardNavItems}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
-      <div className="pb-16 md:pb-0 md:pl-rail lg:pl-sidebar">{children}</div>
+      <div className={cn("pb-16 md:pb-0 md:pl-rail", isSidebarCollapsed ? "lg:pl-rail" : "lg:pl-sidebar")}>
+        {children}
+      </div>
     </>
   );
 }

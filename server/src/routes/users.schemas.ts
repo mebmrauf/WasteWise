@@ -13,6 +13,7 @@ export const updateProfileSchema = z
     longitude: z.number().optional(),
     emailNotificationsEnabled: z.boolean().optional(),
     smsNotificationsEnabled: z.boolean().optional(),
+    rewardsEmailNotificationsEnabled: z.boolean().optional(),
   })
   .strict();
 type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
@@ -34,5 +35,12 @@ export const updateRecyclingProfileSchema = z
     district: z.string().trim().min(1, "District is required").optional(),
     serviceAreas: z.array(z.string()).optional(),
     acceptedWasteMaterials: z.array(z.string()).optional(), // Will map to WasteCategory
+  })
+  .strict();
+
+export const updateBusinessProfileSchema = z
+  .object({
+    businessName: z.string().trim().min(1, "Business name is required").optional(),
+    tradeLicenseNumber: z.string().trim().optional().nullable(),
   })
   .strict();
