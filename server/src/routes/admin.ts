@@ -6,12 +6,8 @@ import { requireAuth, requireRole } from "../lib/rbac";
 import { requireCsrf } from "../lib/csrf";
 import { sendData, sendError } from "../lib/apiResponse";
 import { VerificationStatus } from "@prisma/client";
-<<<<<<< HEAD
-import { toPublicCollectorProfile } from "./users";
 import { createNotification } from "../lib/notifications";
-=======
 import { toPublicCollectorProfile, toPublicRecyclingProfile, toPublicBusinessProfile } from "./users";
->>>>>>> origin/main
 
 export const adminRouter = Router();
 
