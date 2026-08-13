@@ -6,19 +6,23 @@ import { requireAuth, requireRole } from "../lib/rbac";
 import { requireCsrf } from "../lib/csrf";
 import { asyncHandler } from "../lib/asyncHandler";
 import { sendData, sendError } from "../lib/apiResponse";
-import { clearAuthCookies } from "../lib/cookies";
+import { clearAuthCookies, REFRESH_TOKEN_COOKIE } from "../lib/cookies";
 import { logger } from "../lib/logger";
+import { sha256Hex } from "../lib/hash";
 import {
   GeocodingResolutionError,
   isGeocodingConfigured,
   resolveAddressFromPlaceId,
 } from "../lib/geocoding";
-import { isCloudinaryConfigured, uploadAvatarImage } from "../lib/cloudinary";
+import { deleteAvatarImage, isCloudinaryConfigured, uploadAvatarImage } from "../lib/cloudinary";
+import { hashPassword, verifyPassword } from "../lib/passwords";
 import {
   updateProfileSchema,
   updateCollectorProfileSchema,
   updateRecyclingProfileSchema,
   updateBusinessProfileSchema,
+  deleteAccountSchema,
+  changePasswordSchema,
 } from "./users.schemas";
 
 export const usersRouter = Router();
@@ -70,6 +74,7 @@ function toPublicProfile(
     role: user.role,
     accountType: user.accountType,
     isEmailVerified: user.isEmailVerified,
+    hasPassword: Boolean(user.passwordHash),
     formattedAddress: user.formattedAddress,
     latitude: user.latitude,
     longitude: user.longitude,
@@ -545,5 +550,158 @@ usersRouter.get(
       categoryStats: formattedCategoryStats,
       dailyStats: formattedDailyStats,
     });
+  }),
+);
+
+// Changes the password for an already-authenticated user by proving
+// knowledge of the current one — unlike /auth/reset-password (which proves
+// identity via an emailed OTP for someone who's locked out), this is the
+// in-profile "change password" flow. OAuth-only accounts (no passwordHash
+// yet) skip the current-password check and just set one for the first time.
+usersRouter.patch(
+  "/me/password",
+  requireAuth,
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const parsed = changePasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
+      return;
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!existingUser) {
+      clearAuthCookies(res);
+      sendError(res, 401, "UNAUTHENTICATED", "Sign in to continue.");
+      return;
+    }
+
+    if (existingUser.passwordHash) {
+      if (!parsed.data.currentPassword) {
+        sendError(res, 400, "CURRENT_PASSWORD_REQUIRED", "Enter your current password to continue.");
+        return;
+      }
+      const passwordMatches = await verifyPassword(parsed.data.currentPassword, existingUser.passwordHash);
+      if (!passwordMatches) {
+        sendError(res, 401, "INVALID_PASSWORD", "That current password is incorrect.");
+        return;
+      }
+    }
+
+    const passwordHash = await hashPassword(parsed.data.newPassword);
+
+    // Sign out every other session/device on a password change, but leave
+    // this browser's own session alone so the user isn't logged out by the
+    // very form they just submitted.
+    const currentRefreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE];
+    const currentTokenHash = currentRefreshToken ? sha256Hex(currentRefreshToken) : null;
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: existingUser.id },
+        data: { passwordHash },
+      }),
+      prisma.refreshToken.updateMany({
+        where: {
+          userId: existingUser.id,
+          revokedAt: null,
+          ...(currentTokenHash ? { tokenHash: { not: currentTokenHash } } : {}),
+        },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+
+    sendData(res, 200, { success: true });
+  }),
+);
+
+// Deletes everything owned solely by this user (tokens, verification codes,
+// role-specific profile, notifications, waste-recognition history, points
+// ledger) and anonymizes the User row itself rather than removing it —
+// PickupRequest/Offer/Rating/Complaint/BulkMarketplaceRequest/etc. rows
+// reference this id from the *other* party's side, and deleting the row
+// would either cascade-destroy that party's history or hit a foreign key
+// restriction. Keeping an anonymized row means those records just show
+// "Deleted user" going forward, with no schema changes required.
+usersRouter.delete(
+  "/me",
+  requireAuth,
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    if (req.user!.role === "ADMIN") {
+      sendError(res, 403, "FORBIDDEN", "Admin accounts can't be deleted from here.");
+      return;
+    }
+
+    const parsed = deleteAccountSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
+      return;
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!existingUser) {
+      clearAuthCookies(res);
+      sendError(res, 401, "UNAUTHENTICATED", "Sign in to continue.");
+      return;
+    }
+
+    if (existingUser.passwordHash) {
+      if (!parsed.data.password) {
+        sendError(res, 400, "PASSWORD_REQUIRED", "Enter your password to confirm account deletion.");
+        return;
+      }
+      const passwordMatches = await verifyPassword(parsed.data.password, existingUser.passwordHash);
+      if (!passwordMatches) {
+        sendError(res, 401, "INVALID_PASSWORD", "That password is incorrect.");
+        return;
+      }
+    }
+
+    const anonymizedEmail = `deleted-${existingUser.id}@deleted.wastewise.invalid`;
+
+    await prisma.$transaction([
+      prisma.refreshToken.deleteMany({ where: { userId: existingUser.id } }),
+      prisma.emailVerificationCode.deleteMany({ where: { userId: existingUser.id } }),
+      prisma.passwordResetCode.deleteMany({ where: { userId: existingUser.id } }),
+      prisma.oAuthAccount.deleteMany({ where: { userId: existingUser.id } }),
+      prisma.notification.deleteMany({ where: { userId: existingUser.id } }),
+      prisma.wasteRecognitionLog.deleteMany({ where: { userId: existingUser.id } }),
+      prisma.mobileRechargeTransaction.deleteMany({ where: { userId: existingUser.id } }),
+      prisma.greenPointsTransaction.deleteMany({ where: { userId: existingUser.id } }),
+      prisma.collectorProfile.deleteMany({ where: { userId: existingUser.id } }),
+      prisma.recyclingCompanyProfile.deleteMany({ where: { userId: existingUser.id } }),
+      prisma.businessProfile.deleteMany({ where: { userId: existingUser.id } }),
+      prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          email: anonymizedEmail,
+          phone: null,
+          passwordHash: null,
+          fullName: "Deleted user",
+          placeId: null,
+          formattedAddress: null,
+          latitude: null,
+          longitude: null,
+          avatarUrl: null,
+          emailNotificationsEnabled: false,
+          smsNotificationsEnabled: false,
+          rewardsEmailNotificationsEnabled: false,
+          referralCode: null,
+          sustainabilityCertificateUrl: null,
+        },
+      }),
+    ]);
+
+    if (existingUser.avatarUrl && isCloudinaryConfigured()) {
+      try {
+        await deleteAvatarImage(existingUser.avatarUrl);
+      } catch (err) {
+        logger.error({ err }, "Failed to delete avatar from Cloudinary during account deletion");
+      }
+    }
+
+    clearAuthCookies(res);
+    sendData(res, 200, { success: true });
   }),
 );

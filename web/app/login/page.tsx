@@ -20,16 +20,25 @@ function resolveOAuthErrorMessage(errorParam: string | string[] | undefined): st
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string | string[] }>;
+  searchParams: Promise<{ error?: string | string[]; passwordReset?: string | string[] }>;
 }) {
   const searchParamsValue = await searchParams;
   const errorMessage = resolveOAuthErrorMessage(searchParamsValue.error);
+  const passwordWasReset = Boolean(searchParamsValue.passwordReset);
 
   return (
     <AuthPageShell
       title="Log in"
       subtitle="Welcome back — pick up where you left off."
-      banner={errorMessage && <ErrorBanner className="mt-4">{errorMessage}</ErrorBanner>}
+      banner={
+        errorMessage ? (
+          <ErrorBanner className="mt-4">{errorMessage}</ErrorBanner>
+        ) : passwordWasReset ? (
+          <p className="mt-4 rounded-md border border-success-500 bg-success-50 p-3 text-body-sm text-success-700">
+            Your password has been reset. Log in with your new password.
+          </p>
+        ) : null
+      }
       footerNote={
         <>
           Don&apos;t have an account?{" "}

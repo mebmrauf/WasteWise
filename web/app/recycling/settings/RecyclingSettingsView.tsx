@@ -5,10 +5,10 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { authFetch } from "@/lib/api/auth";
 import { Loader2, Camera, MapPin, Building, FileText, Phone, Mail, CheckCircle2, AlertCircle, Bell } from "lucide-react";
 import { Button } from "@/components/Button";
+import { ChangePasswordSection } from "@/components/ChangePasswordSection";
+import { DeleteAccountSection } from "@/components/DeleteAccountSection";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
-import { AddressAutocomplete, type AddressSuggestion } from "@/components/AddressAutocomplete";
-import { fetchAddressSuggestions, fetchPlaceDetails, PlacesConfigError } from "@/lib/api/places";
 import { getMyProfile, updateMyProfile, type UpdateProfileInput } from "@/lib/api/users";
 
 interface NotificationPrefs {
@@ -77,71 +77,7 @@ export function RecyclingSettingsView() {
   // User model states
   const [fullName, setFullName] = React.useState(user?.fullName || "");
   const [phone, setPhone] = React.useState(user?.phone || "");
-
-  // Address autocomplete state (saves immediately on selection, not via handleSubmit)
-  const [addressQuery, setAddressQuery] = React.useState(user?.formattedAddress || "");
-  const [addressSuggestions, setAddresseSuggestions] = React.useState<AddressSuggestion[]>([]);
-  const [isLoadingAddressSuggestions, setIsLoadingAddressSuggestions] = React.useState(false);
-  const [addressSuggestionsError, setAddressSuggestionsError] = React.useState<string | null>(null);
-  const [addressSaveError, setAddressSaveError] = React.useState<string | null>(null);
-  const [addressSaving, setAddressSaving] = React.useState(false);
-  const addressDebounceRef = React.useRef<number | null>(null);
-  const addressSeqRef = React.useRef(0);
-
-  function handleAddressQueryChange(nextQuery: string) {
-    setAddressQuery(nextQuery);
-    setAddressSaveError(null);
-    if (addressDebounceRef.current !== null) window.clearTimeout(addressDebounceRef.current);
-    const trimmed = nextQuery.trim();
-    if (trimmed.length < 3) {
-      addressSeqRef.current += 1;
-      setAddresseSuggestions([]);
-      setIsLoadingAddressSuggestions(false);
-      return;
-    }
-    addressDebounceRef.current = window.setTimeout(async () => {
-      const seq = ++addressSeqRef.current;
-      setIsLoadingAddressSuggestions(true);
-      setAddressSuggestionsError(null);
-      try {
-        const results = await fetchAddressSuggestions(trimmed, crypto.randomUUID());
-        if (seq !== addressSeqRef.current) return;
-        setAddresseSuggestions(results);
-      } catch (err) {
-        if (seq !== addressSeqRef.current) return;
-        setAddressSuggestionsError(
-          err instanceof PlacesConfigError
-            ? "Address search isn't available right now."
-            : "Couldn't load address suggestions. Try again.",
-        );
-      } finally {
-        if (seq === addressSeqRef.current) setIsLoadingAddressSuggestions(false);
-      }
-    }, 300);
-  }
-
-  async function handleSelectAddressSuggestion(suggestion: AddressSuggestion) {
-    if (addressDebounceRef.current !== null) window.clearTimeout(addressDebounceRef.current);
-    addressSeqRef.current += 1;
-    setAddressQuery(suggestion.description);
-    setAddresseSuggestions([]);
-    setAddressSaveError(null);
-    setAddressSaving(true);
-    try {
-      const details = await fetchPlaceDetails(suggestion.placeId);
-      await updateMyProfile({
-        placeId: details.placeId,
-        formattedAddress: details.formattedAddress,
-        latitude: details.latitude,
-        longitude: details.longitude,
-      });
-      setAddressQuery(details.formattedAddress);
-    } catch {
-      setAddressSaveError("Couldn't save that address. Please try again.");
-    } finally {
-      setAddressSaving(false);
-    }
-  }
+  const [address, setAddress] = React.useState(user?.formattedAddress || "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,14 +89,14 @@ export function RecyclingSettingsView() {
       // Clean up phone number (remove spaces)
       const cleanPhone = phone ? phone.replace(/\s+/g, '') : null;
 
-      // Update User fields (Contact Person, Phone)
-      // Note: address is saved separately on autocomplete selection
+      // Update User fields (Contact Person, Phone, Address)
       await authFetch("/users/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName,
           phone: cleanPhone,
+          formattedAddress: address,
         }),
       });
 
@@ -275,21 +211,8 @@ export function RecyclingSettingsView() {
               <input type="text" required value={district} onChange={(e) => setDistrict(e.target.value)} className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
             </div>
             <div className="md:col-span-2">
-              <AddressAutocomplete
-                label="Full Address"
-                name="address"
-                placeholder="Start typing your address…"
-                value={addressQuery}
-                onChange={handleAddressQueryChange}
-                suggestions={addressSuggestions}
-                onSelectSuggestion={(s) => void handleSelectAddressSuggestion(s)}
-                isLoading={isLoadingAddressSuggestions}
-                error={addressSuggestionsError ?? addressSaveError}
-                disabled={addressSaving}
-              />
-              {addressSaving && (
-                <p className="mt-1 text-xs text-neutral-500">Saving address…</p>
-              )}
+              <label className="block text-body-sm font-medium text-neutral-700 mb-2">Full Address</label>
+              <textarea rows={3} value={address} onChange={(e) => setAddress(e.target.value)} className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
             </div>
           </div>
         </div>
@@ -300,6 +223,11 @@ export function RecyclingSettingsView() {
           </Button>
         </div>
       </form>
+
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        <ChangePasswordSection hasPassword={user?.hasPassword ?? false} />
+        <DeleteAccountSection hasPassword={user?.hasPassword ?? false} />
+      </div>
 
       <div className="rounded-2xl border border-neutral-200 bg-neutral-0 shadow-sm overflow-hidden">
         <div className="border-b border-neutral-100 p-6 bg-neutral-50/50">

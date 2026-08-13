@@ -6,6 +6,8 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/AddressAutocomplete";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { ChangePasswordSection } from "@/components/ChangePasswordSection";
+import { DeleteAccountSection } from "@/components/DeleteAccountSection";
 import { Divider } from "@/components/Divider";
 import { EditableField } from "@/components/EditableField";
 import { ErrorBanner } from "@/components/ErrorBanner";
@@ -356,7 +358,7 @@ export function ProfileView() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8 items-start">
         {/* Left Column: Profile Snapshot */}
         <div className="lg:col-span-1 self-stretch">
-          <Card className="h-full p-0 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all flex flex-col items-center text-center overflow-hidden">
+          <Card className="h-full p-0 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all flex flex-col items-center justify-center text-center overflow-hidden">
             <div className="p-6 flex flex-col items-center w-full">
               <AvatarUpload
                 name={user.fullName}
@@ -446,8 +448,12 @@ export function ProfileView() {
               </div>
             </div>
           </Card>
-
         </div>
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        <ChangePasswordSection hasPassword={user.hasPassword} />
+        <DeleteAccountSection hasPassword={user.hasPassword} />
       </div>
 
       <Card className="mt-8 p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">

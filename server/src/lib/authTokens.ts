@@ -1,7 +1,8 @@
-import { randomUUID, createHash } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { User } from "@prisma/client";
 import { prisma } from "./prisma";
 import { signAccessToken, signRefreshToken, verifyRefreshToken, decodeExpiry } from "./jwt";
+import { sha256Hex } from "./hash";
 
 export interface TokenPair {
   accessToken: string;
@@ -9,7 +10,7 @@ export interface TokenPair {
 }
 
 function hashRefreshToken(rawToken: string): string {
-  return createHash("sha256").update(rawToken).digest("hex");
+  return sha256Hex(rawToken);
 }
 
 export async function issueTokenPair(user: Pick<User, "id" | "role">): Promise<TokenPair> {

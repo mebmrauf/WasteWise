@@ -39,6 +39,7 @@ export interface UserProfile {
   role: Role;
   accountType: AccountType | null;
   isEmailVerified: boolean;
+  hasPassword: boolean;
   formattedAddress: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -122,6 +123,31 @@ export function updateBusinessProfile(
 ): Promise<{ businessProfile: BusinessProfileSummary }> {
   return authFetch<{ businessProfile: BusinessProfileSummary }>("/users/me/business-profile", {
     method: "PATCH",
+    body: JSON.stringify(input),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export interface ChangePasswordInput {
+  currentPassword?: string;
+  newPassword: string;
+}
+
+export function changeMyPassword(input: ChangePasswordInput): Promise<{ success: boolean }> {
+  return authFetch<{ success: boolean }>("/users/me/password", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export interface DeleteAccountInput {
+  password?: string;
+}
+
+export function deleteMyAccount(input: DeleteAccountInput = {}): Promise<{ success: boolean }> {
+  return authFetch<{ success: boolean }>("/users/me", {
+    method: "DELETE",
     body: JSON.stringify(input),
     headers: { "x-csrf-token": readCsrfToken() },
   });

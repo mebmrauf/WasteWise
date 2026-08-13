@@ -44,3 +44,19 @@ export const updateBusinessProfileSchema = z
     tradeLicenseNumber: z.string().trim().optional().nullable(),
   })
   .strict();
+
+export const deleteAccountSchema = z
+  .object({
+    password: z.string().min(1, "Password is required").optional(),
+  })
+  .strict();
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required").optional(),
+    newPassword: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .max(72, "Password must be at most 72 characters"),
+  })
+  .strict();

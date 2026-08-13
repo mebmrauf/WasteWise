@@ -90,7 +90,13 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
         const email = String(formData.get("email") ?? "");
         const phone = String(formData.get("phone") ?? "").trim();
         const password = String(formData.get("password") ?? "");
+        const confirmPassword = String(formData.get("confirmPassword") ?? "");
         const { role, accountType } = resolveRoleChoice(roleChoice);
+
+        if (password !== confirmPassword) {
+          setErrorMessage("Passwords do not match.");
+          return;
+        }
 
         setIsSubmitting(true);
         void signup({
@@ -112,9 +118,7 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
                     : "/dashboard";
 
             if (!newUser.isEmailVerified) {
-              // Use hard navigation to ensure the verify-email page always loads,
-              // regardless of any router state buffering in Next.js App Router.
-              window.location.href = `/verify-email?redirect=${encodeURIComponent(destination)}`;
+              router.push(`/verify-email?redirect=${encodeURIComponent(destination)}`);
               return;
             }
             router.push(destination);
@@ -183,6 +187,15 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
         type="password"
         autoComplete="new-password"
         helperText="At least 8 characters."
+        required
+        minLength={8}
+        disabled={isSubmitting}
+      />
+      <Input
+        label="Confirm password"
+        name="confirmPassword"
+        type="password"
+        autoComplete="new-password"
         required
         minLength={8}
         disabled={isSubmitting}
