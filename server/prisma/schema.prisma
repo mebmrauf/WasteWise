@@ -307,6 +307,14 @@ model CollectorProfile {
 
   serviceArea String @default("")
 
+  // Radius-based service coverage: collector sets a base point + radius (km).
+  // Pickup requests within that radius surface to them / trigger a notification.
+  serviceAreaPlaceId          String?
+  serviceAreaFormattedAddress String?
+  serviceAreaLatitude         Float?
+  serviceAreaLongitude        Float?
+  serviceAreaRadiusKm         Float?
+
   verificationStatus            VerificationStatus @default(PENDING)
   verificationDocumentUrl       String?
   verificationReviewedAt        DateTime?
