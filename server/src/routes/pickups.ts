@@ -17,13 +17,10 @@ import {
 import { getLoadSizeKgRange } from "../lib/loadSize";
 import { emitToRoom } from "../realtime/emitToRoom";
 import { PICKUP_STATUS_EVENT } from "../realtime/pickupEvents";
-<<<<<<< HEAD
-import { createPickupRequestSchema } from "./pickups.schemas";
 import { computeRecyclingReminder } from "../lib/recyclingPattern";
 import { isWithinRadiusKm } from "../lib/geoDistance";
-=======
 import { createPickupRequestSchema, ratePickupSchema } from "./pickups.schemas";
->>>>>>> origin/main
+
 
 export const pickupsRouter = Router();
 

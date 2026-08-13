@@ -14,13 +14,9 @@ import { Input } from "@/components/Input";
 import { PageContainer } from "@/components/PageContainer";
 import { Select } from "@/components/Select";
 import { StatusPill } from "@/components/StatusPill";
-<<<<<<< HEAD
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/AddressAutocomplete";
 import { Map } from "@/components/Map";
 import { fetchAddressSuggestions, fetchPlaceDetails, fetchReverseGeocode, PlacesConfigError } from "@/lib/api/places";
-=======
-
->>>>>>> origin/main
 import { useRequireRole } from "@/lib/auth/AuthContext";
 import { AuthApiError } from "@/lib/api/auth";
 import {
@@ -185,7 +181,6 @@ export function CollectorProfileView() {
     error: string | null;
   }>({ isUploading: false, error: null });
 
-<<<<<<< HEAD
   const [addressSuggestions, setAddressSuggestions] = React.useState<AddressSuggestion[]>([]);
   const [isLoadingAddressSuggestions, setIsLoadingAddressSuggestions] = React.useState(false);
   const [addressSuggestionsError, setAddressSuggestionsError] = React.useState<string | null>(null);
@@ -308,8 +303,6 @@ export function CollectorProfileView() {
     }
   }
 
-=======
->>>>>>> origin/main
   const [detailsSave, setDetailsSave] = React.useState<FieldSaveState>(idleSaveState);
   const savedDetails = draftFromProfile(extras?.collectorProfile ?? null);
   const savedServiceAreaLocation = serviceAreaLocationFromProfile(extras?.collectorProfile ?? null);
@@ -535,13 +528,11 @@ export function CollectorProfileView() {
               label="Service area base location"
               value={details.serviceArea}
               disabled={!extras || detailsSave.isSaving}
-              onChange={(event) =>
-                setDetails((prev) => ({ ...prev, serviceArea: event.target.value }))
-              }
-              options={[
-                { value: "", label: "Select an area..." },
-                ...ALL_SERVICE_AREAS.map((area: string) => ({ value: area, label: area }))
-              ]}
+              onChange={handleAddressQueryChange}
+              suggestions={addressSuggestions}
+              onSelectSuggestion={(suggestion) => void handleSelectAddressSuggestion(suggestion)}
+              isLoading={isLoadingAddressSuggestions}
+              error={addressSuggestionsError}
             />
             <p className="mt-1 text-label text-neutral-500">
               Search for your base location to drop a pin, then click anywhere on the map to fine-tune it. Pickup requests within your radius will notify you automatically.
