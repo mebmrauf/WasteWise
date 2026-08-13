@@ -78,14 +78,22 @@ export function LoginForm() {
         required
         disabled={isSubmitting}
       />
-      <Input
-        label="Password"
-        name="password"
-        type="password"
-        autoComplete="current-password"
-        required
-        disabled={isSubmitting}
-      />
+      <div className="flex flex-col gap-1">
+        <Input
+          label="Password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          disabled={isSubmitting}
+        />
+        <a
+          href="/forgot-password"
+          className="self-end text-body-sm text-primary-600 hover:text-primary-700"
+        >
+          Forgot password?
+        </a>
+      </div>
 
       <Button type="submit" fullWidth className="mt-2" disabled={isSubmitting}>
         {isSubmitting ? "Logging in…" : "Log in"}

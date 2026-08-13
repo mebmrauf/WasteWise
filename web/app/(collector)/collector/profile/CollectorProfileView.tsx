@@ -4,6 +4,8 @@ import * as React from "react";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { ChangePasswordSection } from "@/components/ChangePasswordSection";
+import { DeleteAccountSection } from "@/components/DeleteAccountSection";
 import { Divider } from "@/components/Divider";
 import { EditableField } from "@/components/EditableField";
 import { ErrorBanner } from "@/components/ErrorBanner";
@@ -418,6 +420,9 @@ export function CollectorProfileView() {
         )}
         {notificationError && <ErrorBanner className="mt-4">{notificationError}</ErrorBanner>}
       </Card>
+
+      <ChangePasswordSection hasPassword={user.hasPassword} />
+      <DeleteAccountSection hasPassword={user.hasPassword} />
       </div>
     </PageContainer>
   );

@@ -104,6 +104,65 @@ export function buildVerificationCodeEmail(fullName: string, code: string): { su
 }
 
 /**
+ * Same plain, spam-safe profile as buildVerificationCodeEmail — a password
+ * reset code is the highest-stakes OTP this app sends, so it gets the same
+ * minimal, link-free treatment.
+ */
+export function buildPasswordResetCodeEmail(fullName: string, code: string): { subject: string; html: string; text: string } {
+  const firstName = fullName.trim().split(" ")[0] || "there";
+  const subject = `Your WasteWise password reset code is ${code}`;
+
+  const text = [
+    `Hi ${firstName},`,
+    ``,
+    `We received a request to reset your WasteWise password. Your reset code is: ${code}`,
+    ``,
+    `Enter this code in the app to choose a new password. This code expires in 15 minutes.`,
+    ``,
+    `If you didn't request a password reset, you can safely ignore this email — your password won't be changed.`,
+    ``,
+    `— The WasteWise Team`,
+  ].join("\n");
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background-color:#f7f8fa;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f7f8fa;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border:1px solid #e5e7eb;border-radius:8px;max-width:480px;width:100%;">
+            <tr>
+              <td style="padding:32px 32px 8px 32px;">
+                <p style="margin:0 0 16px 0;font-size:15px;line-height:22px;color:#1f2937;">Hi ${firstName},</p>
+                <p style="margin:0 0 24px 0;font-size:15px;line-height:22px;color:#1f2937;">
+                  We received a request to reset your WasteWise password. Use the code below to choose a new one.
+                </p>
+                <p style="margin:0 0 24px 0;text-align:center;">
+                  <span style="display:inline-block;font-size:32px;font-weight:700;letter-spacing:8px;color:#14532d;background-color:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:16px 24px;">${code}</span>
+                </p>
+                <p style="margin:0 0 16px 0;font-size:14px;line-height:20px;color:#4b5563;">
+                  This code expires in 15 minutes. If you didn't request a password reset, you can safely ignore this email — your password won't be changed.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 32px 32px 32px;border-top:1px solid #e5e7eb;">
+                <p style="margin:16px 0 0 0;font-size:12px;line-height:18px;color:#9ca3af;">
+                  WasteWise — this is a one-time transactional message sent because a password reset was requested for this email address.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+
+  return { subject, html, text };
+}
+
+/**
  * Generic notification email — mirrors the same plain, spam-safe profile as
  * buildVerificationCodeEmail (no images, real plain-text alternative, one
  * link). Used for pickup-update and rewards/referral notification emails,

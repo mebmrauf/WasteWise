@@ -90,7 +90,13 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
         const email = String(formData.get("email") ?? "");
         const phone = String(formData.get("phone") ?? "").trim();
         const password = String(formData.get("password") ?? "");
+        const confirmPassword = String(formData.get("confirmPassword") ?? "");
         const { role, accountType } = resolveRoleChoice(roleChoice);
+
+        if (password !== confirmPassword) {
+          setErrorMessage("Passwords do not match.");
+          return;
+        }
 
         setIsSubmitting(true);
         void signup({
@@ -181,6 +187,15 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
         type="password"
         autoComplete="new-password"
         helperText="At least 8 characters."
+        required
+        minLength={8}
+        disabled={isSubmitting}
+      />
+      <Input
+        label="Confirm password"
+        name="confirmPassword"
+        type="password"
+        autoComplete="new-password"
         required
         minLength={8}
         disabled={isSubmitting}

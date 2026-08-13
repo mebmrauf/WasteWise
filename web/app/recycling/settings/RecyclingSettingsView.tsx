@@ -5,6 +5,8 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { authFetch } from "@/lib/api/auth";
 import { Loader2, Camera, MapPin, Building, FileText, Phone, Mail, CheckCircle2, AlertCircle, Bell } from "lucide-react";
 import { Button } from "@/components/Button";
+import { ChangePasswordSection } from "@/components/ChangePasswordSection";
+import { DeleteAccountSection } from "@/components/DeleteAccountSection";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
 import { getMyProfile, updateMyProfile, type UpdateProfileInput } from "@/lib/api/users";
@@ -268,6 +270,9 @@ export function RecyclingSettingsView() {
           )}
         </div>
       </div>
+
+      <ChangePasswordSection hasPassword={user?.hasPassword ?? false} />
+      <DeleteAccountSection hasPassword={user?.hasPassword ?? false} />
     </div>
   );
 }

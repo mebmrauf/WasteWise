@@ -17,6 +17,7 @@ export interface AuthUser {
   role: Role;
   accountType: AccountType | null;
   isEmailVerified: boolean;
+  hasPassword: boolean;
   avatarUrl: string | null;
   membershipLevel: MembershipLevel;
   membershipBadge: string;
@@ -55,7 +56,13 @@ export class AuthApiError extends Error {
 
 const API_BASE_URL = publicEnv.NEXT_PUBLIC_API_URL;
 
-const SKIP_REFRESH_RETRY_PATHS = new Set(["/auth/refresh", "/auth/login", "/auth/register"]);
+const SKIP_REFRESH_RETRY_PATHS = new Set([
+  "/auth/refresh",
+  "/auth/login",
+  "/auth/register",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+]);
 
 export async function authFetch<T>(
   path: string,
@@ -201,6 +208,30 @@ export function resendVerificationEmail(): Promise<{ success: boolean }> {
   return authFetch<{ success: boolean }>("/auth/resend-verification-email", {
     method: "POST",
     headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export interface ForgotPasswordInput {
+  email: string;
+}
+
+export function forgotPassword(input: ForgotPasswordInput): Promise<{ success: boolean }> {
+  return authFetch<{ success: boolean }>("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export interface ResetPasswordInput {
+  email: string;
+  code: string;
+  newPassword: string;
+}
+
+export function resetPassword(input: ResetPasswordInput): Promise<{ success: boolean }> {
+  return authFetch<{ success: boolean }>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify(input),
   });
 }
 
