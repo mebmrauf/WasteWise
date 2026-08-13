@@ -80,12 +80,10 @@ async function issueEmailVerificationCode(userId: string, email: string, fullNam
     },
   });
 
-  try {
-    const { subject, html, text } = buildVerificationCodeEmail(fullName, code);
-    await sendEmail({ to: email, subject, html, text });
-  } catch (err) {
+  const { subject, html, text } = buildVerificationCodeEmail(fullName, code);
+  void sendEmail({ to: email, subject, html, text }).catch((err) => {
     logger.error({ err, userId }, "Failed to send email verification code");
-  }
+  });
 }
 
 authRouter.post(
