@@ -39,3 +39,7 @@ export function uploadAvatarImage(buffer: Buffer, userId: string): Promise<{ pub
     stream.end(buffer);
   });
 }
+
+export async function deleteAvatarImage(publicId: string): Promise<void> {
+  await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
+}

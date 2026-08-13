@@ -6,6 +6,9 @@ export type SelectableRole = Extract<Role, "USER" | "COLLECTOR" | "RECYCLING_COM
 
 export type AccountType = "HOUSEHOLD" | "BUSINESS";
 
+export type MembershipLevel = "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
+export type PlatinumGift = "TREE_SAPLING" | "ECO_TOTE_BAG" | "REUSABLE_WATER_BOTTLE";
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -14,8 +17,24 @@ export interface AuthUser {
   role: Role;
   accountType: AccountType | null;
   isEmailVerified: boolean;
+  hasPassword: boolean;
   avatarUrl: string | null;
+  membershipLevel: MembershipLevel;
+  membershipBadge: string;
+  totalGreenPoints: number;
+  giftClaimed: boolean;
+  selectedGift: PlatinumGift | null;
+  nextGiftEligibleDate: string | null;
+  discountCouponClaimed?: boolean;
+  nextDiscountEligibleDate?: string | null;
+  lastTreePlantationClaimDate?: string | null;
+  nextTreePlantationEligibleDate?: string | null;
+  treePlantationClaimed?: boolean;
+  sustainabilityCertificateUrl?: string | null;
   createdAt: string;
+  formattedAddress?: string;
+  recyclingCompanyProfile?: any;
+  collectorProfile?: any;
 }
 
 export interface ApiError {
@@ -37,7 +56,13 @@ export class AuthApiError extends Error {
 
 const API_BASE_URL = publicEnv.NEXT_PUBLIC_API_URL;
 
-const SKIP_REFRESH_RETRY_PATHS = new Set(["/auth/refresh", "/auth/login", "/auth/register"]);
+const SKIP_REFRESH_RETRY_PATHS = new Set([
+  "/auth/refresh",
+  "/auth/login",
+  "/auth/register",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+]);
 
 export async function authFetch<T>(
   path: string,
@@ -74,6 +99,9 @@ export async function authFetch<T>(
         return authFetch<T>(path, retryInit, true);
       }
     }
+    if (res.status !== 401) {
+      console.error("AuthApiError Debug:", { status: res.status, body });
+    }
 
     throw new AuthApiError(
       res.status,
@@ -104,6 +132,7 @@ export interface SignupInput {
   fullName: string;
   role?: SelectableRole;
   accountType?: AccountType;
+  referralCode?: string;
 }
 
 export function signup(input: SignupInput): Promise<{ user: AuthUser }> {
@@ -165,6 +194,45 @@ async function performRefresh(): Promise<boolean> {
     }
     throw err;
   }
+}
+
+export function verifyEmail(code: string): Promise<{ user: AuthUser }> {
+  return authFetch<{ user: AuthUser }>("/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export function resendVerificationEmail(): Promise<{ success: boolean }> {
+  return authFetch<{ success: boolean }>("/auth/resend-verification-email", {
+    method: "POST",
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export interface ForgotPasswordInput {
+  email: string;
+}
+
+export function forgotPassword(input: ForgotPasswordInput): Promise<{ success: boolean }> {
+  return authFetch<{ success: boolean }>("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export interface ResetPasswordInput {
+  email: string;
+  code: string;
+  newPassword: string;
+}
+
+export function resetPassword(input: ResetPasswordInput): Promise<{ success: boolean }> {
+  return authFetch<{ success: boolean }>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
 export function getGoogleOAuthUrl(): string {

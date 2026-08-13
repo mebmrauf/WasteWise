@@ -29,6 +29,7 @@ export interface DashboardNavProps {
 
 const sidebarFillClasses: Record<RoleAccent, string> = {
   user: "bg-role-user-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
+  business: "bg-role-business-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
   collector: "bg-role-collector-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
   recyclingCompany: "bg-role-recycler-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
   admin: "bg-role-admin-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
@@ -36,6 +37,7 @@ const sidebarFillClasses: Record<RoleAccent, string> = {
 
 const activePillFillClasses: Record<RoleAccent, string> = {
   user: "bg-role-user-500",
+  business: "bg-role-business-500",
   collector: "bg-role-collector-500",
   recyclingCompany: "bg-role-recycler-500",
   admin: "bg-role-admin-500",
@@ -43,6 +45,7 @@ const activePillFillClasses: Record<RoleAccent, string> = {
 
 const ringOffsetClasses: Record<RoleAccent, string> = {
   user: "focus-visible:ring-offset-role-user-900",
+  business: "focus-visible:ring-offset-role-business-900",
   collector: "focus-visible:ring-offset-role-collector-900",
   recyclingCompany: "focus-visible:ring-offset-role-recycler-900",
   admin: "focus-visible:ring-offset-role-admin-900",
@@ -50,6 +53,7 @@ const ringOffsetClasses: Record<RoleAccent, string> = {
 
 const mobileActiveTextClasses: Record<RoleAccent, string> = {
   user: "text-role-user-500",
+  business: "text-role-business-500",
   collector: "text-role-collector-500",
   recyclingCompany: "text-role-recycler-500",
   admin: "text-role-admin-500",
@@ -86,7 +90,13 @@ function resolveActiveStates(items: DashboardNavItem[], pathname: string | null)
   return result.map((value) => value ?? false);
 }
 
-export function DashboardNav({ items, accent, roleLabel, brand, className }: DashboardNavProps) {
+export function DashboardNav({
+  items,
+  accent,
+  roleLabel,
+  brand,
+  className,
+}: DashboardNavProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const shortName = user?.fullName.trim().split(/\s+/)[0] ?? user?.fullName;
@@ -105,13 +115,15 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
           className
         )}
       >
-        <div className="flex shrink-0 flex-col justify-center px-6 py-4 border-b border-white/10">
-          <Link href="/" className="font-brand text-3xl font-bold tracking-wide text-white drop-shadow-md leading-none">
-            WasteWise
-          </Link>
-          <span className="text-[10px] uppercase tracking-wider text-white/60 mt-1 font-medium">
-            Formalizing Waste Management
-          </span>
+        <div className="flex shrink-0 items-start justify-between px-6 py-4 border-b border-white/10">
+          <div className="flex flex-col justify-center">
+            <Link href="/" className="font-brand text-3xl font-bold tracking-wide text-white drop-shadow-md leading-none">
+              WasteWise
+            </Link>
+            <span className="text-[10px] uppercase tracking-wider text-white/60 mt-1 font-medium">
+              Formalizing Waste Management
+            </span>
+          </div>
         </div>
         <div className="flex flex-col gap-1 px-4 pb-4 pt-6">
           <span className="text-overline text-neutral-0/70">{roleLabel}</span>
@@ -131,7 +143,7 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
                   }}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-4 rounded-md px-4 py-3 text-body-sm font-medium transition-colors",
+                    "group flex items-center gap-4 rounded-md px-4 py-3 text-body-sm font-medium transition-colors",
                     darkSurfaceFocusRing,
                     ringOffsetClasses[accent],
                     isActive
@@ -139,7 +151,9 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
                       : "text-neutral-0/80 hover:text-neutral-0"
                   )}
                 >
-                  <Icon icon={item.icon} size="md" />
+                  <div className={cn("flex items-center justify-center h-8 w-8 rounded-full shrink-0 transition-colors", isActive ? "bg-white/20" : "bg-white/5 group-hover:bg-white/10")}>
+                    <Icon icon={item.icon} size="sm" />
+                  </div>
                   <span>{item.label}</span>
                 </Link>
               </li>
@@ -175,7 +189,8 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
         </div>
       </nav>
 
-      {/* Tablet — icon-only collapsed rail (md to just under lg, §6.4) */}
+      {/* Tablet — icon-only collapsed rail (md to just under lg, §6.4). Also
+          used at lg+ when the desktop sidebar is manually collapsed. */}
       <nav
         aria-label="Primary (compact)"
         className={cn(
@@ -205,7 +220,7 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
                   }}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex h-12 w-12 items-center justify-center rounded-md transition-colors",
+                    "flex h-12 w-12 items-center justify-center rounded-full transition-colors",
                     darkSurfaceFocusRing,
                     ringOffsetClasses[accent],
                     isActive
@@ -235,7 +250,7 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
                 window.location.href = "/";
               });
             }}
-            className="group relative flex h-12 w-12 items-center justify-center rounded-md text-white/80 transition-colors hover:bg-white/10 hover:text-white border border-transparent hover:border-white/5"
+            className="group relative flex h-12 w-12 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white border border-transparent hover:border-white/5"
             title="Log out"
           >
             <Icon icon={LogOut} size="md" />
@@ -279,7 +294,9 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
                     isActive ? "text-white bg-white/10" : "text-white/60 hover:text-white hover:bg-white/5"
                   )}
                 >
-                  <Icon icon={item.icon} size="md" className="shrink-0" />
+                  <div className={cn("flex items-center justify-center h-8 w-8 rounded-full shrink-0 transition-colors", isActive ? "bg-white/20" : "bg-transparent")}>
+                    <Icon icon={item.icon} size="sm" className="shrink-0" />
+                  </div>
                   <span className="w-full truncate text-center text-[10px] leading-tight">{item.label}</span>
                 </Link>
               </li>

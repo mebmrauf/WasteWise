@@ -8,8 +8,9 @@ import { useRequireRole } from "@/lib/auth/AuthContext";
 import { getMyProfile, type UserProfile } from "@/lib/api/users";
 import { AlertCircle, CheckCircle2, UserCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { AvailableJobsBoard } from "@/components/AvailableJobsBoard";
 import { ActiveJobTracker } from "@/components/ActiveJobTracker";
+import { CollectorRatingsPanel } from "@/components/CollectorRatingsPanel";
+import { CollectorStatsChart } from "@/components/CollectorStatsChart";
 import { listAssignedPickups, type PickupRequestSummary } from "@/lib/api/pickups";
 
 export default function CollectorDashboardPage() {
@@ -17,11 +18,6 @@ export default function CollectorDashboardPage() {
   const router = useRouter();
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
   const [isProfileLoading, setIsProfileLoading] = React.useState(true);
-
-  // We fetch active jobs here just to see if we should render the tracker at the top.
-  const [activeJobs, setActiveJobs] = React.useState<PickupRequestSummary[]>([]);
-  const [isActiveJobsLoading, setIsActiveJobsLoading] = React.useState(true);
-
   const fetchProfile = React.useCallback(() => {
     setIsProfileLoading(true);
     getMyProfile()
@@ -30,25 +26,15 @@ export default function CollectorDashboardPage() {
       .finally(() => setIsProfileLoading(false));
   }, []);
 
-  const fetchActiveJobs = React.useCallback(() => {
-    setIsActiveJobsLoading(true);
-    listAssignedPickups()
-      .then(({ pickups }) => setActiveJobs(pickups))
-      .catch(() => setActiveJobs([]))
-      .finally(() => setIsActiveJobsLoading(false));
-  }, []);
-
   React.useEffect(() => {
     if (user) {
       fetchProfile();
-      fetchActiveJobs();
     } else {
       setIsProfileLoading(false);
-      setIsActiveJobsLoading(false);
     }
-  }, [user, fetchProfile, fetchActiveJobs]);
+  }, [user, fetchProfile]);
 
-  if (isAuthLoading || isProfileLoading || isActiveJobsLoading) {
+  if (isAuthLoading || isProfileLoading) {
     return (
       <PageContainer className="flex min-h-[60vh] items-center justify-center py-16">
         <p className="text-body-sm text-neutral-500">Loading…</p>
@@ -67,11 +53,16 @@ export default function CollectorDashboardPage() {
 
   return (
     <PageContainer className="py-8 lg:py-12">
-      <h1 className="text-h1 text-neutral-900 mb-8">Dashboard</h1>
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 p-8 mb-8 rounded-2xl shadow-sm">
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Dashboard</h1>
+        <p className="mt-2 text-neutral-600">
+          Welcome back, {profile?.fullName?.split(" ")[0] || "Collector"}! Here is your performance hub. Check your latest reputation feedback and track the waste you've collected.
+        </p>
+      </Card>
 
       {!isApproved ? (
         hasMissingInfo ? (
-          <Card className="max-w-2xl bg-neutral-50 border-neutral-200">
+          <Card className="max-w-2xl bg-white border border-neutral-100 shadow-sm rounded-2xl p-8">
             <div className="flex flex-col items-center text-center py-8">
               <UserCircle2 className="h-16 w-16 text-neutral-400 mb-4" />
               <h2 className="text-h2 text-neutral-900 mb-2">Profile incomplete</h2>
@@ -84,9 +75,9 @@ export default function CollectorDashboardPage() {
             </div>
           </Card>
         ) : (
-          <Card className="max-w-2xl bg-warning-50 border-warning-200">
+          <Card className="max-w-2xl bg-amber-50 border border-amber-100 shadow-sm rounded-2xl p-8">
             <div className="flex flex-col items-center text-center py-8">
-              <AlertCircle className="h-16 w-16 text-warning-500 mb-4" />
+              <AlertCircle className="h-16 w-16 text-amber-500 mb-4" />
               <h2 className="text-h2 text-warning-900 mb-2">Verification pending</h2>
               <p className="text-body text-warning-800 mb-8 max-w-md mx-auto">
                 Your collector account needs to be verified by an admin before you can browse open pickup requests. Check back once your profile has been approved.
@@ -98,18 +89,17 @@ export default function CollectorDashboardPage() {
           </Card>
         )
       ) : (
-        <div className="flex flex-col gap-12 w-full max-w-5xl">
-          {/* Smart Active Job Section */}
-          {activeJobs.length > 0 && (
-            <section className="w-full">
-              <ActiveJobTracker />
-            </section>
-          )}
+        <div className="flex flex-col gap-8 w-full max-w-6xl">
+          {/* Welcome Hero Removed (Moved to top of page) */}
 
-          {/* Smart Available Jobs Section */}
-          <section className="w-full">
-            <AvailableJobsBoard />
-          </section>
+          {/* Bento Grid Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-max">
+            <CollectorRatingsPanel 
+              averageRating={profile?.collectorProfile?.averageRating ?? null}
+              totalRatings={profile?.collectorProfile?.totalRatings ?? 0}
+            />
+            <CollectorStatsChart />
+          </div>
         </div>
       )}
     </PageContainer>

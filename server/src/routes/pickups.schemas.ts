@@ -5,6 +5,7 @@ const pickupRequestItemSchema = z
   .object({
     category: z.nativeEnum(WasteCategory, { required_error: "category is required" }),
     loadSize: z.nativeEnum(LoadSize, { required_error: "loadSize is required" }),
+    exactWeightKg: z.number().positive().optional(),
   })
   .strict();
 
@@ -28,6 +29,11 @@ export const createPickupRequestSchema = z
     formattedAddress: z.string().optional(),
     latitude: z.number().optional(),
     longitude: z.number().optional(),
+    serviceArea: z.string().optional(),
+    preferredCollectorId: z.string().cuid().optional(),
+    isExclusiveToPreferred: z.boolean().default(false),
+    isBulk: z.boolean().default(false),
+    estimatedTotalWeight: z.number().positive().optional(),
   })
   .strict()
   .superRefine((data, ctx) => {
@@ -95,3 +101,9 @@ export const rejectWeightsSchema = z.object({
   pickupRequestId: pickupIdSchema,
 });
 type RejectWeightsInput = z.infer<typeof rejectWeightsSchema>;
+
+export const ratePickupSchema = z.object({
+  score: z.number().int().min(1).max(5),
+  comment: z.string().trim().max(500).optional(),
+});
+type RatePickupInput = z.infer<typeof ratePickupSchema>;

@@ -1,22 +1,24 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Truck, Package, Clock, MapPin, Home, Navigation, Search } from "lucide-react";
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/AddressAutocomplete";
 import { Icon } from "@/components/Icon";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
-import { CategoryQuantityRow } from "@/components/CategoryQuantityRow";
+
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Input } from "@/components/Input";
 import { PageContainer } from "@/components/PageContainer";
 import { PillRadioGroup } from "@/components/PillRadioGroup";
-import { type SelectOption } from "@/components/Select";
+import { Select, type SelectOption } from "@/components/Select";
 import { StepProgress } from "@/components/StepProgress";
+import { ALL_SERVICE_AREAS } from "@/lib/areas";
+import { getVerifiedCollectors, type CollectorDirectoryEntry } from "@/lib/api/collectors";
 import { SummaryPanel, SummaryRow } from "@/components/SummaryPanel";
 import { TimeSlotPicker, type TimeSlot } from "@/components/TimeSlotPicker";
-import { WasteCategoryQuantityPicker } from "@/components/WasteCategoryQuantityPicker";
+
 import { WasteCategorySelector, type WasteCategory } from "@/components/WasteCategorySelector";
 import { AuthApiError } from "@/lib/api/auth";
 import { fetchAddressSuggestions, fetchPlaceDetails, PlacesConfigError, fetchReverseGeocode, type PlaceDetails } from "@/lib/api/places";
@@ -24,9 +26,6 @@ import { getMyProfile, type UserProfile } from "@/lib/api/users";
 import { cn } from "@/lib/utils";
 import {
   createPickupRequest,
-  LOAD_SIZE_KG_RANGES,
-  LOAD_SIZE_LABELS,
-  formatKgRange,
   type LoadSize,
 } from "@/lib/api/pickups";
 
@@ -53,19 +52,13 @@ interface TimeWindow extends TimeSlot {
 }
 
 const TIME_WINDOWS: TimeWindow[] = [
-  { id: "08:00-10:00", label: "08:00 - 10:00", startHour: 8, endHour: 10 },
-  { id: "10:00-12:00", label: "10:00 - 12:00", startHour: 10, endHour: 12 },
-  { id: "14:00-16:00", label: "14:00 - 16:00", startHour: 14, endHour: 16 },
-  { id: "16:00-18:00", label: "16:00 - 18:00", startHour: 16, endHour: 18 },
+  { id: "08:00-10:00", label: "08:00 AM - 10:00 AM", startHour: 8, endHour: 10 },
+  { id: "10:00-12:00", label: "10:00 AM - 12:00 PM", startHour: 10, endHour: 12 },
+  { id: "14:00-16:00", label: "02:00 PM - 04:00 PM", startHour: 14, endHour: 16 },
+  { id: "16:00-18:00", label: "04:00 PM - 06:00 PM", startHour: 16, endHour: 18 },
 ];
 
-const LOAD_SIZE_OPTIONS: SelectOption[] = [
-  { value: "", label: "Select an estimated quantity…", disabled: true },
-  ...(Object.keys(LOAD_SIZE_KG_RANGES) as LoadSize[]).map((size) => ({
-    value: size,
-    label: `${LOAD_SIZE_LABELS[size]} (${formatKgRange(size)})`,
-  })),
-];
+
 
 const ADDRESS_DEBOUNCE_MS = 300;
 const ADDRESS_MIN_QUERY_LENGTH = 3;
@@ -91,14 +84,24 @@ function formatWindowSummary(dateStr: string, window: TimeWindow): string {
 
 export function NewPickupRequestView() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preferredCollectorId = searchParams.get("preferredCollectorId");
+  const preferredCollectorName = searchParams.get("collectorName");
+
   const [validationMessage, setValidationMessage] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const [isExclusiveToPreferred, setIsExclusiveToPreferred] = React.useState(true);
 
   const [categories, setCategories] = React.useState<WasteCategory[]>([]);
-  const [quantities, setQuantities] = React.useState<Partial<Record<WasteCategory, LoadSize>>>({});
+  const [estimatedTotalWeight, setEstimatedTotalWeight] = React.useState<number | "">("");
+  const [categoryWeights, setCategoryWeights] = React.useState<Record<string, string>>({});
   const [date, setDate] = React.useState("");
   const [timeWindowId, setTimeWindowId] = React.useState<string | null>(null);
+
+  const [serviceArea, setServiceArea] = React.useState<string>("");
+  const [localCollectors, setLocalCollectors] = React.useState<CollectorDirectoryEntry[]>([]);
+  const [selectedCollectorId, setSelectedCollectorId] = React.useState<string>(preferredCollectorId || "");
 
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
   const [profileError, setProfileError] = React.useState<string | null>(null);
@@ -150,6 +153,34 @@ export function NewPickupRequestView() {
       if (addressDebounceTimerRef.current !== null) window.clearTimeout(addressDebounceTimerRef.current);
     };
   }, []);
+
+  const activeAddress = React.useMemo(() => {
+    if (addressMode === "saved") return profile?.formattedAddress;
+    if (addressMode === "custom") return selectedCustomPlace?.description;
+    if (addressMode === "current") return currentLocationPlace?.formattedAddress;
+    return null;
+  }, [addressMode, profile, selectedCustomPlace, currentLocationPlace]);
+
+  React.useEffect(() => {
+    if (activeAddress && !serviceArea) {
+      const lowerAddress = activeAddress.toLowerCase();
+      const detected = ALL_SERVICE_AREAS.find(area => lowerAddress.includes(area.toLowerCase()));
+      if (detected) {
+        setServiceArea(detected);
+      }
+    }
+  }, [activeAddress, serviceArea]);
+
+  React.useEffect(() => {
+    if (serviceArea) {
+      getVerifiedCollectors({ serviceArea }).then(cols => {
+        cols.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
+        setLocalCollectors(cols);
+      }).catch(console.error);
+    } else {
+      setLocalCollectors([]);
+    }
+  }, [serviceArea]);
 
 
 
@@ -264,28 +295,37 @@ export function NewPickupRequestView() {
     : addressMode === "current" ? (currentLocationPlace?.formattedAddress ?? null) 
     : (selectedCustomPlace?.description ?? null);
 
-  const hasQuantityForEveryCategory =
-    categories.length > 0 && categories.every((category) => quantities[category] !== undefined);
+  const isBusiness = false;
+
+  const computedTotalWeight = React.useMemo(() => {
+    if (!isBusiness) return typeof estimatedTotalWeight === "number" ? estimatedTotalWeight : 0;
+    
+    let total = 0;
+    for (const cat of categories) {
+      const weight = parseFloat(categoryWeights[cat] || "0");
+      if (!isNaN(weight)) total += weight;
+    }
+    return total;
+  }, [categories, categoryWeights, isBusiness, estimatedTotalWeight]);
 
   const canSubmit =
     !isSubmitting &&
-    hasQuantityForEveryCategory &&
+    categories.length > 0 &&
+    (isBusiness ? computedTotalWeight > 0 : estimatedTotalWeight !== "") &&
     date !== "" &&
     selectedWindow !== null &&
     !isSlotInPast &&
-    resolvedPlaceId !== null;
-
-  function handleQuantityChange(category: WasteCategory, loadSize: LoadSize) {
-    setQuantities((prev) => ({ ...prev, [category]: loadSize }));
-  }
+    resolvedPlaceId !== null &&
+    serviceArea !== "";
 
   function handleCategoriesChange(nextCategories: WasteCategory[]) {
     setCategories(nextCategories);
-    setQuantities((prev) => {
-      const nextSet = new Set(nextCategories);
-      const next: Partial<Record<WasteCategory, LoadSize>> = {};
-      for (const category of Object.keys(prev) as WasteCategory[]) {
-        if (nextSet.has(category)) next[category] = prev[category];
+    setCategoryWeights(prev => {
+      const next = { ...prev };
+      for (const key of Object.keys(next)) {
+        if (!nextCategories.includes(key as WasteCategory)) {
+          delete next[key];
+        }
       }
       return next;
     });
@@ -294,7 +334,16 @@ export function NewPickupRequestView() {
 
 
   async function handleSubmitPickupRequest() {
-    if (!date || !selectedWindow || !resolvedPlaceId || !hasQuantityForEveryCategory) return;
+    if (!date || !selectedWindow || !resolvedPlaceId || categories.length === 0 || (!isBusiness && estimatedTotalWeight === "")) return;
+
+    if (computedTotalWeight >= 50) {
+      setSubmitError("This request qualifies as a Bulk Waste Pickup. Please use the Bulk Waste Pickup feature instead.");
+      return;
+    }
+    if (computedTotalWeight < 1) {
+      setSubmitError("Please enter a valid weight of at least 1 kg.");
+      return;
+    }
 
     setSubmitError(null);
     setIsSubmitting(true);
@@ -318,10 +367,11 @@ export function NewPickupRequestView() {
         longitude = details.longitude;
       }
 
-      await createPickupRequest({
+      const payload = {
         items: categories.map((category) => ({
           category,
-          loadSize: quantities[category] as LoadSize,
+          loadSize: "SMALL" as LoadSize,
+          exactWeightKg: isBusiness && categoryWeights[category] ? parseFloat(categoryWeights[category]) : undefined,
         })),
         timeSlotStart: buildTimeSlotIso(date, selectedWindow.startHour),
         timeSlotEnd: buildTimeSlotIso(date, selectedWindow.endHour),
@@ -329,7 +379,15 @@ export function NewPickupRequestView() {
         formattedAddress,
         latitude,
         longitude,
-      });
+        serviceArea,
+        ...(selectedCollectorId ? { 
+          preferredCollectorId: selectedCollectorId, 
+          isExclusiveToPreferred 
+        } : {}),
+        estimatedTotalWeight: computedTotalWeight
+      };
+
+      await createPickupRequest(payload);
       router.push("/dashboard/pickups");
     } catch (err) {
       setSubmitError(resolveSubmitPickupErrorMessage(err));
@@ -339,26 +397,22 @@ export function NewPickupRequestView() {
 
   return (
     <PageContainer className="py-8 lg:py-12">
-      <div className="flex items-center gap-4 animate-slide-up">
-        <div className="inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-primary-100 to-emerald-100 text-primary-600 shadow-sm border border-primary-100/50">
-          <Icon icon={Truck} size="xl" />
-        </div>
-        <div>
-          <h1 className="font-heading text-h1 text-neutral-900 tracking-tight">Schedule a pickup</h1>
-          <p className="mt-2 text-body-lg text-neutral-500 max-w-xl">
-            Tell us what you&apos;re recycling and when — we&apos;ll match you with a nearby collector.
-          </p>
-        </div>
-      </div>
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 p-8 mb-8 rounded-2xl shadow-sm">
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Schedule a pickup</h1>
+        <p className="mt-2 text-neutral-600">
+          Tell us what you&apos;re recycling and when — we&apos;ll match you with a nearby collector.
+        </p>
+      </Card>
 
       {profileError && <ErrorBanner className="mt-4 max-w-form">{profileError}</ErrorBanner>}
+
+
 
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] animate-slide-up">
         <div className="flex flex-col gap-6">
           
           {/* Section 1: Categories */}
-          <Card className="glass-panel border-0 shadow-xl rounded-[2rem] p-8 relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
             <div className="flex items-center gap-5 mb-8">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner">
                 <Icon icon={Package} size="lg" />
@@ -377,8 +431,7 @@ export function NewPickupRequestView() {
           </Card>
 
           {/* Section 2: Quantity & Time */}
-          <Card className="glass-panel border-0 shadow-xl rounded-[2rem] p-8 relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
             <div className="flex items-center gap-5 mb-8">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner">
                 <Icon icon={Clock} size="lg" />
@@ -390,13 +443,52 @@ export function NewPickupRequestView() {
             </div>
             <div className="mt-8 flex flex-col gap-6">
               <div className="flex flex-col gap-3">
-                <p className="text-body font-semibold text-neutral-900">Estimated quantity</p>
-                <WasteCategoryQuantityPicker
-                  categories={categories}
-                  value={quantities}
-                  onChange={handleQuantityChange}
-                  loadSizeOptions={LOAD_SIZE_OPTIONS}
-                />
+                <div className="flex justify-between items-end mb-2">
+                  <p className="text-body font-semibold text-neutral-900">Estimated Weight</p>
+                  {isBusiness && computedTotalWeight > 0 && (
+                    <span className="text-body-sm font-semibold text-primary-600 bg-primary-50 px-3 py-1 rounded-full">
+                      Total: {computedTotalWeight} kg
+                    </span>
+                  )}
+                </div>
+
+                {isBusiness ? (
+                  categories.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 p-6 text-center">
+                      <p className="text-body-sm text-neutral-500">Select materials above to enter their weights.</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3 rounded-xl border border-neutral-100 bg-neutral-50/50 p-4">
+                      {categories.map((cat) => (
+                        <div key={cat} className="flex items-center justify-between gap-4">
+                          <label className="text-body-sm font-medium text-neutral-700 capitalize">
+                            {cat.toLowerCase()} Weight (kg)
+                          </label>
+                          <Input
+                            type="number"
+                            min="0.1"
+                            step="0.1"
+                            placeholder="e.g. 5"
+                            value={categoryWeights[cat] || ""}
+                            onChange={(e) => setCategoryWeights(prev => ({ ...prev, [cat]: e.target.value }))}
+                            className="bg-white w-32"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  <Input
+                    type="number"
+                    min="1"
+                    max="49"
+                    step="0.1"
+                    placeholder="e.g. 12.5"
+                    value={estimatedTotalWeight}
+                    onChange={(e) => setEstimatedTotalWeight(e.target.value === "" ? "" : Number(e.target.value))}
+                    className="bg-white"
+                  />
+                )}
               </div>
 
               <div className="h-px w-full bg-neutral-100" />
@@ -429,8 +521,7 @@ export function NewPickupRequestView() {
 
         <div className="flex flex-col gap-6 sticky top-24 h-fit">
           {/* Section 3: Address */}
-          <Card className="glass-panel border-0 shadow-xl rounded-[2rem] p-8 relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
             <div className="flex items-center gap-4 mb-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner">
                 <Icon icon={MapPin} size="md" />
@@ -570,12 +661,59 @@ export function NewPickupRequestView() {
               )}
             </div>
             
+            <div className="mt-6 pt-6 border-t border-neutral-100 flex flex-col gap-4">
+              <Select
+                label="Service Area (Required)"
+                value={serviceArea}
+                onChange={(e) => {
+                  setServiceArea(e.target.value);
+                  setSelectedCollectorId(""); // Reset collector when area changes
+                }}
+                options={[
+                  { value: "", label: "Select your zone...", disabled: true },
+                  ...ALL_SERVICE_AREAS.map(area => ({ value: area, label: area }))
+                ]}
+              />
+
+              {serviceArea && localCollectors.length > 0 && (
+                <div className="p-4 bg-primary-50 rounded-xl border border-primary-100">
+                  <h3 className="font-semibold text-primary-900 mb-2">Optional: Request a Specific Collector</h3>
+                  <p className="text-body-sm text-primary-800 mb-4">
+                    Choose a highly-rated collector in your area to send this request directly to them.
+                  </p>
+                  <Select
+                    label="Preferred Collector"
+                    value={selectedCollectorId}
+                    onChange={(e) => setSelectedCollectorId(e.target.value)}
+                    options={[
+                      { value: "", label: "Broadcast to everyone (Default)" },
+                      ...localCollectors.map(col => ({ 
+                        value: col.id, 
+                        label: `${col.fullName} - ⭐ ${col.averageRating ? col.averageRating.toFixed(1) : "New"}` 
+                      }))
+                    ]}
+                  />
+                  {selectedCollectorId && (
+                    <label className="flex items-center gap-2 mt-4 text-body-sm text-neutral-800 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={isExclusiveToPreferred}
+                        onChange={(e) => setIsExclusiveToPreferred(e.target.checked)}
+                        className="rounded text-primary-600 focus:ring-primary-500 w-4 h-4"
+                      />
+                      Send this request ONLY to the selected collector.
+                    </label>
+                  )}
+                </div>
+              )}
+            </div>
+
             {validationMessage && <ErrorBanner className="mt-4">{validationMessage}</ErrorBanner>}
           </Card>
 
           <SummaryPanel
             title="Request summary"
-            className="glass-panel border-0 shadow-2xl rounded-[2rem] bg-gradient-to-b from-white to-primary-50/20"
+            className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all"
             footer={
             <div className="flex flex-col gap-3">
               {submitError && <ErrorBanner>{submitError}</ErrorBanner>}
@@ -586,23 +724,23 @@ export function NewPickupRequestView() {
           }
         >
           <div>
-            <p className="text-body-sm text-neutral-500">Categories & quantities</p>
+            <p className="text-body-sm text-neutral-500">Categories & estimated weight</p>
             <div className="mt-2 flex flex-col gap-2">
               {categories.length > 0 ? (
-                categories.map((category) => {
-                  const categoryLoadSize = quantities[category];
-                  return (
-                    <CategoryQuantityRow
-                      key={category}
-                      category={category}
-                      quantityLabel={
-                        categoryLoadSize
-                          ? `${LOAD_SIZE_LABELS[categoryLoadSize]} (${formatKgRange(categoryLoadSize)})`
-                          : null
-                      }
-                    />
-                  );
-                })
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    {categories.map((category) => (
+                      <span key={category} className="px-3 py-1 bg-neutral-100 rounded-full text-body-sm font-medium text-neutral-700">
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                  {estimatedTotalWeight !== "" && (
+                    <p className="text-body-sm font-semibold text-neutral-900 mt-2">
+                      Total Weight: {estimatedTotalWeight} kg
+                    </p>
+                  )}
+                </div>
               ) : (
                 <span className="text-body-sm text-neutral-500">Not selected yet</span>
               )}

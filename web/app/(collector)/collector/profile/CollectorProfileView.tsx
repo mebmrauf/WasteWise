@@ -4,6 +4,8 @@ import * as React from "react";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { ChangePasswordSection } from "@/components/ChangePasswordSection";
+import { DeleteAccountSection } from "@/components/DeleteAccountSection";
 import { Divider } from "@/components/Divider";
 import { EditableField } from "@/components/EditableField";
 import { ErrorBanner } from "@/components/ErrorBanner";
@@ -12,9 +14,13 @@ import { Input } from "@/components/Input";
 import { PageContainer } from "@/components/PageContainer";
 import { Select } from "@/components/Select";
 import { StatusPill } from "@/components/StatusPill";
+<<<<<<< HEAD
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/AddressAutocomplete";
 import { Map } from "@/components/Map";
 import { fetchAddressSuggestions, fetchPlaceDetails, fetchReverseGeocode, PlacesConfigError } from "@/lib/api/places";
+=======
+
+>>>>>>> origin/main
 import { useRequireRole } from "@/lib/auth/AuthContext";
 import { AuthApiError } from "@/lib/api/auth";
 import {
@@ -24,9 +30,11 @@ import {
   uploadMyAvatar,
   resolveAvatarUrl,
   type CollectorProfileSummary,
+  type UpdateProfileInput,
 } from "@/lib/api/users";
 import { VEHICLE_TYPE_LABELS, type VehicleType } from "@/lib/vehicleType";
 import { VERIFICATION_STATUS_TONE, VERIFICATION_STATUS_LABEL } from "@/lib/verificationStatus";
+import { ALL_SERVICE_AREAS } from "@/lib/areas";
 
 const profileErrorMessages: Record<string, string> = {
   VALIDATION_ERROR: "Please check that value and try again.",
@@ -53,7 +61,16 @@ const DEFAULT_VEHICLE_TYPE: VehicleType = "MOTORCYCLE_VAN";
 interface ProfileExtras {
   avatarUrl: string | null;
   collectorProfile: CollectorProfileSummary | null;
+  emailNotificationsEnabled: boolean;
+  smsNotificationsEnabled: boolean;
+  rewardsEmailNotificationsEnabled: boolean;
 }
+
+const notificationPreferenceKeys = {
+  email: "emailNotificationsEnabled",
+  sms: "smsNotificationsEnabled",
+  rewardsEmail: "rewardsEmailNotificationsEnabled",
+} as const;
 
 interface FieldSaveState {
   isSaving: boolean;
@@ -139,6 +156,9 @@ export function CollectorProfileView() {
         setExtras({
           avatarUrl: resolveAvatarUrl(profile.avatarUrl),
           collectorProfile: profile.collectorProfile,
+          emailNotificationsEnabled: profile.emailNotificationsEnabled,
+          smsNotificationsEnabled: profile.smsNotificationsEnabled,
+          rewardsEmailNotificationsEnabled: profile.rewardsEmailNotificationsEnabled,
         });
         setDetails(draftFromProfile(profile.collectorProfile));
         const savedLocation = serviceAreaLocationFromProfile(profile.collectorProfile);
@@ -159,11 +179,13 @@ export function CollectorProfileView() {
 
   const [fullNameSave, setFullNameSave] = React.useState<FieldSaveState>(idleSaveState);
   const [phoneSave, setPhoneSave] = React.useState<FieldSaveState>(idleSaveState);
+  const [notificationError, setNotificationError] = React.useState<string | null>(null);
   const [avatarUploadState, setAvatarUploadState] = React.useState<{
     isUploading: boolean;
     error: string | null;
   }>({ isUploading: false, error: null });
 
+<<<<<<< HEAD
   const [addressSuggestions, setAddressSuggestions] = React.useState<AddressSuggestion[]>([]);
   const [isLoadingAddressSuggestions, setIsLoadingAddressSuggestions] = React.useState(false);
   const [addressSuggestionsError, setAddressSuggestionsError] = React.useState<string | null>(null);
@@ -286,6 +308,8 @@ export function CollectorProfileView() {
     }
   }
 
+=======
+>>>>>>> origin/main
   const [detailsSave, setDetailsSave] = React.useState<FieldSaveState>(idleSaveState);
   const savedDetails = draftFromProfile(extras?.collectorProfile ?? null);
   const savedServiceAreaLocation = serviceAreaLocationFromProfile(extras?.collectorProfile ?? null);
@@ -302,6 +326,20 @@ export function CollectorProfileView() {
     details.vehicleNumber.trim().length > 0 &&
     details.licenseNumber.trim().length > 0 &&
     details.serviceArea.trim().length > 0;
+
+  async function handleToggleNotification(kind: keyof typeof notificationPreferenceKeys, checked: boolean) {
+    if (!extras) return;
+    const previous = extras;
+    const key = notificationPreferenceKeys[kind];
+    setNotificationError(null);
+    setExtras({ ...extras, [key]: checked });
+    try {
+      await updateMyProfile({ [key]: checked } as UpdateProfileInput);
+    } catch (err) {
+      setExtras(previous);
+      setNotificationError(resolveProfileErrorMessage(err, "Couldn't save that preference. Try again."));
+    }
+  }
 
   async function handleSaveFullName(newValue: string) {
     setFullNameSave({ isSaving: true, error: null });
@@ -391,15 +429,18 @@ export function CollectorProfileView() {
 
   return (
     <PageContainer className="py-8 lg:py-12">
-      <h1 className="text-h1 text-neutral-900">Your profile</h1>
-      <p className="mt-2 text-body-lg text-neutral-500">
-        Manage your contact details, vehicle, and service area.
-      </p>
+      <div className="flex flex-col gap-8 w-full max-w-4xl">
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 p-8 mb-8 rounded-2xl shadow-sm">
+          <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Your Profile</h1>
+          <p className="mt-2 text-neutral-600">
+            Manage your contact details, vehicle, and service area.
+          </p>
+        </Card>
 
-      {extrasError && <ErrorBanner className="mt-4 max-w-form">{extrasError}</ErrorBanner>}
+        {extrasError && <ErrorBanner className="w-full">{extrasError}</ErrorBanner>}
 
-      <Card className="mt-8 max-w-form">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+        <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all w-full">
+          <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
           <AvatarUpload
             name={user.fullName}
             currentSrc={extras?.avatarUrl ?? null}
@@ -415,6 +456,8 @@ export function CollectorProfileView() {
               Tied to your account — can&apos;t be changed here.
             </p>
           </div>
+
+          <FieldDisplayRow label="Account Type" value="🚚 Collector" />
         </div>
 
         <Divider label="Profile details" className="my-6" />
@@ -491,13 +534,14 @@ export function CollectorProfileView() {
             <AddressAutocomplete
               label="Service area base location"
               value={details.serviceArea}
-              placeholder="e.g. Gulshan, Dhaka"
-              onChange={handleAddressQueryChange}
-              suggestions={addressSuggestions}
-              onSelectSuggestion={handleSelectAddressSuggestion}
-              isLoading={isLoadingAddressSuggestions}
-              error={addressSuggestionsError}
               disabled={!extras || detailsSave.isSaving}
+              onChange={(event) =>
+                setDetails((prev) => ({ ...prev, serviceArea: event.target.value }))
+              }
+              options={[
+                { value: "", label: "Select an area..." },
+                ...ALL_SERVICE_AREAS.map((area: string) => ({ value: area, label: area }))
+              ]}
             />
             <p className="mt-1 text-label text-neutral-500">
               Search for your base location to drop a pin, then click anywhere on the map to fine-tune it. Pickup requests within your radius will notify you automatically.
@@ -557,6 +601,52 @@ export function CollectorProfileView() {
           </div>
         </div>
       </Card>
+
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        <ChangePasswordSection hasPassword={user.hasPassword} />
+        <DeleteAccountSection hasPassword={user.hasPassword} />
+      </div>
+
+      <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all w-full">
+        <h3 className="text-xl font-bold text-neutral-900 mb-6">Notification Preferences</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+            <input
+              type="checkbox"
+              className="h-5 w-5 accent-primary-600 rounded shrink-0"
+              checked={extras?.emailNotificationsEnabled ?? false}
+              disabled={!extras}
+              onChange={(event) => void handleToggleNotification("email", event.target.checked)}
+            />
+            Email me about job offers &amp; pickup updates
+          </label>
+          <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+            <input
+              type="checkbox"
+              className="h-5 w-5 accent-primary-600 rounded shrink-0"
+              checked={extras?.smsNotificationsEnabled ?? false}
+              disabled={!extras}
+              onChange={(event) => void handleToggleNotification("sms", event.target.checked)}
+            />
+            Text me about job offers &amp; pickup updates
+          </label>
+          <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+            <input
+              type="checkbox"
+              className="h-5 w-5 accent-primary-600 rounded shrink-0"
+              checked={extras?.rewardsEmailNotificationsEnabled ?? false}
+              disabled={!extras}
+              onChange={(event) => void handleToggleNotification("rewardsEmail", event.target.checked)}
+            />
+            Email me about ratings &amp; recognition
+          </label>
+        </div>
+        {!extras && (
+          <p className="text-caption text-neutral-500 mt-4">Loading your saved preferences…</p>
+        )}
+        {notificationError && <ErrorBanner className="mt-4">{notificationError}</ErrorBanner>}
+      </Card>
+      </div>
     </PageContainer>
   );
 }

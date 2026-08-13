@@ -100,6 +100,7 @@ offersRouter.post(
       title: "New Offer Received",
       message: `A collector has submitted a new bid on your pickup request.`,
       relatedPickupRequestId: pickup.id,
+      emailPreference: "emailNotificationsEnabled",
     });
 
     sendData(res, 201, { offer: toOfferSummary(offer) });
@@ -211,6 +212,7 @@ offersRouter.post(
       title: "Offer Accepted!",
       message: `Your bid for the pickup request has been accepted. You have been assigned the pickup.`,
       relatedPickupRequestId: offer.pickupRequestId,
+      emailPreference: "emailNotificationsEnabled",
     });
 
     // Notify the other bidders that they didn't get this one

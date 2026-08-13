@@ -17,15 +17,19 @@ import {
 import { getLoadSizeKgRange } from "../lib/loadSize";
 import { emitToRoom } from "../realtime/emitToRoom";
 import { PICKUP_STATUS_EVENT } from "../realtime/pickupEvents";
+<<<<<<< HEAD
 import { createPickupRequestSchema } from "./pickups.schemas";
 import { computeRecyclingReminder } from "../lib/recyclingPattern";
 import { isWithinRadiusKm } from "../lib/geoDistance";
+=======
+import { createPickupRequestSchema, ratePickupSchema } from "./pickups.schemas";
+>>>>>>> origin/main
 
 export const pickupsRouter = Router();
 
 const PICKUP_LIST_LIMIT = 50;
 
-function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[] }) {
+function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[], rating?: any }) {
   const acceptedOffer = pickup.offers?.find(o => o.status === "ACCEPTED");
   return {
     id: pickup.id,
@@ -44,7 +48,12 @@ function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], o
     pickupFormattedAddress: pickup.pickupFormattedAddress,
     latitude: pickup.latitude,
     longitude: pickup.longitude,
+    serviceArea: pickup.serviceArea,
+    preferredCollectorId: pickup.preferredCollectorId,
+    isExclusiveToPreferred: pickup.isExclusiveToPreferred,
+    isBulk: pickup.isBulk,
     bidAmountsPerKg: acceptedOffer?.bidAmountsPerKg ?? null,
+    hasRating: !!pickup.rating,
     createdAt: pickup.createdAt,
     updatedAt: pickup.updatedAt,
   };
@@ -53,6 +62,8 @@ function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], o
 function toPickupDetail(
   pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[] },
   weightRecord: WeightRecord | null,
+  rating?: { score: number; comment: string | null; createdAt: Date } | null,
+  pointsEarned?: number | null,
 ) {
   return {
     ...toPickupSummary(pickup),
@@ -64,6 +75,14 @@ function toPickupDetail(
           loggedAt: weightRecord.loggedAt,
         }
       : null,
+    rating: rating
+      ? {
+          score: rating.score,
+          comment: rating.comment,
+          createdAt: rating.createdAt,
+        }
+      : null,
+    pointsEarned: pointsEarned ?? null,
   };
 }
 
@@ -78,7 +97,15 @@ pickupsRouter.post(
       sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    const { items, timeSlotStart, timeSlotEnd, placeId, formattedAddress, latitude, longitude } = parsed.data;
+    const { items, timeSlotStart, timeSlotEnd, placeId, formattedAddress, latitude, longitude, serviceArea, preferredCollectorId, isExclusiveToPreferred, isBulk, estimatedTotalWeight } = parsed.data;
+
+    if (isBulk) {
+      const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+      if (!user || user.accountType !== "BUSINESS") {
+        sendError(res, 403, "FORBIDDEN", "Only Business accounts can create Bulk Pickups.");
+        return;
+      }
+    }
 
     let resolvedAddress: { formattedAddress: string; latitude: number | null; longitude: number | null };
 
@@ -122,13 +149,23 @@ pickupsRouter.post(
       }
     }
 
-    const { minKg, maxKg } = items.reduce(
-      (sum, item) => {
-        const range = getLoadSizeKgRange(item.loadSize);
-        return { minKg: sum.minKg + range.minKg, maxKg: sum.maxKg + range.maxKg };
-      },
-      { minKg: 0, maxKg: 0 },
-    );
+    let minKg = 0;
+    let maxKg = 0;
+
+    if (estimatedTotalWeight !== undefined) {
+      minKg = estimatedTotalWeight;
+      maxKg = estimatedTotalWeight;
+    } else {
+      const calc = items.reduce(
+        (sum, item) => {
+          const range = getLoadSizeKgRange(item.loadSize);
+          return { minKg: sum.minKg + range.minKg, maxKg: sum.maxKg + range.maxKg };
+        },
+        { minKg: 0, maxKg: 0 },
+      );
+      minKg = calc.minKg;
+      maxKg = calc.maxKg;
+    }
 
     const pickup = await prisma.pickupRequest.create({
       data: {
@@ -142,6 +179,10 @@ pickupsRouter.post(
         pickupFormattedAddress: resolvedAddress.formattedAddress,
         latitude: resolvedAddress.latitude,
         longitude: resolvedAddress.longitude,
+        serviceArea,
+        preferredCollectorId,
+        isExclusiveToPreferred,
+        isBulk,
         weightRecord: {
           create: {
             estimatedMinKg: minKg,
@@ -196,7 +237,7 @@ pickupsRouter.get(
       where: { requesterId: req.user!.id },
       orderBy: { createdAt: "desc" },
       take: PICKUP_LIST_LIMIT,
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } } },
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true },
     });
 
     sendData(res, 200, { pickups: pickups.map(toPickupSummary) });
@@ -244,9 +285,25 @@ pickupsRouter.get(
       );
       return;
     }
+    
+    if (!collectorProfile?.serviceArea) {
+      sendError(
+        res,
+        403,
+        "COLLECTOR_SERVICE_AREA_MISSING",
+        "You must select a service area in your profile to view open pickup requests.",
+      );
+      return;
+    }
 
     const pickups = await prisma.pickupRequest.findMany({
-      where: { status: PickupStatus.PENDING },
+      where: { 
+        status: PickupStatus.PENDING,
+        OR: [
+          { isExclusiveToPreferred: { not: true } },
+          { preferredCollectorId: req.user!.id }
+        ]
+      },
       orderBy: { createdAt: "desc" },
       take: PICKUP_LIST_LIMIT,
       include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } } },
@@ -291,7 +348,7 @@ pickupsRouter.get(
       return;
     }
 
-    const [items, weightRecord, offers] = await Promise.all([
+    const [items, weightRecord, offers, rating, pointsTxn] = await Promise.all([
       prisma.pickupRequestItem.findMany({
         where: { pickupRequestId: access.pickup.id },
         orderBy: { createdAt: "asc" },
@@ -302,9 +359,15 @@ pickupsRouter.get(
       prisma.offer.findMany({
         where: { pickupRequestId: access.pickup.id, status: OfferStatus.ACCEPTED },
       }),
+      prisma.rating.findUnique({
+        where: { pickupRequestId: access.pickup.id },
+      }),
+      prisma.greenPointsTransaction.findFirst({
+        where: { pickupRequestId: access.pickup.id },
+      }),
     ]);
 
-    sendData(res, 200, { pickup: toPickupDetail({ ...access.pickup, items, offers }, weightRecord) });
+    sendData(res, 200, { pickup: toPickupDetail({ ...access.pickup, items, offers }, weightRecord, rating, pointsTxn?.points ?? null) });
   }),
 );
 
@@ -491,5 +554,80 @@ pickupsRouter.get(
         },
       })),
     });
+  }),
+);
+
+pickupsRouter.post(
+  "/:id/rate",
+  requireAuth,
+  requireRole("USER"),
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    
+    const parsed = ratePickupSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
+      return;
+    }
+    const { score, comment } = parsed.data;
+
+    const pickup = await prisma.pickupRequest.findUnique({ where: { id } });
+    if (!pickup) {
+      sendError(res, 404, "NOT_FOUND", "Pickup not found.");
+      return;
+    }
+    if (pickup.requesterId !== req.user!.id) {
+      sendError(res, 403, "FORBIDDEN", "Only the requester can rate this pickup.");
+      return;
+    }
+    if (pickup.status !== PickupStatus.COMPLETED) {
+      sendError(res, 400, "INVALID_STATUS", "You can only rate a completed pickup.");
+      return;
+    }
+    if (!pickup.assignedCollectorId) {
+      sendError(res, 400, "NO_COLLECTOR", "No collector was assigned to this pickup.");
+      return;
+    }
+
+    const existingRating = await prisma.rating.findUnique({ where: { pickupRequestId: id } });
+    if (existingRating) {
+      sendError(res, 409, "ALREADY_RATED", "You have already rated this pickup.");
+      return;
+    }
+
+    const assignedCollectorId = pickup.assignedCollectorId;
+    
+    await prisma.$transaction(async (tx) => {
+      await tx.rating.create({
+        data: {
+          pickupRequestId: id,
+          raterId: req.user!.id,
+          collectorId: assignedCollectorId,
+          score,
+          comment,
+        },
+      });
+
+      const profile = await tx.collectorProfile.findUnique({
+        where: { userId: assignedCollectorId },
+      });
+      if (profile) {
+        const oldTotal = profile.totalRatings;
+        const oldAvg = profile.averageRating ?? 0;
+        const newTotal = oldTotal + 1;
+        const newAvg = ((oldAvg * oldTotal) + score) / newTotal;
+
+        await tx.collectorProfile.update({
+          where: { userId: assignedCollectorId },
+          data: {
+            totalRatings: newTotal,
+            averageRating: newAvg,
+          },
+        });
+      }
+    });
+
+    sendData(res, 201, { success: true });
   }),
 );

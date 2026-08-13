@@ -24,6 +24,7 @@ const sizeClasses: Record<AvatarSize, string> = {
 
 const accentFillClasses: Record<RoleAccent, string> = {
   user: "bg-role-user-500",
+  business: "bg-role-business-500",
   collector: "bg-role-collector-500",
   recyclingCompany: "bg-role-recycler-500",
   admin: "bg-role-admin-500",

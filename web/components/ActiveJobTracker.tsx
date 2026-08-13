@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Ban, Compass, MapPin, Navigation } from "lucide-react";
+import { Ban, Compass, MapPin, Navigation, Scale } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { CategoryQuantityRow } from "@/components/CategoryQuantityRow";
@@ -94,13 +94,8 @@ export function ActiveJobTracker() {
 
   return (
     <div className="w-full mb-12">
-      <div className="mb-6">
-        <h2 className="text-h2 text-neutral-900">Active Job</h2>
-        <p className="mt-1 text-body text-neutral-500">Track your current assignment and share live location.</p>
-      </div>
-
       {loadState === "loading" && (
-        <Card className="mt-8 text-center">
+        <Card className="glass-panel border-0 shadow-sm mt-8 text-center p-8">
           <p className="text-body-sm text-neutral-500">Loading your active job…</p>
         </Card>
       )}
@@ -108,19 +103,19 @@ export function ActiveJobTracker() {
       {loadState === "error" && <ErrorBanner className="mt-8">{loadError}</ErrorBanner>}
 
       {loadState === "ready" && jobs.length === 0 && (
-        <Card className="mt-8 flex flex-col items-center gap-3 py-10 text-center">
-          <Icon icon={Compass} size="lg" className="text-neutral-400" aria-hidden />
+        <Card className="glass-panel mt-8 flex flex-col items-center gap-4 py-16 text-center shadow-lg border-0 rounded-2xl">
+          <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-primary-100 text-primary-600">
+            <Icon icon={Compass} size="lg" aria-hidden />
+          </div>
           <div>
-            <p className="text-h4 text-neutral-900">No active job</p>
-            <p className="mt-1 max-w-md text-body-sm text-neutral-500">
-              Once one of your bids is accepted, the job will show up here with live tracking
-              controls.
+            <p className="font-heading text-h3 text-neutral-900">No active job</p>
+            <p className="mt-2 text-body-lg text-neutral-500 max-w-sm mx-auto">
+              Once one of your bids is accepted, the job will show up here with live tracking controls.
             </p>
           </div>
-          <div className="flex flex-wrap justify-center gap-3">
-            <Button href="/collector/jobs">Browse available jobs</Button>
-            {}
-            <Button variant="secondary" onClick={() => void fetchJobs()}>
+          <div className="flex flex-wrap justify-center gap-3 mt-4">
+            <Button href="/collector/jobs" className="px-8">Browse available jobs</Button>
+            <Button variant="secondary" onClick={() => void fetchJobs()} className="px-8">
               Check for updates
             </Button>
           </div>
@@ -209,16 +204,6 @@ function ActiveJobCard({
 
   const [geoError, setGeoError] = React.useState<string | null>(null);
 
-  const [canMarkEnRoute, setCanMarkEnRoute] = React.useState(true);
-
-  React.useEffect(() => {
-    const pickupDate = new Date(job.timeSlotStart);
-    const today = new Date();
-    const pickupDay = new Date(pickupDate.getFullYear(), pickupDate.getMonth(), pickupDate.getDate());
-    const currentDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    setCanMarkEnRoute(currentDay.getTime() >= pickupDay.getTime());
-  }, [job.timeSlotStart]);
-
   const watchIdRef = React.useRef<number | null>(null);
   const lastEmitRef = React.useRef<{ at: number; lat: number; lng: number } | null>(null);
 
@@ -240,7 +225,7 @@ function ActiveJobCard({
         const { latitude, longitude } = position.coords;
         
         if (statusRef.current === "EN_ROUTE") {
-          const distanceToUser = haversineDistanceMeters(latitude, longitude, job.latitude, job.longitude);
+          const distanceToUser = haversineDistanceMeters(latitude, longitude, job.latitude || 0, job.longitude || 0);
           if (distanceToUser <= 50) {
             getTrackingSocket().emit(PICKUP_STATUS_UPDATE_EVENT, { pickupRequestId: job.id, status: "ARRIVED" });
           }
@@ -346,8 +331,8 @@ function ActiveJobCard({
   const nextStatus = nextStatusInSequence(status);
 
   return (
-    <Card className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <Card className="glass-panel border-0 shadow-lg flex flex-col gap-4 rounded-2xl">
+      <div className="flex flex-wrap items-start justify-between gap-3 p-2">
         <div className="flex items-center gap-2 text-body-sm text-neutral-700">
           <Icon icon={MapPin} size="sm" className="text-neutral-500" aria-hidden />
           <span>{job.pickupFormattedAddress}</span>
@@ -389,42 +374,62 @@ function ActiveJobCard({
         {status === "VERIFYING_WEIGHTS" ? (
           <p className="text-body-sm text-neutral-500 italic text-center py-4">Waiting for household to verify weights...</p>
         ) : status === "ARRIVED" ? (
-          <div className="flex flex-col gap-4 mt-2">
-            <p className="text-body-sm text-neutral-600">Enter the exact weight of each item collected.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {job.items.map((item) => (
-                <Input
-                  key={item.category}
-                  label={`${item.category} Weight (KG)`}
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  step="any"
-                  value={exactWeights[item.category] ?? ""}
-                  onChange={(e) => setExactWeights(prev => ({ ...prev, [item.category]: e.target.value }))}
-                />
-              ))}
+          <div className="flex flex-col gap-5 mt-4">
+            <div className="bg-primary-50/50 border border-primary-100 p-5 rounded-2xl flex flex-col gap-5">
+              <div className="flex items-center gap-3 border-b border-primary-100/50 pb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 text-primary-600">
+                  <Icon icon={Scale} size="sm" />
+                </div>
+                <div>
+                  <h3 className="text-body-lg font-semibold text-neutral-900 leading-tight">Weigh items</h3>
+                  <p className="text-body-sm text-neutral-600">Enter the exact weight (KG) of each item collected.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                {job.items.map((item) => (
+                  <Input
+                    key={item.category}
+                    label={`${item.category} Weight (KG)`}
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="any"
+                    placeholder="0.0"
+                    className="bg-white"
+                    value={exactWeights[item.category] ?? ""}
+                    onChange={(e) => setExactWeights(prev => ({ ...prev, [item.category]: e.target.value }))}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center mt-2">
+              <Button variant="ghost" size="sm" onClick={() => getTrackingSocket().emit(PICKUP_STATUS_UPDATE_EVENT, { pickupRequestId: job.id, status: "EN_ROUTE" })}>
+                Back to En Route
+              </Button>
               <Button size="sm" disabled={submittingWeights} onClick={handleSubmitWeights}>
-                {submittingWeights ? "Submitting..." : "Submit exact weights"}
+                {submittingWeights ? "Submitting..." : "Submit weights"}
               </Button>
             </div>
           </div>
         ) : status === "EN_ROUTE" ? (
-          <div className="flex justify-center text-center py-4">
-            <p className="text-body-sm text-neutral-500 italic">Driving to destination... Location is updating automatically. Status will change to Arrived once you are within 50 meters.</p>
+          <div className="flex flex-col gap-4 py-4">
+            <p className="text-body-sm text-neutral-500 italic text-center">Driving to destination... Location is updating automatically.</p>
+            <div className="flex justify-end">
+              <Button size="sm" onClick={() => {
+                setStatusError(null);
+                setAdvancing(true);
+                getTrackingSocket().emit(PICKUP_STATUS_UPDATE_EVENT, { pickupRequestId: job.id, status: "ARRIVED" });
+              }}>
+                Mark as Arrived
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-end gap-2">
-            {nextStatus === "EN_ROUTE" && !canMarkEnRoute && (
-              <p className="text-body-sm text-neutral-500 text-right">
-                You can only start this job on the scheduled pickup date ({new Date(job.timeSlotStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}).
-              </p>
-            )}
             <Button 
               size="sm" 
-              disabled={!nextStatus || advancing || (nextStatus === "EN_ROUTE" && !canMarkEnRoute)} 
+              disabled={!nextStatus || advancing} 
               onClick={handleAdvanceStatus}
             >
               {advancing ? "Updating…" : nextStatus ? `Mark as ${PICKUP_STATUS_LABEL[nextStatus]}` : "Job completed"}

@@ -44,11 +44,12 @@ const envSchema = z.object({
   CLOUDINARY_API_SECRET: z.string().optional().default(""),
 
   SMTP_HOST: z.string().optional().default(""),
-  SMTP_PORT: z.coerce.number().int().positive().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(465),
   SMTP_USER: z.string().optional().default(""),
   SMTP_PASS: z.string().optional().default(""),
   EMAIL_USER: z.string().optional().default(""),
   EMAIL_PASS: z.string().optional().default(""),
+  EMAIL_FROM: z.string().optional().default("WasteWise <onboarding@resend.dev>"),
 
   SENTRY_DSN: z.string().optional().default(""),
   LOG_LEVEL: z

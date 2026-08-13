@@ -1,9 +1,11 @@
 import { AuthPageShell } from "../_components/AuthPageShell";
+import { Suspense } from "react";
 import { SignupForm, type SignupRoleChoice } from "./SignupForm";
 
 
 const roleParamToChoice: Record<string, SignupRoleChoice> = {
-  HOUSEHOLD: "HOUSEHOLD",
+  USER: "HOUSEHOLD",
+  INDIVIDUAL: "HOUSEHOLD",
   BUSINESS: "BUSINESS",
   COLLECTOR: "COLLECTOR",
   RECYCLING_COMPANY: "RECYCLING_COMPANY",
@@ -15,12 +17,13 @@ function resolveDefaultRoleChoice(roleParam: string | string[] | undefined): Sig
   return roleParamToChoice[normalized] ?? "HOUSEHOLD";
 }
 
-export default function SignupPage({
+export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: { role?: string | string[] };
+  searchParams: Promise<{ role?: string | string[] }>;
 }) {
-  const defaultRoleChoice = resolveDefaultRoleChoice(searchParams.role);
+  const resolvedSearchParams = await searchParams;
+  const defaultRoleChoice = resolveDefaultRoleChoice(resolvedSearchParams.role);
 
   return (
     <AuthPageShell
@@ -35,7 +38,9 @@ export default function SignupPage({
         </>
       }
     >
-      <SignupForm defaultRoleChoice={defaultRoleChoice} />
+      <Suspense fallback={<div className="flex justify-center p-8 text-neutral-500">Loading signup...</div>}>
+        <SignupForm defaultRoleChoice={defaultRoleChoice} />
+      </Suspense>
     </AuthPageShell>
   );
 }

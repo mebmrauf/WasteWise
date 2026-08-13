@@ -15,6 +15,19 @@ enum Role {
   ADMIN
 }
 
+enum MembershipLevel {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum PlatinumGift {
+  TREE_SAPLING
+  ECO_TOTE_BAG
+  REUSABLE_WATER_BOTTLE
+}
+
 enum AccountType {
   HOUSEHOLD
   BUSINESS
@@ -74,6 +87,23 @@ enum OfferStatus {
   WITHDRAWN
 }
 
+enum BulkRequestStatus {
+  OPEN_FOR_BIDDING
+  RECYCLING_COMPANY_ASSIGNED
+  EN_ROUTE
+  ARRIVED
+  IN_PROGRESS
+  VERIFYING_WEIGHTS
+  COMPLETED
+  CANCELLED
+}
+
+enum QuotationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 enum ComplaintStatus {
   OPEN
   IN_REVIEW
@@ -95,6 +125,15 @@ enum GreenPointsTransactionType {
   REDEEMED
 }
 
+enum TransactionCategory {
+  PICKUP
+  BONUS
+  REFERRAL
+  LOYALTY
+  REDEMPTION
+  OTHER
+}
+
 enum MobileOperator {
   GRAMEENPHONE
   BANGLALINK
@@ -114,27 +153,55 @@ enum MobileRechargeStatus {
 }
 
 model User {
-  id              String       @id @default(cuid())
-  email           String       @unique
-  phone           String?      @unique
-  passwordHash    String?
-  fullName        String
-  role            Role         @default(USER)
-  accountType     AccountType?
-  isEmailVerified Boolean      @default(false)
+  id                              String       @id @default(cuid())
+  email                           String       @unique
+  phone                           String?      @unique
+  passwordHash                    String?
+  fullName                        String
+  role                            Role         @default(USER)
+  accountType                     AccountType?
+  isEmailVerified                 Boolean      @default(false)
+  emailVerificationReminderSentAt DateTime?
 
-  placeId                   String?
-  formattedAddress          String?
-  latitude                  Float?
-  longitude                 Float?
-  avatarUrl                 String?
-  emailNotificationsEnabled Boolean @default(true)
-  smsNotificationsEnabled   Boolean @default(true)
+  placeId                          String?
+  formattedAddress                 String?
+  latitude                         Float?
+  longitude                        Float?
+  avatarUrl                        String?
+  emailNotificationsEnabled        Boolean @default(true)
+  smsNotificationsEnabled          Boolean @default(true)
+  rewardsEmailNotificationsEnabled Boolean @default(true)
 
   greenPointsBalance Int @default(0)
+  totalGreenPoints   Int @default(0)
+  membershipLevel    MembershipLevel @default(BRONZE)
+  membershipBadge    String @default("Bronze Badge")
+
+  lastDiscountClaimDate    DateTime?
+  nextDiscountEligibleDate DateTime?
+  discountCouponClaimed    Boolean   @default(false)
+
+  selectedGift             PlatinumGift?
+  giftClaimDate            DateTime?
+  nextGiftEligibleDate     DateTime?
+  giftClaimed              Boolean   @default(false)
+
+  lastTreePlantationClaimDate    DateTime?
+  nextTreePlantationEligibleDate DateTime?
+  treePlantationClaimed          Boolean   @default(false)
+  sustainabilityCertificateUrl   String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  referralCode          String? @unique
+  referredById          String?
+  referredBy            User?   @relation("Referrals", fields: [referredById], references: [id])
+  referredUsers         User[]  @relation("Referrals")
+  referralRewardClaimed Boolean @default(false)
+  successfulReferrals   Int     @default(0)
+  referralPointsEarned  Int     @default(0)
+  milestonesClaimed     Int[]   @default([])
 
   oauthAccounts          OAuthAccount[]
   emailVerificationCodes EmailVerificationCode[]
@@ -143,12 +210,18 @@ model User {
 
   collectorProfile        CollectorProfile?        @relation("CollectorProfileUser")
   recyclingCompanyProfile RecyclingCompanyProfile? @relation("RecyclingCompanyProfileUser")
+  businessProfile         BusinessProfile?         @relation("BusinessProfileUser")
 
   collectorVerificationsReviewed        CollectorProfile[]        @relation("CollectorVerificationReviewer")
   recyclingCompanyVerificationsReviewed RecyclingCompanyProfile[] @relation("RecyclingCompanyVerificationReviewer")
+  businessVerificationsReviewed         BusinessProfile[]         @relation("BusinessVerificationReviewer")
 
   pickupRequestsMade     PickupRequest[] @relation("PickupRequester")
   pickupRequestsAssigned PickupRequest[] @relation("AssignedCollector")
+
+  bulkRequestsMade      BulkMarketplaceRequest[] @relation("BusinessRequests")
+  bulkRequestsAssigned  BulkMarketplaceRequest[] @relation("AssignedCompany")
+  marketplaceQuotations MarketplaceQuotation[]   @relation("CompanyQuotations")
 
   offers Offer[] @relation("CollectorOffers")
 
@@ -265,15 +338,37 @@ model RecyclingCompanyProfile {
   userId String @unique
   user   User   @relation("RecyclingCompanyProfileUser", fields: [userId], references: [id], onDelete: Cascade)
 
-  companyName        String
-  district           String
-  currentInventoryKg Float  @default(0)
+  companyName            String
+  tradeLicenseNumber     String?
+  district               String
+  serviceAreas           String[]
+  acceptedWasteMaterials WasteCategory[]
+  currentInventoryKg     Float           @default(0)
 
   verificationStatus            VerificationStatus @default(PENDING)
   verificationDocumentUrl       String?
   verificationReviewedAt        DateTime?
   verificationReviewedByAdminId String?
   verificationReviewedByAdmin   User?              @relation("RecyclingCompanyVerificationReviewer", fields: [verificationReviewedByAdminId], references: [id])
+  verificationRejectionReason   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BusinessProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation("BusinessProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  businessName       String
+  tradeLicenseNumber String?
+
+  verificationStatus            VerificationStatus @default(PENDING)
+  verificationDocumentUrl       String?
+  verificationReviewedAt        DateTime?
+  verificationReviewedByAdminId String?
+  verificationReviewedByAdmin   User?              @relation("BusinessVerificationReviewer", fields: [verificationReviewedByAdminId], references: [id])
   verificationRejectionReason   String?
 
   createdAt DateTime @default(now())
@@ -289,6 +384,10 @@ model PickupRequest {
   assignedCollectorId String?
   assignedCollector   User?   @relation("AssignedCollector", fields: [assignedCollectorId], references: [id])
 
+  preferredCollectorId   String?
+  isExclusiveToPreferred Boolean @default(false)
+  isBulk                 Boolean @default(false)
+
   items PickupRequestItem[]
 
   timeSlotStart DateTime
@@ -299,6 +398,7 @@ model PickupRequest {
   pickupFormattedAddress String
   latitude               Float?
   longitude              Float?
+  serviceArea            String?
 
   offers                  Offer[]
   weightRecord            WeightRecord?
@@ -390,8 +490,11 @@ model WeightRecord {
 model Rating {
   id String @id @default(cuid())
 
-  pickupRequestId String        @unique
-  pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+  pickupRequestId String?        @unique
+  pickupRequest   PickupRequest? @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+
+  bulkRequestId String?                 @unique
+  bulkRequest   BulkMarketplaceRequest? @relation(fields: [bulkRequestId], references: [id], onDelete: Cascade)
 
   raterId String
   rater   User   @relation("RaterRatings", fields: [raterId], references: [id])
@@ -483,9 +586,15 @@ model GreenPointsTransaction {
   pickupRequestId String?
   pickupRequest   PickupRequest? @relation(fields: [pickupRequestId], references: [id])
 
-  points Int
+  points Int // Keeping this as the master source of truth for total points changed in transaction for backward compatibility
   type   GreenPointsTransactionType
   description String
+
+  basePoints   Int?
+  bonusPoints  Int?
+  totalPoints  Int?
+  category     TransactionCategory @default(OTHER)
+  rewardReason Json?
 
   mobileRechargeTransaction MobileRechargeTransaction?
 
@@ -518,4 +627,59 @@ model MobileRechargeTransaction {
   updatedAt DateTime @updatedAt
 
   @@index([userId, createdAt])
+}
+
+model BulkMarketplaceRequest {
+  id                String  @id @default(cuid())
+  businessId        String
+  business          User    @relation("BusinessRequests", fields: [businessId], references: [id])
+  assignedCompanyId String?
+  assignedCompany   User?   @relation("AssignedCompany", fields: [assignedCompanyId], references: [id])
+
+  wasteTypes          Json
+  estimatedWeightKg   Float
+  pickupAddress       String
+  latitude            Float?
+  longitude           Float?
+  placeId             String?
+  preferredPickupDate DateTime
+  images              String[]
+  additionalNotes     String?
+  status              BulkRequestStatus @default(OPEN_FOR_BIDDING)
+
+  verifiedWeights       Json?
+  verifiedTotalWeightKg Float?
+  collectionPhotos      String[]
+
+  quotations MarketplaceQuotation[]
+  rating     Rating?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([status])
+}
+
+model MarketplaceQuotation {
+  id        String                 @id @default(cuid())
+  requestId String
+  request   BulkMarketplaceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  companyId String
+  company   User   @relation("CompanyQuotations", fields: [companyId], references: [id])
+
+  purchasePrice       Float
+  vehicleType         VehicleType
+  estimatedPickupDate DateTime
+  estimatedPickupTime String?
+  additionalNotes     String?
+
+  status QuotationStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([requestId, companyId])
+  @@index([companyId])
 }

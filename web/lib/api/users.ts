@@ -20,6 +20,22 @@ export interface CollectorProfileSummary {
   totalRatings: number;
 }
 
+export interface RecyclingCompanyProfileSummary {
+  companyName: string;
+  tradeLicenseNumber: string | null;
+  district: string;
+  serviceAreas: string[];
+  acceptedWasteMaterials: string[];
+  currentInventoryKg: number;
+  verificationStatus: VerificationStatus;
+}
+
+export interface BusinessProfileSummary {
+  businessName: string;
+  tradeLicenseNumber: string | null;
+  verificationStatus: VerificationStatus;
+}
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -28,6 +44,7 @@ export interface UserProfile {
   role: Role;
   accountType: AccountType | null;
   isEmailVerified: boolean;
+  hasPassword: boolean;
   formattedAddress: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -35,9 +52,12 @@ export interface UserProfile {
   avatarUrl: string | null;
   emailNotificationsEnabled: boolean;
   smsNotificationsEnabled: boolean;
+  rewardsEmailNotificationsEnabled: boolean;
   createdAt: string;
   updatedAt: string;
   collectorProfile: CollectorProfileSummary | null;
+  recyclingCompanyProfile: RecyclingCompanyProfileSummary | null;
+  businessProfile: BusinessProfileSummary | null;
 }
 
 export function getMyProfile(): Promise<{ user: UserProfile }> {
@@ -53,6 +73,7 @@ export interface UpdateProfileInput {
   longitude?: number;
   emailNotificationsEnabled?: boolean;
   smsNotificationsEnabled?: boolean;
+  rewardsEmailNotificationsEnabled?: boolean;
 }
 
 export function updateMyProfile(input: UpdateProfileInput): Promise<{ user: UserProfile }> {
@@ -99,5 +120,74 @@ export function updateCollectorProfile(
     method: "PATCH",
     body: JSON.stringify(input),
     headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export interface UpdateBusinessProfileInput {
+  businessName?: string;
+  tradeLicenseNumber?: string | null;
+}
+
+export function updateBusinessProfile(
+  input: UpdateBusinessProfileInput,
+): Promise<{ businessProfile: BusinessProfileSummary }> {
+  return authFetch<{ businessProfile: BusinessProfileSummary }>("/users/me/business-profile", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export interface ChangePasswordInput {
+  currentPassword?: string;
+  newPassword: string;
+}
+
+export function changeMyPassword(input: ChangePasswordInput): Promise<{ success: boolean }> {
+  return authFetch<{ success: boolean }>("/users/me/password", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export interface DeleteAccountInput {
+  password?: string;
+}
+
+export function deleteMyAccount(input: DeleteAccountInput = {}): Promise<{ success: boolean }> {
+  return authFetch<{ success: boolean }>("/users/me", {
+    method: "DELETE",
+    body: JSON.stringify(input),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export interface CollectorRating {
+  id: string;
+  score: number;
+  comment: string | null;
+  createdAt: string;
+}
+
+export function getMyRatings(): Promise<{ ratings: CollectorRating[] }> {
+  return authFetch<{ ratings: CollectorRating[] }>("/users/me/ratings", {
+    method: "GET",
+  });
+}
+
+export interface CollectorCategoryStat {
+  category: string;
+  weight: number;
+}
+
+export interface CollectorDailyStat {
+  date: string;
+  weight: number;
+}
+
+export function getMyStats(): Promise<{ categoryStats: CollectorCategoryStat[]; dailyStats: CollectorDailyStat[] }> {
+  return authFetch<{ categoryStats: CollectorCategoryStat[]; dailyStats: CollectorDailyStat[] }>("/users/me/stats", {
+    method: "GET",
   });
 }

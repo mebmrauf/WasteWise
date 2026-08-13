@@ -81,9 +81,14 @@ export interface PickupRequestSummary {
   status: PickupStatus;
   placeId: string;
   pickupFormattedAddress: string;
-  latitude: number;
-  longitude: number;
-  bidAmountsPerKg?: Record<string, number> | null;
+  latitude: number | null;
+  longitude: number | null;
+  serviceArea: string | null;
+  preferredCollectorId: string | null;
+  isExclusiveToPreferred: boolean;
+  isBulk: boolean;
+  bidAmountsPerKg: Record<string, number> | null;
+  hasRating: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -101,11 +106,21 @@ interface WeightRecordSnapshot {
 
 export interface PickupRequestDetail extends PickupRequestSummary {
   weightRecord: WeightRecordSnapshot | null;
+  rating?: { score: number; comment: string | null; createdAt: string } | null;
+  pointsEarned?: number | null;
 }
 
 export function getPickupDetail(pickupRequestId: string): Promise<{ pickup: PickupRequestDetail }> {
   return authFetch<{ pickup: PickupRequestDetail }>(`/pickups/${encodeURIComponent(pickupRequestId)}`, {
     method: "GET",
+  });
+}
+
+export function ratePickup(pickupRequestId: string, score: number, comment?: string): Promise<{ success: boolean }> {
+  return authFetch<{ success: boolean }>(`/pickups/${encodeURIComponent(pickupRequestId)}/rate`, {
+    method: "POST",
+    body: JSON.stringify({ score, comment }),
+    headers: { "x-csrf-token": readCsrfToken() },
   });
 }
 
@@ -117,6 +132,11 @@ export interface CreatePickupRequestInput {
   formattedAddress?: string;
   latitude?: number;
   longitude?: number;
+  serviceArea?: string;
+  preferredCollectorId?: string;
+  isExclusiveToPreferred?: boolean;
+  isBulk?: boolean;
+  estimatedTotalWeight?: number;
 }
 
 export function createPickupRequest(input: CreatePickupRequestInput): Promise<{ pickup: PickupRequestDetail }> {

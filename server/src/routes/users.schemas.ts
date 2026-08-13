@@ -13,6 +13,7 @@ export const updateProfileSchema = z
     longitude: z.number().optional(),
     emailNotificationsEnabled: z.boolean().optional(),
     smsNotificationsEnabled: z.boolean().optional(),
+    rewardsEmailNotificationsEnabled: z.boolean().optional(),
   })
   .strict();
 type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
@@ -35,6 +36,7 @@ export const updateCollectorProfileSchema = z
       .max(100, "Radius can't exceed 100 km")
       .optional(),
   })
+
   .strict()
   .superRefine((data, ctx) => {
     const hasCenter = data.serviceAreaLatitude !== undefined || data.serviceAreaLongitude !== undefined;
@@ -57,4 +59,39 @@ export const updateCollectorProfileSchema = z
       });
     }
   });
+
 type UpdateCollectorProfileInput = z.infer<typeof updateCollectorProfileSchema>;
+
+export const updateRecyclingProfileSchema = z
+  .object({
+    companyName: z.string().trim().min(1, "Company name is required").optional(),
+    tradeLicenseNumber: z.string().trim().optional().nullable(),
+    district: z.string().trim().min(1, "District is required").optional(),
+    serviceAreas: z.array(z.string()).optional(),
+    acceptedWasteMaterials: z.array(z.string()).optional(), // Will map to WasteCategory
+  })
+  .strict();
+
+export const updateBusinessProfileSchema = z
+  .object({
+    businessName: z.string().trim().min(1, "Business name is required").optional(),
+    tradeLicenseNumber: z.string().trim().optional().nullable(),
+  })
+  .strict();
+
+export const deleteAccountSchema = z
+  .object({
+    password: z.string().min(1, "Password is required").optional(),
+  })
+  .strict();
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required").optional(),
+    newPassword: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .max(72, "Password must be at most 72 characters"),
+  })
+  .strict();
+

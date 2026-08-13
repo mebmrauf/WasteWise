@@ -18,6 +18,7 @@ export const registerSchema = z
     fullName: z.string().trim().min(1, "Full name is required").max(120),
     role: selectableRole.optional().default(Role.USER),
     accountType: selectableAccountType.optional(),
+    referralCode: z.string().trim().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.role === Role.USER) {
@@ -51,3 +52,23 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 type LoginInput = z.infer<typeof loginSchema>;
+
+export const verifyEmailSchema = z.object({
+  code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code from your email"),
+});
+type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Enter a valid email address"),
+});
+type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Enter a valid email address"),
+  code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code from your email"),
+  newPassword: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(72, "Password must be at most 72 characters"),
+});
+type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

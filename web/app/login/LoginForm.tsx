@@ -47,7 +47,21 @@ export function LoginForm() {
               setIsSubmitting(false);
               return;
             }
-            router.push("/");
+            const destination =
+              user.role === "COLLECTOR"
+                ? "/collector"
+                : user.role === "RECYCLING_COMPANY"
+                  ? "/recycling/dashboard"
+                  : user.role === "USER" && user.accountType === "BUSINESS"
+                    ? "/business/dashboard"
+                    : "/dashboard";
+
+            if (!user.isEmailVerified) {
+              router.push(`/verify-email?redirect=${encodeURIComponent(destination)}`);
+              return;
+            }
+            router.push(destination);
+            router.refresh();
           })
           .catch((err: unknown) => {
             setErrorMessage(resolveLoginErrorMessage(err));
@@ -64,14 +78,22 @@ export function LoginForm() {
         required
         disabled={isSubmitting}
       />
-      <Input
-        label="Password"
-        name="password"
-        type="password"
-        autoComplete="current-password"
-        required
-        disabled={isSubmitting}
-      />
+      <div className="flex flex-col gap-1">
+        <Input
+          label="Password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          disabled={isSubmitting}
+        />
+        <a
+          href="/forgot-password"
+          className="self-end text-body-sm text-primary-600 hover:text-primary-700"
+        >
+          Forgot password?
+        </a>
+      </div>
 
       <Button type="submit" fullWidth className="mt-2" disabled={isSubmitting}>
         {isSubmitting ? "Logging in…" : "Log in"}
