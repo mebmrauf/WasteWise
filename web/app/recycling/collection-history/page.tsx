@@ -48,6 +48,7 @@ export default function CollectionHistoryPage() {
         {errorMsg && <ErrorBanner>{errorMsg}</ErrorBanner>}
 
         <RecyclingVerificationGate pendingMessage="Your recycling company account needs to be verified by an admin before you can view collection history. Check back once your profile has been approved.">
+
         {isLoading ? (
           <p className="text-neutral-500">Loading...</p>
         ) : requests.length === 0 ? (

@@ -247,20 +247,16 @@ export function CollectorProfileView() {
   return (
     <PageContainer className="py-8 lg:py-12">
       <div className="flex flex-col gap-8 w-full max-w-4xl">
-        {/* Profile Hero */}
-        <div className="rounded-3xl bg-gradient-to-br from-primary-600 to-primary-800 p-8 text-white shadow-xl relative overflow-hidden">
-          <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay"></div>
-          <div className="relative z-10">
-            <h1 className="text-3xl font-heading font-bold mb-2">Your Profile</h1>
-            <p className="text-primary-100 max-w-xl text-lg">
-              Manage your contact details, vehicle, and service area.
-            </p>
-          </div>
-        </div>
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 p-8 mb-8 rounded-2xl shadow-sm">
+          <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Your Profile</h1>
+          <p className="mt-2 text-neutral-600">
+            Manage your contact details, vehicle, and service area.
+          </p>
+        </Card>
 
         {extrasError && <ErrorBanner className="w-full">{extrasError}</ErrorBanner>}
 
-        <Card className="glass-panel border-0 shadow-lg rounded-2xl p-8 w-full">
+        <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all w-full">
           <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
           <AvatarUpload
             name={user.fullName}

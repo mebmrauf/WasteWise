@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Battery, Camera, ClipboardList, Gift, Leaf, Medal, Package, Truck, Wind, BadgeCheck } from "lucide-react";
+import { Battery, Camera, ClipboardList, Gift, Leaf, Medal, Package, Truck, Wind, BadgeCheck, Recycle } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { StatusPill } from "@/components/StatusPill";
 import { Card } from "@/components/Card";
@@ -19,22 +19,29 @@ export default function UserDashboardPage() {
   const { user } = useAuth();
   const [pickups, setPickups] = React.useState<PickupRequestSummary[]>([]);
   const [rewardsBalance, setRewardsBalance] = React.useState(0);
+  const [membershipLevel, setMembershipLevel] = React.useState<"BRONZE" | "SILVER" | "GOLD" | "PLATINUM">((user?.membershipLevel as any) || "BRONZE");
   const [isLoading, setIsLoading] = React.useState(true);
+
+  const [rewardsData, setRewardsData] = React.useState<any>(null);
 
   const fetchData = React.useCallback(async () => {
     try {
-      const [pickupsData, rewardsData] = await Promise.all([
+      const [pickupsData, fetchedRewards] = await Promise.all([
         listPickups().catch(() => ({ pickups: [] })),
-        getRewardsBalance().catch(() => ({ greenPointsBalance: 0 })),
+        getRewardsBalance().catch(() => ({ greenPointsBalance: 0, membershipLevel: user?.membershipLevel || "BRONZE" })),
       ]);
       setPickups(pickupsData.pickups);
-      setRewardsBalance(rewardsData.greenPointsBalance);
+      setRewardsBalance(fetchedRewards.greenPointsBalance);
+      if (fetchedRewards.membershipLevel) {
+        setMembershipLevel(fetchedRewards.membershipLevel as any);
+      }
+      setRewardsData(fetchedRewards);
     } catch (err) {
       console.error("Failed to load dashboard stats", err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user?.membershipLevel]);
 
   React.useEffect(() => {
     fetchData();
@@ -54,12 +61,12 @@ export default function UserDashboardPage() {
 
   const currentYear = new Date().getFullYear().toString();
   const completedPickups = pickups.filter(p => p.status === "COMPLETED");
-  
+
   let totalRecycled = 0;
   let totalEarnings = 0;
   let co2OffsetBase = 0;
   let treesSavedBase = 0;
-  
+
   const yearlyMap: Record<string, number> = {};
   const monthlyMap: Record<string, number> = {};
 
@@ -68,10 +75,10 @@ export default function UserDashboardPage() {
     p.items.forEach(item => {
       const w = item.exactWeightKg || 0;
       weight += w;
-      
+
       const bidPerKg = p.bidAmountsPerKg?.[item.category] || 0;
       totalEarnings += w * bidPerKg;
-      
+
       // Category-specific eco impact multipliers
       switch (item.category) {
         case "PAPER":
@@ -100,11 +107,11 @@ export default function UserDashboardPage() {
     });
     totalRecycled += weight;
 
-    const dateStr = p.createdAt.split("T")[0]; 
+    const dateStr = p.createdAt.split("T")[0];
     if (dateStr) {
       const year = dateStr.split("-")[0];
       const monthNum = parseInt(dateStr.split("-")[1] || "1", 10);
-      
+
       yearlyMap[year] = (yearlyMap[year] || 0) + weight;
 
       if (year === currentYear) {
@@ -124,24 +131,23 @@ export default function UserDashboardPage() {
     .map(([label, weight]) => ({ label, weight }))
     .sort((a, b) => monthOrder.indexOf(a.label) - monthOrder.indexOf(b.label));
 
-  const co2Offset = co2OffsetBase.toFixed(1); 
-  const treesSaved = treesSavedBase.toFixed(2); 
+  const co2Offset = co2OffsetBase.toFixed(1);
+  const treesSaved = treesSavedBase.toFixed(2);
 
-  // Recent Pickups logic
-  const recentPickupsWithEarnings = [...completedPickups]
-    .sort((a, b) => new Date(b.timeSlotStart).getTime() - new Date(a.timeSlotStart).getTime())
-    .slice(0, 3)
-    .map(p => {
-      let weight = 0;
-      let earnings = 0;
-      p.items.forEach(item => {
-        const w = item.exactWeightKg || 0;
-        weight += w;
-        const bidPerKg = p.bidAmountsPerKg?.[item.category] || 0;
-        earnings += w * bidPerKg;
-      });
-      return { ...p, totalWeight: weight, totalEarnings: earnings };
+  // Calculate total earnings across all completed pickups
+  let totalEarningsCalc = 0;
+  completedPickups.forEach(p => {
+    p.items.forEach(item => {
+      const w = item.exactWeightKg || 0;
+      const bidPerKg = p.bidAmountsPerKg?.[item.category] || 0;
+      totalEarningsCalc += w * bidPerKg;
     });
+  });
+
+  // Recent Pickups logic (up to 4 most recent requests)
+  const recentPickupsList = [...pickups]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 4);
 
   // Active tracking banner logic
   const activePickupList = pickups.filter((p) => !["COMPLETED", "CANCELLED"].includes(p.status));
@@ -157,25 +163,32 @@ export default function UserDashboardPage() {
   });
   const nextActivePickup = sortedActivePickups.length > 0 ? sortedActivePickups[0] : null;
 
+  const isBusiness = user?.accountType === "BUSINESS";
+  const bulkPickups = pickups.filter(p => p.isBulk);
+  const openBulkRequests = bulkPickups.filter(p => p.status === "PENDING").length;
+  const activeBulkRequests = bulkPickups.filter(p => ["ASSIGNED", "EN_ROUTE", "ARRIVED", "VERIFYING_WEIGHTS"].includes(p.status)).length;
+  const completedBulkPickups = bulkPickups.filter(p => p.status === "COMPLETED").length;
+  const totalBulkRecycled = bulkPickups.filter(p => p.status === "COMPLETED").reduce((acc, p) => acc + p.items.reduce((sum, item) => sum + (item.exactWeightKg || 0), 0), 0);
+
   return (
     <PageContainer className="py-8 max-w-6xl">
       {/* Banner & Primary CTA */}
-      <div className="bg-[#114E29] text-white p-8 rounded-2xl mb-8 flex flex-col md:flex-row md:items-center justify-between shadow-lg min-h-[160px] relative overflow-hidden gap-6">
+      <Card className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-8 mb-8 bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 rounded-2xl shadow-sm relative overflow-hidden">
         <div className="relative z-10">
-          <h1 className="text-display text-white font-bold tracking-tight mb-2">
+          <h1 className="text-3xl font-bold tracking-tight text-neutral-900 mb-2">
             {greeting}, {displayName}!
           </h1>
-          <p className="text-white/90 text-body-lg max-w-xl">
+          <p className="text-neutral-600 text-body max-w-xl">
             Ready to make an impact today? Schedule a pickup or track your active collections.
           </p>
         </div>
-        
+
         <div className="relative z-10 flex items-center gap-6">
-          <Button href="/dashboard/pickups/new" size="lg" variant="secondary" className="font-bold px-8 shadow-sm border-none text-green-900 hover:text-green-900">
+          <Button href="/dashboard/pickups/new" size="lg" className="font-bold px-8 shadow-sm border-none bg-emerald-600 hover:bg-emerald-700 text-white">
             Request Pickup
           </Button>
         </div>
-      </div>
+      </Card>
 
       {isLoading ? (
         <div className="animate-pulse space-y-4">
@@ -183,159 +196,137 @@ export default function UserDashboardPage() {
         </div>
       ) : (
         <>
-          {/* Active Mission Widget (Glanceable) */}
-          {nextActivePickup && (
-            <div className="mb-8 animate-fade-in-up">
-              <h2 className="text-h5 text-neutral-900 mb-3 font-semibold flex items-center gap-2">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-                </span>
-                Active Request
-              </h2>
-              <Card className="p-0 border border-green-200 overflow-hidden bg-white shadow-sm hover:border-green-400 transition-colors">
-                <div className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50 text-green-700 shadow-inner shrink-0">
-                      <Icon icon={Truck} size="sm" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-bold text-body text-neutral-900">Your Pickup Request</p>
-                        <StatusPill tone={PICKUP_STATUS_TONE[nextActivePickup.status]} className="shadow-sm py-1 px-3 text-[10px]">
-                          {PICKUP_STATUS_LABEL[nextActivePickup.status]}
-                        </StatusPill>
-                      </div>
-                      <p className="text-caption text-neutral-500">
-                        {new Date(nextActivePickup.timeSlotStart).toLocaleDateString()} &bull; {new Date(nextActivePickup.timeSlotStart).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: true})}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col sm:items-end">
-                    <Button href={`/dashboard/pickups?pickupId=${nextActivePickup.id}&view=${nextActivePickup.status === 'PENDING' ? 'offers' : 'track'}`} variant="primary" size="sm" className="w-full sm:w-auto shadow-sm bg-green-700 hover:bg-green-800">
-                      {nextActivePickup.status === "PENDING" ? "Review Offers" : (["EN_ROUTE", "ARRIVED", "VERIFYING_WEIGHTS"].includes(nextActivePickup.status) ? "Track Live" : "View Details")}
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          )}
 
-          <h2 className="text-h4 text-neutral-900 mb-4 font-semibold">Overview</h2>
+
+          <h2 className="text-xl font-semibold text-neutral-900 mb-4">Overview</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {/* 3 Top-Level Stats */}
-            <Card className="flex flex-col p-6 shadow-sm border border-neutral-200 bg-white hover:border-green-300 transition-colors">
-              <span className="text-overline text-neutral-500 mb-2">TOTAL EARNED</span>
-              <div className="text-display font-bold text-neutral-900">
+            <Card className="p-6 text-center shadow-sm hover:shadow-md transition-shadow relative overflow-hidden bg-white">
+              <span className="text-sm font-medium text-neutral-500 uppercase tracking-wider block mb-2">TOTAL EARNED</span>
+              <div className="text-4xl font-bold text-neutral-900">
                 ৳{totalEarnings.toFixed(0)}
               </div>
             </Card>
-            
-            <Card className="flex flex-col p-6 shadow-sm border border-neutral-200 bg-white hover:border-green-300 transition-colors">
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-overline text-neutral-500">ACTIVE PICKUPS</span>
+
+            <Card className="p-6 text-center shadow-sm hover:shadow-md transition-shadow relative overflow-hidden bg-white">
+              <div className="absolute right-4 top-4">
                 {activePickups > 0 && (
-                  <Link href="/dashboard/pickups" className="text-caption text-primary hover:underline font-medium">
+                  <Link href="/dashboard/pickups" className="text-xs text-emerald-600 hover:underline font-medium">
                     View &rarr;
                   </Link>
                 )}
               </div>
-              <div className="text-display font-bold text-neutral-900">{activePickups}</div>
+              <span className="text-sm font-medium text-neutral-500 uppercase tracking-wider block mb-2">ACTIVE PICKUPS</span>
+              <div className="text-4xl font-bold text-neutral-900">{activePickups}</div>
             </Card>
 
-            <Card className="flex flex-col p-6 shadow-sm border border-green-200 bg-[#f0fdf4]">
-              <span className="text-overline text-green-700 mb-2">ECO IMPACT</span>
-              <div className="flex flex-col gap-2 mt-1">
+            <Card className="p-6 text-center shadow-sm hover:shadow-md transition-shadow relative overflow-hidden bg-gradient-to-tr from-green-50 to-emerald-50 border-emerald-100">
+              <span className="text-sm font-medium text-emerald-700 uppercase tracking-wider block mb-2">ECO IMPACT</span>
+              <div className="flex flex-col items-center gap-2 mt-1">
                 <div className="flex items-center gap-2">
-                  <Icon icon={Wind} size="sm" className="text-green-600" />
-                  <span className="text-body-sm font-semibold text-green-900">{co2Offset} kg CO₂ saved</span>
+                  <Icon icon={Wind} size="sm" className="text-emerald-600" />
+                  <span className="text-sm font-semibold text-emerald-900">{co2Offset} kg CO₂ saved</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Icon icon={Leaf} size="sm" className="text-green-600" />
-                  <span className="text-body-sm font-semibold text-green-900">{treesSaved} trees planted</span>
+                  <Icon icon={Leaf} size="sm" className="text-emerald-600" />
+                  <span className="text-sm font-semibold text-emerald-900">{treesSaved} trees planted</span>
                 </div>
               </div>
             </Card>
           </div>
 
           <div className="mb-10">
-            <h2 className="text-h4 text-neutral-900 mb-4 font-semibold">Quick Actions</h2>
+            <h2 className="text-xl font-semibold text-neutral-900 mb-4">Quick Actions</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <DashboardFeatureTile
                 icon={Truck}
                 label="Request Pickup"
                 description="Schedule a smart pickup easily."
                 href="/dashboard/pickups/new"
-                className="p-5 shadow-sm border border-neutral-200 bg-white hover:border-green-300"
-                iconClassName="p-2 bg-green-100 text-green-700 rounded-full box-content"
+                className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"
+                iconContainerClassName="bg-emerald-100 text-emerald-600"
               />
               <DashboardFeatureTile
                 icon={ClipboardList}
                 label="My Pickups"
                 description="Track and manage active requests."
                 href="/dashboard/pickups"
-                className="p-5 shadow-sm border border-neutral-200 bg-white hover:border-blue-300"
-                iconClassName="p-2 bg-blue-100 text-blue-700 rounded-full box-content"
+                className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"
+                iconContainerClassName="bg-blue-100 text-blue-600"
               />
               <DashboardFeatureTile
                 icon={Camera}
                 label="Scan Waste"
                 description="Use AI to identify materials."
                 href="/waste-recognition"
-                className="p-5 shadow-sm border border-neutral-200 bg-white hover:border-purple-300"
-                iconClassName="p-2 bg-purple-100 text-purple-700 rounded-full box-content"
+                className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"
+                iconContainerClassName="bg-purple-100 text-purple-600"
               />
               <DashboardFeatureTile
                 icon={Gift}
                 label="Green Rewards"
                 description="View and redeem your points."
                 href="/dashboard/rewards"
-                className="p-5 shadow-sm border border-neutral-200 bg-white hover:border-yellow-300"
-                iconClassName="p-2 bg-yellow-100 text-yellow-700 rounded-full box-content"
+                className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"
+                iconContainerClassName="bg-yellow-100 text-yellow-600"
               />
               <DashboardFeatureTile
                 icon={BadgeCheck}
                 label="Verified Collectors"
                 description="Find trusted collectors near you."
                 href="/dashboard/collectors"
-                className="p-5 shadow-sm border border-neutral-200 bg-white hover:border-indigo-300"
-                iconClassName="p-2 bg-indigo-100 text-indigo-700 rounded-full box-content"
+                className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"
+                iconContainerClassName="bg-indigo-100 text-indigo-600"
               />
             </div>
           </div>
 
           <div className="mb-10">
-            <h2 className="text-h4 text-neutral-900 mb-4 font-semibold">Recycling History</h2>
-            
+            <h2 className="text-xl font-semibold text-neutral-900 mb-4">Recycling History</h2>
+
             {totalRecycled === 0 ? (
               <Card className="flex flex-col items-center justify-center p-12 text-center bg-neutral-50 border border-dashed border-neutral-300 shadow-none min-h-[300px]">
-                <Icon icon={Leaf} size="xl" className="text-neutral-300 mb-4" />
-                <h3 className="text-h5 font-bold text-neutral-800 mb-2">Welcome to WasteWise!</h3>
-                <p className="text-body text-neutral-500 max-w-md mb-6">
+                <Icon icon={Leaf} size="xl" className="text-neutral-400 mb-4" />
+                <h3 className="text-lg font-bold text-neutral-900 mb-2">Welcome to WasteWise!</h3>
+                <p className="text-sm text-neutral-500 max-w-md mb-6">
                   You haven't recycled anything yet. Request your first pickup to start tracking your environmental impact and earning rewards.
                 </p>
-                <Button href="/dashboard/pickups/new">Schedule First Pickup</Button>
+                <Button href="/dashboard/pickups/new" className="bg-emerald-600 hover:bg-emerald-700">Schedule First Pickup</Button>
               </Card>
             ) : (
               <WasteSoldChart areaData={areaData} barData={barData} currentYear={currentYear} />
             )}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            {recentPickupsWithEarnings.length > 0 ? (
-              <div>
-                <h2 className="text-h4 text-neutral-900 mb-4 font-semibold">Recent Pickups</h2>
-                <div className="flex flex-col gap-3">
-                  {recentPickupsWithEarnings.map(rp => (
-                    <Card key={rp.id} className="flex items-center justify-between p-4 shadow-sm border border-neutral-200 bg-white hover:border-neutral-300 transition-colors">
-                      <div>
-                        <div className="font-semibold text-neutral-900">{new Date(rp.timeSlotStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                        <div className="text-body-sm text-neutral-500">{rp.items.length} categories &bull; {rp.totalWeight.toFixed(1)} kg</div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 items-start">
+            {recentPickupsList.length > 0 ? (
+              <div className="flex flex-col gap-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-neutral-900">Recent Requests</h2>
+                  <Link href="/dashboard/pickups" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 hover:underline">
+                    View All &rarr;
+                  </Link>
+                </div>
+                <div className="flex flex-col gap-4">
+                  {recentPickupsList.map(rp => (
+                    <Card key={rp.id} className="flex items-center justify-between p-6 rounded-2xl shadow-sm border border-neutral-100 bg-white hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-5 min-w-0">
+                        <div className={`flex h-12 w-12 items-center justify-center rounded-full shrink-0 ${rp.isBulk ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                          <Icon icon={rp.isBulk ? Package : Truck} size="md" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-neutral-900 mb-1 truncate">
+                            {rp.isBulk ? "Bulk Pickup" : "Smart Pickup"} &bull; {new Date(rp.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </div>
+                          <div className="text-sm font-medium text-neutral-500 truncate">
+                            {rp.items.map(i => i.category).join(', ')}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-green-700 text-body-lg">৳{rp.totalEarnings.toFixed(0)}</div>
-                        <div className="text-caption text-neutral-400 uppercase tracking-wider">Earned</div>
+                      <div className="text-right shrink-0 ml-4">
+                        <StatusPill tone={PICKUP_STATUS_TONE[rp.status]} className="text-xs px-2.5 py-1">
+                          {PICKUP_STATUS_LABEL[rp.status]}
+                        </StatusPill>
                       </div>
                     </Card>
                   ))}
@@ -354,51 +345,76 @@ export default function UserDashboardPage() {
               </div>
             )}
 
-            <div className="flex flex-col gap-4">
-              <h2 className="text-h4 text-neutral-900 mb-4 font-semibold">Balances & Rewards</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Card className="flex flex-col p-6 shadow-none border border-neutral-200 bg-white">
-                  <span className="text-caption text-neutral-500 uppercase tracking-widest mb-2">Total Sold</span>
-                  <div className="text-h2 font-bold text-neutral-900">
-                    {totalRecycled.toFixed(1)} <span className="text-body text-neutral-500 font-normal">kg</span>
-                  </div>
-                </Card>
-                
-                <Card className="flex flex-col p-6 shadow-none border border-neutral-200 bg-white">
-                  <span className="text-caption text-neutral-500 uppercase tracking-widest mb-2">Green Points</span>
-                  <div className="text-h2 font-bold text-neutral-900 flex items-center justify-between">
-                    <span>{rewardsBalance} <span className="text-body text-neutral-500 font-normal">pts</span></span>
-                    <Link href="/dashboard/rewards" className="text-body-sm text-primary hover:underline font-medium tracking-normal">
-                      Redeem &rarr;
-                    </Link>
-                  </div>
-                </Card>
-              </div>
+            <div className="flex flex-col gap-5">
+              <h2 className="text-xl font-semibold text-neutral-900">{isBusiness ? "Business Overview" : "Balances & Rewards"}</h2>
+              <div className="flex flex-col gap-4">
 
-              {user && (
-                <Card className="flex flex-col p-6 shadow-none border border-neutral-200 bg-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-caption text-neutral-500 uppercase tracking-widest block mb-1">Membership</span>
-                      <div className="text-h3 font-bold text-neutral-900">{user.membershipLevel}</div>
+                {/* Green Points Card (Primary) */}
+                <Card className="flex flex-col sm:flex-row items-center justify-between p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-100">
+                  <div className="flex flex-col items-center sm:items-start text-center sm:text-left mb-6 sm:mb-0">
+                    <span className="text-sm font-bold text-emerald-700/80 uppercase tracking-widest mb-2 flex items-center gap-2">
+                      <Icon icon={Gift} size="sm" /> Green Points
+                    </span>
+                    <div className="text-5xl font-black text-emerald-700 tracking-tight">
+                      {rewardsBalance}
                     </div>
-                    <Icon 
-                      icon={Medal} 
-                      className={
-                        user.membershipLevel === "BRONZE" ? "text-[#CD7F32]" :
-                        user.membershipLevel === "SILVER" ? "text-slate-400" :
-                        user.membershipLevel === "GOLD" ? "text-yellow-500" :
-                        user.membershipLevel === "PLATINUM" ? "text-indigo-500" :
-                        "text-neutral-300"
-                      } 
-                      size="xl" 
-                    />
                   </div>
+                  <Link href="/dashboard/rewards" className="shrink-0 px-6 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-emerald-700 transition-colors w-full sm:w-auto text-center">
+                    {isBusiness ? "View Rewards" : "Redeem Points"}
+                  </Link>
                 </Card>
-              )}
+
+                {/* Grid for Total Sold & Membership */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Left Card: Total Sold (Individual) OR Eco Impact (Business) */}
+                  {isBusiness ? (
+                    <Card className="flex flex-col p-6 rounded-2xl text-left shadow-sm hover:shadow-md transition-shadow bg-white border border-neutral-100">
+                      <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <Icon icon={Leaf} size="sm" className="text-emerald-500" /> Eco Impact
+                      </span>
+                      <div className="flex flex-col gap-2 mt-auto">
+                        <div className="text-sm font-medium text-neutral-600"><span className="font-bold text-neutral-900">{rewardsData?.environmentalImpact?.totalWasteRecycledKg || 0}kg</span> Recycled</div>
+                        <div className="text-sm font-medium text-neutral-600"><span className="font-bold text-neutral-900">{rewardsData?.environmentalImpact?.totalCo2ReducedKg || 0}kg</span> CO₂ Saved</div>
+                      </div>
+                    </Card>
+                  ) : (
+                    <Card className="flex flex-col p-6 rounded-2xl text-left shadow-sm hover:shadow-md transition-shadow bg-white border border-neutral-100">
+                      <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <Icon icon={Package} size="sm" className="text-neutral-400" /> Total Sold
+                      </span>
+                      <div className="text-3xl font-black text-neutral-900 tracking-tight mt-auto">
+                        {totalRecycled.toFixed(1)} <span className="text-lg font-medium text-neutral-400">kg</span>
+                      </div>
+                    </Card>
+                  )}
+
+                  {/* Membership Card */}
+                  {user && (
+                    <Card className="flex flex-col p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow bg-white border border-neutral-100 relative overflow-hidden h-full">
+                      <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <Icon icon={Medal} size="sm" className={
+                          membershipLevel === "BRONZE" ? "text-[#CD7F32]" :
+                            membershipLevel === "SILVER" ? "text-slate-400" :
+                              membershipLevel === "GOLD" ? "text-yellow-500" :
+                                membershipLevel === "PLATINUM" ? "text-indigo-500" :
+                                  "text-neutral-400"
+                        } />
+                        {isBusiness ? "Business Tier" : "Membership Tier"}
+                      </span>
+                      <div className="text-3xl font-black text-neutral-900 tracking-tight mb-5">
+                        {membershipLevel.charAt(0) + membershipLevel.slice(1).toLowerCase()}
+                      </div>
+
+                      <Link href="/dashboard/rewards" className="mt-auto inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 text-sm font-bold text-[#c2601c] border border-orange-200 hover:bg-orange-50 transition-colors shadow-sm self-start">
+                        View Perks
+                      </Link>
+                    </Card>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-          
+
         </>
       )}
     </PageContainer>

@@ -13,6 +13,7 @@ import { NotificationsPanel } from "@/components/NotificationsPanel";
 const DASHBOARD_HOME_BY_ROLE: Partial<Record<Role, string>> = {
   COLLECTOR: "/collector",
   ADMIN: "/admin",
+  RECYCLING_COMPANY: "/recycling/dashboard",
 };
 
 export function NavAuthActions() {
@@ -22,7 +23,10 @@ export function NavAuthActions() {
 
   useEffect(() => {
     if (user && !isLoading && pathname === "/") {
-      const dashboardHomeHref = DASHBOARD_HOME_BY_ROLE[user.role] ?? "/dashboard";
+      let dashboardHomeHref = DASHBOARD_HOME_BY_ROLE[user.role] ?? "/dashboard";
+      if (user.role === "USER" && user.accountType === "BUSINESS") {
+        dashboardHomeHref = "/business/dashboard";
+      }
       router.replace(dashboardHomeHref);
     }
   }, [user, isLoading, pathname, router]);
@@ -55,7 +59,10 @@ export function NavAuthActions() {
 
   if (user) {
     const shortName = user.fullName.trim().split(/\s+/)[0] ?? user.fullName;
-    const dashboardHomeHref = DASHBOARD_HOME_BY_ROLE[user.role] ?? "/dashboard";
+    let dashboardHomeHref = DASHBOARD_HOME_BY_ROLE[user.role] ?? "/dashboard";
+    if (user.role === "USER" && user.accountType === "BUSINESS") {
+      dashboardHomeHref = "/business/dashboard";
+    }
     const isInDashboardShell = pathname?.startsWith(dashboardHomeHref) || pathname?.startsWith("/profile") || pathname?.startsWith("/waste-recognition") || false;
 
     return (

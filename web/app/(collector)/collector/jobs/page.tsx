@@ -51,9 +51,15 @@ export default function CollectorJobsPage() {
 
   return (
     <PageContainer className="py-8 lg:py-12">
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 p-8 mb-8 rounded-2xl shadow-sm">
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Available Jobs Marketplace</h1>
+        <p className="mt-2 text-neutral-600">
+          Browse open pickup requests in your service area, estimate weights, and submit competitive bids.
+        </p>
+      </Card>
 
       {hasMissingInfo ? (
-        <Card className="max-w-2xl bg-neutral-50 border-neutral-200">
+        <Card className="max-w-2xl bg-white border border-neutral-100 shadow-sm rounded-2xl p-8">
           <div className="flex flex-col items-center text-center py-8">
             <UserCircle2 className="h-16 w-16 text-neutral-400 mb-4" />
             <h2 className="text-h2 text-neutral-900 mb-2">Profile incomplete</h2>
@@ -66,9 +72,9 @@ export default function CollectorJobsPage() {
           </div>
         </Card>
       ) : !isApproved ? (
-        <Card className="max-w-2xl bg-warning-50 border-warning-200">
+        <Card className="max-w-2xl bg-amber-50 border border-amber-100 shadow-sm rounded-2xl p-8">
           <div className="flex flex-col items-center text-center py-8">
-            <AlertCircle className="h-16 w-16 text-warning-500 mb-4" />
+            <AlertCircle className="h-16 w-16 text-amber-500 mb-4" />
             <h2 className="text-h2 text-warning-900 mb-2">Verification pending</h2>
             <p className="text-body text-warning-800 mb-8 max-w-md mx-auto">
               Your collector account needs to be verified by an admin before you can browse open pickup requests. Check back once your profile has been approved.
@@ -80,18 +86,7 @@ export default function CollectorJobsPage() {
         </Card>
       ) : (
         <div className="flex flex-col gap-8 w-full max-w-6xl">
-          {/* Marketplace Hero */}
-          <div className="rounded-3xl bg-gradient-to-br from-primary-600 to-primary-800 p-8 text-white shadow-xl relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay"></div>
-            <div className="relative z-10">
-              <h2 className="text-3xl font-heading font-bold mb-2">
-                Available Jobs Marketplace
-              </h2>
-              <p className="text-primary-100 max-w-xl text-lg">
-                Browse open pickup requests in your service area, estimate weights, and submit competitive bids.
-              </p>
-            </div>
-          </div>
+          {/* Marketplace Hero Removed (Moved to top of page) */}
           
           <section className="w-full">
             <AvailableJobsBoard />

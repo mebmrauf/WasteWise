@@ -162,7 +162,7 @@ export function DashboardNav({
                   }}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-4 rounded-md px-4 py-3 text-body-sm font-medium transition-colors",
+                    "group flex items-center gap-4 rounded-md px-4 py-3 text-body-sm font-medium transition-colors",
                     darkSurfaceFocusRing,
                     ringOffsetClasses[accent],
                     isActive
@@ -170,7 +170,9 @@ export function DashboardNav({
                       : "text-neutral-0/80 hover:text-neutral-0"
                   )}
                 >
-                  <Icon icon={item.icon} size="md" />
+                  <div className={cn("flex items-center justify-center h-8 w-8 rounded-full shrink-0 transition-colors", isActive ? "bg-white/20" : "bg-white/5 group-hover:bg-white/10")}>
+                    <Icon icon={item.icon} size="sm" />
+                  </div>
                   <span>{item.label}</span>
                 </Link>
               </li>
@@ -254,7 +256,7 @@ export function DashboardNav({
                   }}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex h-12 w-12 items-center justify-center rounded-md transition-colors",
+                    "flex h-12 w-12 items-center justify-center rounded-full transition-colors",
                     darkSurfaceFocusRing,
                     ringOffsetClasses[accent],
                     isActive
@@ -284,7 +286,7 @@ export function DashboardNav({
                 window.location.href = "/";
               });
             }}
-            className="group relative flex h-12 w-12 items-center justify-center rounded-md text-white/80 transition-colors hover:bg-white/10 hover:text-white border border-transparent hover:border-white/5"
+            className="group relative flex h-12 w-12 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white border border-transparent hover:border-white/5"
             title="Log out"
           >
             <Icon icon={LogOut} size="md" />
@@ -328,7 +330,9 @@ export function DashboardNav({
                     isActive ? "text-white bg-white/10" : "text-white/60 hover:text-white hover:bg-white/5"
                   )}
                 >
-                  <Icon icon={item.icon} size="md" className="shrink-0" />
+                  <div className={cn("flex items-center justify-center h-8 w-8 rounded-full shrink-0 transition-colors", isActive ? "bg-white/20" : "bg-transparent")}>
+                    <Icon icon={item.icon} size="sm" className="shrink-0" />
+                  </div>
                   <span className="w-full truncate text-center text-[10px] leading-tight">{item.label}</span>
                 </Link>
               </li>

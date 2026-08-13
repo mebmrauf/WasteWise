@@ -92,6 +92,9 @@ export async function authFetch<T>(
         return authFetch<T>(path, retryInit, true);
       }
     }
+    if (res.status !== 401) {
+      console.error("AuthApiError Debug:", { status: res.status, body });
+    }
 
     throw new AuthApiError(
       res.status,
@@ -122,6 +125,7 @@ export interface SignupInput {
   fullName: string;
   role?: SelectableRole;
   accountType?: AccountType;
+  referralCode?: string;
 }
 
 export function signup(input: SignupInput): Promise<{ user: AuthUser }> {

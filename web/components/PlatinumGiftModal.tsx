@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { TreePine, ShoppingBag, Droplets, X, Loader2 } from "lucide-react";
+import { TreePine, ShoppingBag, Droplets, X, Loader2, Gift } from "lucide-react";
 import { Button } from "@/components/Button";
 import { claimPlatinumGift } from "@/lib/api/rewards";
 
@@ -61,7 +61,7 @@ export function PlatinumGiftModal({ isOpen, onClose, onClaimed }: PlatinumGiftMo
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-slide-up">
         <div className="flex justify-between items-center p-6 border-b border-neutral-100">
           <h2 className="text-xl font-semibold text-neutral-900 flex items-center gap-2">
-            <span>🎁</span> Claim Your Platinum Gift
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-pink-100 text-pink-600 shrink-0"><Gift className="w-4 h-4" /></div> Claim Your Platinum Gift
           </h2>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-neutral-100 transition-colors">
             <X className="w-5 h-5 text-neutral-500" />

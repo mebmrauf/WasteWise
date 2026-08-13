@@ -393,11 +393,9 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
       data: {
         userId: access.pickup.requesterId,
         pickupRequestId,
-        points: totalPoints,
+        points: basePoints,
         basePoints,
-        bonusPoints,
-        totalPoints,
-        rewardReason,
+        rewardReason: { materials: rewardReason.materials, bonuses: [] },
         type: GreenPointsTransactionType.EARNED,
         category: "PICKUP",
         description: "Pickup completed",

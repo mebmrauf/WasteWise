@@ -10,7 +10,7 @@
 // semantics), this uses a plain file input + Card layout, since there's no
 // existing generic "upload any photo" component to reuse yet.
 import * as React from "react";
-import { Camera } from "lucide-react";
+import { Camera, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Icon } from "@/components/Icon";
@@ -51,7 +51,7 @@ const CATEGORY_LABELS: Record<WasteScan["detectedCategory"], string> = {
 };
 
 export function WasteRecognitionView() {
-  const { user, isLoading } = useRequireRole(["USER"]);
+  const { user, isLoading } = useRequireRole(["USER"], { allowedAccountTypes: ["HOUSEHOLD"] });
 
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [isScanning, setIsScanning] = React.useState(false);
@@ -168,22 +168,17 @@ export function WasteRecognitionView() {
 
   return (
     <PageContainer className="py-8 lg:py-12">
-      <div className="flex items-center gap-4 animate-slide-up">
-        <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-100 text-primary-600 shadow-inner">
-          <Icon icon={Camera} size="xl" />
-        </div>
-        <div>
-          <h1 className="font-heading text-h1 text-neutral-900">Waste Recognition</h1>
-          <p className="mt-1 text-body-lg text-neutral-500">
-            Not sure if something can be recycled? Snap a photo and we&apos;ll identify it.
-          </p>
-        </div>
-      </div>
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 p-8 mb-8 rounded-2xl shadow-sm">
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Waste Recognition</h1>
+        <p className="mt-2 text-neutral-600">
+          Not sure if something can be recycled? Snap a photo and we&apos;ll identify it.
+        </p>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
         {/* Left Column: Image Upload & Scanning */}
         <div className="lg:col-span-1">
-          <Card className="glass-panel border-0 shadow-xl rounded-3xl animate-slide-up p-8 min-h-[400px] flex flex-col justify-center">
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all min-h-[400px] flex flex-col justify-center">
             <input
               ref={fileInputRef}
               type="file"
@@ -250,19 +245,23 @@ export function WasteRecognitionView() {
         {/* Right Column: Results & History */}
         <div className="lg:col-span-1 flex flex-col gap-8">
           {result && (
-            <Card className="glass-panel border-0 shadow-xl rounded-3xl animate-slide-up p-8 bg-gradient-to-br from-white to-neutral-50" style={{ animationDelay: '100ms' }}>
+            <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all bg-gradient-to-br from-white to-neutral-50">
               <div className="flex flex-col gap-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-caption font-semibold text-primary-600 uppercase tracking-wider mb-1">AI Analysis Complete</p>
-                    <h2 className="font-heading text-h2 text-neutral-900">{CATEGORY_LABELS[result.detectedCategory]}</h2>
+                    <h2 className="text-2xl font-bold text-neutral-900">{CATEGORY_LABELS[result.detectedCategory]}</h2>
                   </div>
                   <div className={
                     result.isRecyclable 
-                      ? "px-4 py-2 rounded-xl font-bold text-body-sm shadow-sm border bg-green-100 text-green-700 border-green-200 flex-shrink-0" 
-                      : "px-4 py-2 rounded-xl font-bold text-body-sm shadow-sm border bg-red-100 text-red-700 border-red-200 flex-shrink-0"
+                      ? "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-body-sm shadow-sm border bg-green-100 text-green-700 border-green-200 flex-shrink-0" 
+                      : "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-body-sm shadow-sm border bg-red-100 text-red-700 border-red-200 flex-shrink-0"
                   }>
-                    {result.isRecyclable ? "✓ Recyclable" : "✕ Not recyclable"}
+                    {result.isRecyclable ? (
+                      <><CheckCircle className="w-5 h-5" /> Recyclable</>
+                    ) : (
+                      <><XCircle className="w-5 h-5" /> Not recyclable</>
+                    )}
                   </div>
                 </div>
 
@@ -324,8 +323,8 @@ export function WasteRecognitionView() {
             </Card>
           )}
 
-          <Card className="glass-panel border-0 shadow-xl rounded-3xl animate-slide-up p-8 flex-1" style={{ animationDelay: result ? '200ms' : '100ms' }}>
-            <h2 className="font-heading text-h3 text-neutral-900 mb-6">Recent Scans</h2>
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all flex-1">
+            <h2 className="text-xl font-bold text-neutral-900 mb-6">Recent Scans</h2>
 
             {historyError && <ErrorBanner className="mb-4">{historyError}</ErrorBanner>}
 

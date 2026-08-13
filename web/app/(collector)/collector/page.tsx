@@ -53,11 +53,16 @@ export default function CollectorDashboardPage() {
 
   return (
     <PageContainer className="py-8 lg:py-12">
-      <h1 className="text-h1 text-neutral-900 mb-8">Dashboard</h1>
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 p-8 mb-8 rounded-2xl shadow-sm">
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Dashboard</h1>
+        <p className="mt-2 text-neutral-600">
+          Welcome back, {profile?.fullName?.split(" ")[0] || "Collector"}! Here is your performance hub. Check your latest reputation feedback and track the waste you've collected.
+        </p>
+      </Card>
 
       {!isApproved ? (
         hasMissingInfo ? (
-          <Card className="max-w-2xl bg-neutral-50 border-neutral-200">
+          <Card className="max-w-2xl bg-white border border-neutral-100 shadow-sm rounded-2xl p-8">
             <div className="flex flex-col items-center text-center py-8">
               <UserCircle2 className="h-16 w-16 text-neutral-400 mb-4" />
               <h2 className="text-h2 text-neutral-900 mb-2">Profile incomplete</h2>
@@ -70,9 +75,9 @@ export default function CollectorDashboardPage() {
             </div>
           </Card>
         ) : (
-          <Card className="max-w-2xl bg-warning-50 border-warning-200">
+          <Card className="max-w-2xl bg-amber-50 border border-amber-100 shadow-sm rounded-2xl p-8">
             <div className="flex flex-col items-center text-center py-8">
-              <AlertCircle className="h-16 w-16 text-warning-500 mb-4" />
+              <AlertCircle className="h-16 w-16 text-amber-500 mb-4" />
               <h2 className="text-h2 text-warning-900 mb-2">Verification pending</h2>
               <p className="text-body text-warning-800 mb-8 max-w-md mx-auto">
                 Your collector account needs to be verified by an admin before you can browse open pickup requests. Check back once your profile has been approved.
@@ -85,18 +90,7 @@ export default function CollectorDashboardPage() {
         )
       ) : (
         <div className="flex flex-col gap-8 w-full max-w-6xl">
-          {/* Welcome Hero */}
-          <div className="rounded-3xl bg-gradient-to-br from-primary-600 to-primary-800 p-8 text-white shadow-xl relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay"></div>
-            <div className="relative z-10">
-              <h2 className="text-3xl font-heading font-bold mb-2">
-                Welcome back, {profile?.fullName?.split(" ")[0] || "Collector"}! 👋
-              </h2>
-              <p className="text-primary-100 max-w-xl text-lg">
-                Here is your performance hub. Check your latest reputation feedback and track the waste you've collected.
-              </p>
-            </div>
-          </div>
+          {/* Welcome Hero Removed (Moved to top of page) */}
 
           {/* Bento Grid Layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-max">

@@ -13,9 +13,11 @@ import { wasteRecognitionRouter, WASTE_PHOTO_UPLOAD_DIR } from "./routes/wasteRe
 import { pickupsRouter } from "./routes/pickups";
 import { offersRouter } from "./routes/offers";
 import { rewardsRouter } from "./routes/rewards";
+import { referralsRouter } from "./routes/referrals";
 import { notificationsRouter } from "./routes/notifications";
 import { adminRouter } from "./routes/admin";
 import { collectorsRouter } from "./routes/collectors";
+import { marketplaceRouter } from "./routes/marketplace";
 
 export function createApp() {
   const app = express();
@@ -51,9 +53,11 @@ export function createApp() {
   app.use("/api/v1/pickups", pickupsRouter);
   app.use("/api/v1/offers", offersRouter);
   app.use("/api/v1/rewards", rewardsRouter);
+  app.use("/api/v1/referrals", referralsRouter);
   app.use("/api/v1/notifications", notificationsRouter);
   app.use("/api/v1/admin", adminRouter);
   app.use("/api/v1/collectors", collectorsRouter);
+  app.use("/api/v1/marketplace", marketplaceRouter);
 
   // Serves uploaded waste-recognition photos back out. Deliberately
   // root-relative (not under /api/v1) since it's static file serving, not a
@@ -75,10 +79,9 @@ export function createApp() {
   });
 
   app.use(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    (err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    (err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
       logger.error({ err, path: req.path }, "Unhandled error");
-      sendError(res, 500, "INTERNAL_ERROR", "Something went wrong. Please try again.");
+      sendError(res, 500, "INTERNAL_ERROR", err?.message || "Something went wrong. Please try again.");
     },
   );
 

@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { CheckCircle2, AlertTriangle, XCircle, Info } from "lucide-react";
 
 type StatusTone = "success" | "warning" | "error" | "info";
 
@@ -10,6 +11,13 @@ const toneClasses: Record<StatusTone, string> = {
   info: "border-info-500 bg-info-50 text-info-700",
 };
 
+const ToneIcons = {
+  success: CheckCircle2,
+  warning: AlertTriangle,
+  error: XCircle,
+  info: Info,
+};
+
 export interface StatusPillProps {
   tone: StatusTone;
   children: React.ReactNode;
@@ -17,14 +25,16 @@ export interface StatusPillProps {
 }
 
 export function StatusPill({ tone, children, className }: StatusPillProps) {
+  const IconComponent = ToneIcons[tone];
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-3 py-1 text-label",
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-label",
         toneClasses[tone],
         className
       )}
     >
+      <IconComponent size={14} className="shrink-0" />
       {children}
     </span>
   );

@@ -135,6 +135,8 @@ export interface CreatePickupRequestInput {
   serviceArea?: string;
   preferredCollectorId?: string;
   isExclusiveToPreferred?: boolean;
+  isBulk?: boolean;
+  estimatedTotalWeight?: number;
 }
 
 export function createPickupRequest(input: CreatePickupRequestInput): Promise<{ pickup: PickupRequestDetail }> {
