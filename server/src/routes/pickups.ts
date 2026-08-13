@@ -6,6 +6,7 @@ import { requireCsrf } from "../lib/csrf";
 import { asyncHandler } from "../lib/asyncHandler";
 import { sendData, sendError } from "../lib/apiResponse";
 import { authorizePickupAccess } from "../lib/pickupAccess";
+import { createNotification } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
 import { logger } from "../lib/logger";
 import {
@@ -16,7 +17,10 @@ import {
 import { getLoadSizeKgRange } from "../lib/loadSize";
 import { emitToRoom } from "../realtime/emitToRoom";
 import { PICKUP_STATUS_EVENT } from "../realtime/pickupEvents";
+import { computeRecyclingReminder } from "../lib/recyclingPattern";
+import { isWithinRadiusKm } from "../lib/geoDistance";
 import { createPickupRequestSchema, ratePickupSchema } from "./pickups.schemas";
+
 
 export const pickupsRouter = Router();
 
@@ -186,6 +190,38 @@ pickupsRouter.post(
       include: { items: true, weightRecord: true, offers: { where: { status: OfferStatus.ACCEPTED } } },
     });
 
+    // Notify verified collectors whose service radius covers this pickup.
+    if (resolvedAddress.latitude !== null && resolvedAddress.longitude !== null) {
+      const pickupLocation = { lat: resolvedAddress.latitude, lng: resolvedAddress.longitude };
+
+      const candidateCollectors = await prisma.collectorProfile.findMany({
+        where: {
+          verificationStatus: VerificationStatus.APPROVED,
+          serviceAreaLatitude: { not: null },
+          serviceAreaLongitude: { not: null },
+          serviceAreaRadiusKm: { not: null },
+        },
+        select: { userId: true, serviceAreaLatitude: true, serviceAreaLongitude: true, serviceAreaRadiusKm: true },
+      });
+
+      for (const collector of candidateCollectors) {
+        const isInRange = isWithinRadiusKm(
+          pickupLocation,
+          { lat: collector.serviceAreaLatitude as number, lng: collector.serviceAreaLongitude as number },
+          collector.serviceAreaRadiusKm as number,
+        );
+        if (!isInRange) continue;
+
+        void createNotification({
+          userId: collector.userId,
+          type: "GENERIC",
+          title: "New Pickup Request Near You",
+          message: `A household requested a pickup at ${resolvedAddress.formattedAddress}, within your service area.`,
+          relatedPickupRequestId: pickup.id,
+        });
+      }
+    }
+
     sendData(res, 201, { pickup: toPickupDetail(pickup, pickup.weightRecord) });
   }),
 );
@@ -202,6 +238,30 @@ pickupsRouter.get(
     });
 
     sendData(res, 200, { pickups: pickups.map(toPickupSummary) });
+  }),
+);
+
+pickupsRouter.get(
+  "/reminders/summary",
+  requireAuth,
+  requireRole("USER"),
+  asyncHandler(async (req, res) => {
+    const completedPickups = await prisma.pickupRequest.findMany({
+      where: { requesterId: req.user!.id, status: PickupStatus.COMPLETED },
+      select: { updatedAt: true },
+      orderBy: { updatedAt: "asc" },
+    });
+
+    const reminder = computeRecyclingReminder(completedPickups.map((p) => p.updatedAt));
+
+    sendData(res, 200, {
+      hasPattern: reminder.hasPattern,
+      averageIntervalDays: reminder.averageIntervalDays,
+      lastPickupDate: reminder.lastPickupDate,
+      daysSinceLastPickup: reminder.daysSinceLastPickup,
+      isDue: reminder.isDue,
+      message: reminder.message,
+    });
   }),
 );
 
@@ -356,6 +416,12 @@ pickupsRouter.post(
       );
       return;
     }
+    // Grab pending bidders *before* the transaction rejects them, so we know
+    // who to notify that their offer fell through.
+    const pendingOffers = await prisma.offer.findMany({
+      where: { pickupRequestId: id, status: OfferStatus.PENDING },
+      select: { collectorId: true },
+    });
 
     const [updatedPickup] = await prisma.$transaction([
       prisma.pickupRequest.update({
@@ -371,6 +437,16 @@ pickupsRouter.post(
         data: { status: OfferStatus.REJECTED },
       }),
     ]);
+
+    for (const { collectorId } of pendingOffers) {
+      void createNotification({
+        userId: collectorId,
+        type: "PICKUP_STATUS_UPDATE",
+        title: "Pickup Request Cancelled",
+        message: "The household cancelled this pickup request, so your offer is no longer active.",
+        relatedPickupRequestId: id,
+      });
+    }
 
     try {
       emitToRoom(id, PICKUP_STATUS_EVENT, {

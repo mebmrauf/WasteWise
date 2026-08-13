@@ -21,6 +21,10 @@ export interface MapProps {
   routeOrigin?: { lat: number; lng: number };
   routeDestination?: { lat: number; lng: number };
   onRouteCalculated?: (info: { distance: string; duration: string } | null) => void;
+  /** Draws a coverage circle centered on `marker` (falls back to `center`). Meters. */
+  circleRadiusMeters?: number;
+  /** Fires with the clicked lat/lng — lets callers reposition their own marker. */
+  onMapClick?: (position: { lat: number; lng: number }) => void;
 }
 
 type LoadState = "loading" | "ready" | "error";
@@ -78,11 +82,15 @@ function loadGoogleMapsApi(apiKey: string): Promise<typeof google.maps> {
   return mapsApiPromise;
 }
 
-export function Map({ center, marker, zoom = 14, className, routeOrigin, routeDestination, onRouteCalculated }: MapProps) {
+export function Map({ center, marker, zoom = 14, className, routeOrigin, routeDestination, onRouteCalculated, circleRadiusMeters, onMapClick }: MapProps) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const mapsApiRef = React.useRef<typeof google.maps | null>(null);
   const mapRef = React.useRef<google.maps.Map | null>(null);
   const markerRef = React.useRef<google.maps.Marker | null>(null);
+  const circleRef = React.useRef<google.maps.Circle | null>(null);
+  const clickListenerRef = React.useRef<google.maps.MapsEventListener | null>(null);
+  const onMapClickRef = React.useRef(onMapClick);
+  onMapClickRef.current = onMapClick;
   const directionsServiceRef = React.useRef<google.maps.DirectionsService | null>(null);
   const routePolylineRef = React.useRef<google.maps.Polyline | null>(null);
   const routeOriginMarkerRef = React.useRef<google.maps.Marker | null>(null);
@@ -124,6 +132,22 @@ export function Map({ center, marker, zoom = 14, className, routeOrigin, routeDe
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-time setup; see comment above.
   }, [apiKey]);
 
+  // Registered once the map exists; reads the latest onMapClick via a ref so
+  // the listener doesn't need to be torn down/recreated on every render.
+  React.useEffect(() => {
+    if (loadState !== "ready" || !mapRef.current || !mapsApiRef.current) return;
+
+    clickListenerRef.current = mapRef.current.addListener("click", (event: google.maps.MapMouseEvent) => {
+      if (!event.latLng || !onMapClickRef.current) return;
+      onMapClickRef.current({ lat: event.latLng.lat(), lng: event.latLng.lng() });
+    });
+
+    return () => {
+      clickListenerRef.current?.remove();
+      clickListenerRef.current = null;
+    };
+  }, [loadState]);
+
   React.useEffect(() => {
     if (loadState !== "ready" || !mapRef.current) return;
     mapRef.current.setCenter(center);
@@ -158,6 +182,36 @@ export function Map({ center, marker, zoom = 14, className, routeOrigin, routeDe
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: track marker's primitive fields, not object identity, for the same reason as the center/zoom effect above.
   }, [loadState, marker?.lat, marker?.lng, marker?.label]);
+
+  React.useEffect(() => {
+    if (loadState !== "ready" || !mapRef.current || !mapsApiRef.current) return;
+
+    if (!circleRadiusMeters) {
+      circleRef.current?.setMap(null);
+      circleRef.current = null;
+      return;
+    }
+
+    const circleCenter = marker ? { lat: marker.lat, lng: marker.lng } : center;
+
+    if (circleRef.current) {
+      circleRef.current.setCenter(circleCenter);
+      circleRef.current.setRadius(circleRadiusMeters);
+    } else {
+      circleRef.current = new mapsApiRef.current.Circle({
+        map: mapRef.current,
+        center: circleCenter,
+        radius: circleRadiusMeters,
+        strokeColor: "#059669", // primary-600
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        fillColor: "#059669",
+        fillOpacity: 0.12,
+        clickable: false,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: track primitive fields, not object identity.
+  }, [loadState, circleRadiusMeters, marker?.lat, marker?.lng, center.lat, center.lng]);
 
   React.useEffect(() => {
     if (loadState !== "ready" || !mapRef.current || !mapsApiRef.current) return;
