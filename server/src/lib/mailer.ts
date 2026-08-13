@@ -1,26 +1,10 @@
-import nodemailer from "nodemailer";
 import { env } from "./env";
 import { logger } from "./logger";
 
-let transporter: ReturnType<typeof nodemailer.createTransport> | null = null;
-
-function getTransporter() {
-  if (!env.SMTP_HOST || !env.EMAIL_USER || !env.EMAIL_PASS) {
-    return null;
-  }
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: env.SMTP_HOST,
-      port: env.SMTP_PORT,
-      secure: env.SMTP_PORT === 465,
-      auth: { user: env.EMAIL_USER, pass: env.EMAIL_PASS },
-      connectionTimeout: 10_000,
-      greetingTimeout: 10_000,
-      socketTimeout: 10_000,
-    });
-  }
-  return transporter;
-}
+// Sent over Resend's HTTPS API rather than raw SMTP: many PaaS hosts (Render
+// included) block outbound SMTP ports (25/465/587) while allowing normal
+// HTTPS, which silently hung/dropped every verification email in production.
+const RESEND_API_URL = "https://api.resend.com/emails";
 
 interface SendEmailOptions {
   to: string;
@@ -30,19 +14,38 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail(opts: SendEmailOptions): Promise<void> {
-  const client = getTransporter();
-  if (!client) {
-    logger.warn({ to: opts.to }, "Email not sent — SMTP is not configured");
+  const apiKey = env.EMAIL_PASS;
+  if (!apiKey) {
+    logger.warn({ to: opts.to }, "Email not sent — Resend API key is not configured");
     return;
   }
 
-  await client.sendMail({
-    from: env.EMAIL_FROM,
-    to: opts.to,
-    subject: opts.subject,
-    html: opts.html,
-    text: opts.text,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const res = await fetch(RESEND_API_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: env.EMAIL_FROM,
+        to: opts.to,
+        subject: opts.subject,
+        html: opts.html,
+        text: opts.text,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`Resend API responded ${res.status}: ${body}`);
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 /**
