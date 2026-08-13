@@ -112,7 +112,9 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
                     : "/dashboard";
 
             if (!newUser.isEmailVerified) {
-              router.push(`/verify-email?redirect=${encodeURIComponent(destination)}`);
+              // Use hard navigation to ensure the verify-email page always loads,
+              // regardless of any router state buffering in Next.js App Router.
+              window.location.href = `/verify-email?redirect=${encodeURIComponent(destination)}`;
               return;
             }
             router.push(destination);
