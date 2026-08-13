@@ -148,6 +148,17 @@ offersRouter.post(
         return null;
       }
 
+      // Grab the other pending bidders *before* rejecting them, so we know
+      // who to notify that they didn't get this pickup.
+      const otherPendingOffers = await tx.offer.findMany({
+        where: {
+          pickupRequestId: offer.pickupRequestId,
+          id: { not: offer.id },
+          status: OfferStatus.PENDING,
+        },
+        select: { collectorId: true },
+      });
+
       const acceptedOffer = await tx.offer.update({
         where: { id: offer.id },
         data: { status: OfferStatus.ACCEPTED },
@@ -167,7 +178,7 @@ offersRouter.post(
         where: { id: offer.pickupRequestId },
       });
 
-      return { offer: acceptedOffer, pickup: updatedPickup };
+      return { offer: acceptedOffer, pickup: updatedPickup, rejectedCollectorIds: otherPendingOffers.map((o: { collectorId: string }) => o.collectorId) };
     });
 
     if (!result) {
@@ -201,6 +212,17 @@ offersRouter.post(
       message: `Your bid for the pickup request has been accepted. You have been assigned the pickup.`,
       relatedPickupRequestId: offer.pickupRequestId,
     });
+
+    // Notify the other bidders that they didn't get this one
+    for (const collectorId of result.rejectedCollectorIds) {
+      void createNotification({
+        userId: collectorId,
+        type: "GENERIC",
+        title: "Offer Not Selected",
+        message: "The household chose another collector for this pickup request.",
+        relatedPickupRequestId: offer.pickupRequestId,
+      });
+    }
 
     sendData(res, 200, {
       offer: toOfferSummary(result.offer),

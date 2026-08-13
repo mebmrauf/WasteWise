@@ -4,6 +4,7 @@ import * as React from "react";
 import { Truck, Camera, Gift, ClipboardList } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { DashboardFeatureTile } from "@/components/DashboardFeatureTile";
+import { SmartPickupReminderBanner } from "@/components/SmartPickupReminderBanner";
 import { Card } from "@/components/Card";
 import { listPickups, type PickupRequestSummary } from "@/lib/api/pickups";
 import { getRewardsBalance } from "@/lib/api/rewards";
@@ -59,6 +60,9 @@ export default function UserDashboardPage() {
           Ready to make an impact today? Request a pickup, scan waste, or track your active collections right from here.
         </p>
       </div>
+
+      {/* Smart Pickup Reminder */}
+      <SmartPickupReminderBanner />
 
       {/* Stats */}
       {isLoading ? (

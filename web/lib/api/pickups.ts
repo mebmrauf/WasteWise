@@ -138,6 +138,21 @@ export function listOpenPickups(): Promise<{ pickups: PickupRequestSummary[] }> 
   return authFetch<{ pickups: PickupRequestSummary[] }>("/pickups/open", { method: "GET" });
 }
 
+// --- Smart Pickup Reminder ---
+
+export interface PickupReminderSummary {
+  hasPattern: boolean;
+  averageIntervalDays: number | null;
+  lastPickupDate: string | null;
+  daysSinceLastPickup: number | null;
+  isDue: boolean;
+  message: string | null;
+}
+
+export function getPickupReminderSummary(): Promise<PickupReminderSummary> {
+  return authFetch<PickupReminderSummary>("/pickups/reminders/summary", { method: "GET" });
+}
+
 export function listAssignedPickups(): Promise<{ pickups: PickupRequestSummary[] }> {
   return authFetch<{ pickups: PickupRequestSummary[] }>("/pickups/assigned", { method: "GET" });
 }

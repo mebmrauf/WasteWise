@@ -7,6 +7,7 @@ import { requireCsrf } from "../lib/csrf";
 import { sendData, sendError } from "../lib/apiResponse";
 import { VerificationStatus } from "@prisma/client";
 import { toPublicCollectorProfile } from "./users";
+import { createNotification } from "../lib/notifications";
 
 export const adminRouter = Router();
 
@@ -89,6 +90,16 @@ adminRouter.patch(
         fullName: updated.user.fullName,
       }
     };
+
+    void createNotification({
+      userId: id,
+      type: "VERIFICATION_UPDATE",
+      title: action === "APPROVE" ? "Collector Account Verified" : "Collector Verification Rejected",
+      message:
+        action === "APPROVE"
+          ? "You're verified! You can now view and bid on open pickup requests."
+          : `Your collector verification was rejected.${rejectionReason ? ` Reason: ${rejectionReason}` : " Please review your submitted documents and try again."}`,
+    });
 
     sendData(res, 200, { collector: publicCollector });
   }),

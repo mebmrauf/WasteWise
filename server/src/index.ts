@@ -7,6 +7,7 @@ import { createSocketServer } from "./realtime/socket";
 import { registerPickupTrackingHandlers } from "./realtime/pickupEvents";
 import { prisma } from "./lib/prisma";
 import { hashPassword } from "./lib/passwords";
+import { startRecyclingReminderScheduler } from "./lib/reminderScheduler";
 
 const httpServer = http.createServer(app);
 
@@ -33,6 +34,8 @@ registerPickupTrackingHandlers(io);
 ensureAdminUser().then(() => {
   httpServer.listen(env.PORT, () => {
     logger.info({ port: env.PORT, env: env.NODE_ENV }, "WasteWise API listening");
+    startRecyclingReminderScheduler();
+    logger.info("Smart Pickup Reminder scheduler started");
   });
 }).catch((err) => {
   logger.fatal({ err }, "Failed to seed admin user. Exiting...");

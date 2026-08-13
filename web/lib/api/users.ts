@@ -9,6 +9,11 @@ export interface CollectorProfileSummary {
   vehicleNumber: string;
   licenseNumber: string;
   serviceArea: string;
+  serviceAreaPlaceId: string | null;
+  serviceAreaFormattedAddress: string | null;
+  serviceAreaLatitude: number | null;
+  serviceAreaLongitude: number | null;
+  serviceAreaRadiusKm: number | null;
   verificationStatus: VerificationStatus;
   verificationRejectionReason: string | null;
   averageRating: number | null;
@@ -80,6 +85,11 @@ export interface UpdateCollectorProfileInput {
   vehicleNumber: string;
   licenseNumber: string;
   serviceArea: string;
+  serviceAreaPlaceId?: string;
+  serviceAreaFormattedAddress?: string;
+  serviceAreaLatitude?: number;
+  serviceAreaLongitude?: number;
+  serviceAreaRadiusKm?: number;
 }
 
 export function updateCollectorProfile(
