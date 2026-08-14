@@ -61,6 +61,8 @@ export function MyPickupsView() {
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [pickups, setPickups] = React.useState<PickupRequestSummary[]>([]);
 
+  // Filtering states
+  const [typeFilter, setTypeFilter] = React.useState<"ALL" | "SMART" | "BULK">("ALL");
   const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
   const [searchQuery, setSearchQuery] = React.useState("");
 
@@ -200,7 +202,8 @@ export function MyPickupsView() {
   const filteredPickups = React.useMemo(() => {
     const sorted = [...pickups].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return sorted.filter((p) => {
-      if (p.isBulk) return false; // Force only Smart Pickups
+      if (typeFilter === "SMART" && p.isBulk) return false;
+      if (typeFilter === "BULK" && !p.isBulk) return false;
       
       if (statusFilter !== "ALL" && p.status !== statusFilter) return false;
       
@@ -214,13 +217,14 @@ export function MyPickupsView() {
       }
       return true;
     });
-  }, [pickups, statusFilter, searchQuery]);
+  }, [pickups, typeFilter, statusFilter, searchQuery]);
 
   // Statistics
-  const smartPickupsOnly = pickups.filter(p => !p.isBulk);
-  const totalRequests = smartPickupsOnly.length;
-  const completedCount = smartPickupsOnly.filter(p => p.status === "COMPLETED").length;
-  const pendingCount = smartPickupsOnly.filter(p => p.status === "PENDING").length;
+  const totalRequests = pickups.length;
+  const smartPickups = pickups.filter(p => !p.isBulk).length;
+  const bulkPickups = pickups.filter(p => p.isBulk).length;
+  const completedCount = pickups.filter(p => p.status === "COMPLETED").length;
+  const pendingCount = pickups.filter(p => p.status === "PENDING").length;
 
   const renderProgressTimeline = (pickup: PickupRequestSummary) => {
     const isBulk = pickup.isBulk;
@@ -490,10 +494,18 @@ export function MyPickupsView() {
       {loadState === "ready" && pickups.length > 0 && (
         <div className="mt-8">
           {/* Stats Cards */}
-          <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
             <Card className="p-4 bg-white border border-neutral-100 shadow-sm text-center">
-              <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Total Pickups</p>
+              <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Total</p>
               <p className="text-3xl font-black text-neutral-900 mt-2">{totalRequests}</p>
+            </Card>
+            <Card className="p-4 bg-white border border-neutral-100 shadow-sm text-center">
+              <p className="text-xs font-bold text-emerald-700 uppercase tracking-widest">Smart Pickups</p>
+              <p className="text-3xl font-black text-emerald-900 mt-2">{smartPickups}</p>
+            </Card>
+            <Card className="p-4 bg-white border border-neutral-100 shadow-sm text-center">
+              <p className="text-xs font-bold text-blue-700 uppercase tracking-widest">Bulk Pickups</p>
+              <p className="text-3xl font-black text-blue-900 mt-2">{bulkPickups}</p>
             </Card>
             <Card className="p-4 bg-white border border-neutral-100 shadow-sm text-center">
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Completed</p>

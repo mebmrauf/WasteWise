@@ -20,12 +20,10 @@ function resolveDefaultRoleChoice(roleParam: string | string[] | undefined): Sig
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ role?: string | string[]; referral?: string | string[]; ref?: string | string[] }>;
+  searchParams: Promise<{ role?: string | string[] }>;
 }) {
   const resolvedSearchParams = await searchParams;
   const defaultRoleChoice = resolveDefaultRoleChoice(resolvedSearchParams.role);
-  const rawReferral = resolvedSearchParams.ref || resolvedSearchParams.referral;
-  const defaultReferralCode = typeof rawReferral === "string" ? rawReferral : (Array.isArray(rawReferral) ? rawReferral[0] : null);
 
   return (
     <AuthPageShell
@@ -41,7 +39,7 @@ export default async function SignupPage({
       }
     >
       <Suspense fallback={<div className="flex justify-center p-8 text-neutral-500">Loading signup...</div>}>
-        <SignupForm defaultRoleChoice={defaultRoleChoice} defaultReferralCode={defaultReferralCode} />
+        <SignupForm defaultRoleChoice={defaultRoleChoice} />
       </Suspense>
     </AuthPageShell>
   );

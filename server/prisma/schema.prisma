@@ -516,9 +516,9 @@ enum PickupStatus {
   ASSIGNED
   EN_ROUTE
   ARRIVED
+  VERIFYING_WEIGHTS
   COMPLETED
   CANCELLED
-  VERIFYING_WEIGHTS
 }
 
 enum OfferStatus {
@@ -591,4 +591,528 @@ enum SimType {
 enum MobileRechargeStatus {
   SUCCESS
   FAILED
+}
+
+model User {
+  id                              String       @id @default(cuid())
+  email                           String       @unique
+  phone                           String?      @unique
+  passwordHash                    String?
+  fullName                        String
+  role                            Role         @default(USER)
+  accountType                     AccountType?
+  isEmailVerified                 Boolean      @default(false)
+  emailVerificationReminderSentAt DateTime?
+
+  placeId                          String?
+  formattedAddress                 String?
+  latitude                         Float?
+  longitude                        Float?
+  avatarUrl                        String?
+  emailNotificationsEnabled        Boolean @default(true)
+  smsNotificationsEnabled          Boolean @default(true)
+  rewardsEmailNotificationsEnabled Boolean @default(true)
+
+  greenPointsBalance Int @default(0)
+  totalGreenPoints   Int @default(0)
+  membershipLevel    MembershipLevel @default(BRONZE)
+  membershipBadge    String @default("Bronze Badge")
+
+  lastDiscountClaimDate    DateTime?
+  nextDiscountEligibleDate DateTime?
+  discountCouponClaimed    Boolean   @default(false)
+
+  selectedGift             PlatinumGift?
+  giftClaimDate            DateTime?
+  nextGiftEligibleDate     DateTime?
+  giftClaimed              Boolean   @default(false)
+
+  lastTreePlantationClaimDate    DateTime?
+  nextTreePlantationEligibleDate DateTime?
+  treePlantationClaimed          Boolean   @default(false)
+  sustainabilityCertificateUrl   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  referralCode          String? @unique
+  referredById          String?
+  referredBy            User?   @relation("Referrals", fields: [referredById], references: [id])
+  referredUsers         User[]  @relation("Referrals")
+  referralRewardClaimed Boolean @default(false)
+  successfulReferrals   Int     @default(0)
+  referralPointsEarned  Int     @default(0)
+  milestonesClaimed     Int[]   @default([])
+
+  oauthAccounts          OAuthAccount[]
+  emailVerificationCodes EmailVerificationCode[]
+  passwordResetCodes     PasswordResetCode[]
+  refreshTokens          RefreshToken[]
+
+  collectorProfile        CollectorProfile?        @relation("CollectorProfileUser")
+  recyclingCompanyProfile RecyclingCompanyProfile? @relation("RecyclingCompanyProfileUser")
+  businessProfile         BusinessProfile?         @relation("BusinessProfileUser")
+
+  collectorVerificationsReviewed        CollectorProfile[]        @relation("CollectorVerificationReviewer")
+  recyclingCompanyVerificationsReviewed RecyclingCompanyProfile[] @relation("RecyclingCompanyVerificationReviewer")
+  businessVerificationsReviewed         BusinessProfile[]         @relation("BusinessVerificationReviewer")
+
+  pickupRequestsMade     PickupRequest[] @relation("PickupRequester")
+  pickupRequestsAssigned PickupRequest[] @relation("AssignedCollector")
+
+  bulkRequestsMade      BulkMarketplaceRequest[] @relation("BusinessRequests")
+  bulkRequestsAssigned  BulkMarketplaceRequest[] @relation("AssignedCompany")
+  marketplaceQuotations MarketplaceQuotation[]   @relation("CompanyQuotations")
+
+  offers Offer[] @relation("CollectorOffers")
+
+  weightRecordsLogged WeightRecord[] @relation("WeightLogger")
+
+  ratingsGiven    Rating[] @relation("RaterRatings")
+  ratingsReceived Rating[] @relation("CollectorRatings")
+
+  complaintsFiled    Complaint[] @relation("ComplaintFiler")
+  complaintsAgainst  Complaint[] @relation("ComplaintTarget")
+  complaintsResolved Complaint[] @relation("ComplaintResolver")
+
+  notifications Notification[]
+
+// --- AI Waste Recognition ---
+  wasteRecognitionLogs WasteRecognitionLog[]
+  greenPointsTransactions    GreenPointsTransaction[]    @relation("GreenPointsTransactions")
+  mobileRechargeTransactions MobileRechargeTransaction[] @relation("MobileRechargeTransactions")
+}
+
+model OAuthAccount {
+  id                String        @id @default(cuid())
+  provider          OAuthProvider
+  providerAccountId String
+  userId            String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@unique([userId, provider])
+  @@index([userId])
+}
+
+model EmailVerificationCode {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code       String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model PasswordResetCode {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code       String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model RefreshToken {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash         String    @unique
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  replacedByTokenId String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model CollectorProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation("CollectorProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  vehicleType   VehicleType
+  vehicleNumber String @default("")
+  licenseNumber String @default("")
+
+  serviceArea String @default("")
+
+  verificationStatus            VerificationStatus @default(PENDING)
+  verificationDocumentUrl       String?
+  verificationReviewedAt        DateTime?
+  verificationReviewedByAdminId String?
+  verificationReviewedByAdmin   User?              @relation("CollectorVerificationReviewer", fields: [verificationReviewedByAdminId], references: [id])
+  verificationRejectionReason   String?
+
+  averageRating Float?
+  totalRatings  Int    @default(0)
+
+  lastKnownLatitude     Float?
+  lastKnownLongitude    Float?
+  lastLocationUpdatedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RecyclingCompanyProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation("RecyclingCompanyProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  companyName            String
+  tradeLicenseNumber     String?
+  district               String
+  serviceAreas           String[]
+  acceptedWasteMaterials WasteCategory[]
+  currentInventoryKg     Float           @default(0)
+
+  verificationStatus            VerificationStatus @default(PENDING)
+  verificationDocumentUrl       String?
+  verificationReviewedAt        DateTime?
+  verificationReviewedByAdminId String?
+  verificationReviewedByAdmin   User?              @relation("RecyclingCompanyVerificationReviewer", fields: [verificationReviewedByAdminId], references: [id])
+  verificationRejectionReason   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BusinessProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation("BusinessProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  businessName       String
+  tradeLicenseNumber String?
+
+  verificationStatus            VerificationStatus @default(PENDING)
+  verificationDocumentUrl       String?
+  verificationReviewedAt        DateTime?
+  verificationReviewedByAdminId String?
+  verificationReviewedByAdmin   User?              @relation("BusinessVerificationReviewer", fields: [verificationReviewedByAdminId], references: [id])
+  verificationRejectionReason   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PickupRequest {
+  id String @id @default(cuid())
+
+  requesterId String
+  requester   User   @relation("PickupRequester", fields: [requesterId], references: [id])
+
+  assignedCollectorId String?
+  assignedCollector   User?   @relation("AssignedCollector", fields: [assignedCollectorId], references: [id])
+
+  preferredCollectorId   String?
+  isExclusiveToPreferred Boolean @default(false)
+  isBulk                 Boolean @default(false)
+
+  items PickupRequestItem[]
+
+  timeSlotStart DateTime
+  timeSlotEnd   DateTime
+  status        PickupStatus @default(PENDING)
+
+  placeId                String
+  pickupFormattedAddress String
+  latitude               Float?
+  longitude              Float?
+  serviceArea            String?
+
+  offers                  Offer[]
+  weightRecord            WeightRecord?
+  rating                  Rating?
+  complaints              Complaint[]
+  notifications           Notification[]
+  trackingEvents          PickupTrackingEvent[]
+  greenPointsTransactions GreenPointsTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([assignedCollectorId])
+  @@index([requesterId, createdAt])
+}
+
+model PickupRequestItem {
+  id String @id @default(cuid())
+
+  pickupRequestId String
+  pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+
+  category WasteCategory
+  loadSize LoadSize
+
+  exactWeightKg Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([pickupRequestId, category])
+  @@index([pickupRequestId])
+}
+
+model Offer {
+  id String @id @default(cuid())
+
+  pickupRequestId String
+  pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+
+  collectorId String
+  collector   User   @relation("CollectorOffers", fields: [collectorId], references: [id])
+
+  bidAmount Float
+  bidAmountsPerKg Json? // e.g. { "PLASTIC": 10, "PAPER": 5 }
+  message   String?
+  status    OfferStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([pickupRequestId, collectorId])
+  @@index([collectorId])
+}
+
+model PickupTrackingEvent {
+  id String @id @default(cuid())
+
+  pickupRequestId String
+  pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+
+  status PickupStatus
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pickupRequestId])
+}
+
+model WeightRecord {
+  id String @id @default(cuid())
+
+  pickupRequestId String        @unique
+  pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+
+  estimatedMinKg Float
+  estimatedMaxKg Float
+  exactWeightKg  Float?
+  loggedAt       DateTime?
+
+  loggedByCollectorId String?
+  loggedByCollector   User?   @relation("WeightLogger", fields: [loggedByCollectorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Rating {
+  id String @id @default(cuid())
+
+  pickupRequestId String?        @unique
+  pickupRequest   PickupRequest? @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+
+  bulkRequestId String?                 @unique
+  bulkRequest   BulkMarketplaceRequest? @relation(fields: [bulkRequestId], references: [id], onDelete: Cascade)
+
+  raterId String
+  rater   User   @relation("RaterRatings", fields: [raterId], references: [id])
+
+  collectorId String
+  collector   User   @relation("CollectorRatings", fields: [collectorId], references: [id])
+
+  score   Int
+  comment String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Complaint {
+  id String @id @default(cuid())
+
+  pickupRequestId String?
+  pickupRequest   PickupRequest? @relation(fields: [pickupRequestId], references: [id])
+
+  complainantId String
+  complainant   User   @relation("ComplaintFiler", fields: [complainantId], references: [id])
+
+  againstUserId String?
+  againstUser   User?   @relation("ComplaintTarget", fields: [againstUserId], references: [id])
+
+  description String
+  status      ComplaintStatus @default(OPEN)
+
+  resolutionNotes   String?
+  resolvedAt        DateTime?
+  resolvedByAdminId String?
+  resolvedByAdmin   User?     @relation("ComplaintResolver", fields: [resolvedByAdminId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model Notification {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type    NotificationType
+  title   String
+  message String
+  isRead  Boolean          @default(false)
+
+  relatedPickupRequestId String?
+  relatedPickupRequest   PickupRequest? @relation(fields: [relatedPickupRequestId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isRead])
+}
+
+// ---------------------------------------------------------------------------
+// AI Waste Recognition — user uploads a photo, Google Cloud Vision API
+// identifies the waste type; result is logged for the user's own reference
+// and as raw data for future Demand Forecast / Sustainability Reports work.
+// ---------------------------------------------------------------------------
+model WasteRecognitionLog {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  imageUrl String
+
+  detectedCategory WasteCategory
+  isRecyclable     Boolean
+  confidence       Float
+  rawLabels        Json
+  preparationTip   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model GreenPointsTransaction {
+  id String @id @default(cuid())
+  userId String
+  user   User   @relation("GreenPointsTransactions", fields: [userId], references: [id], onDelete: Cascade)
+
+  pickupRequestId String?
+  pickupRequest   PickupRequest? @relation(fields: [pickupRequestId], references: [id])
+
+  points Int // Keeping this as the master source of truth for total points changed in transaction for backward compatibility
+  type   GreenPointsTransactionType
+  description String
+
+  basePoints   Int?
+  bonusPoints  Int?
+  totalPoints  Int?
+  category     TransactionCategory @default(OTHER)
+  rewardReason Json?
+
+  mobileRechargeTransaction MobileRechargeTransaction?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, createdAt])
+}
+
+model MobileRechargeTransaction {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation("MobileRechargeTransactions", fields: [userId], references: [id], onDelete: Cascade)
+
+  operator    MobileOperator
+  simType     SimType
+  phoneNumber String
+
+  amountTaka  Int
+  pointsSpent Int
+
+  status MobileRechargeStatus
+
+  greenPointsTransactionId String?                 @unique
+  greenPointsTransaction   GreenPointsTransaction? @relation(fields: [greenPointsTransactionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+model BulkMarketplaceRequest {
+  id                String  @id @default(cuid())
+  businessId        String
+  business          User    @relation("BusinessRequests", fields: [businessId], references: [id])
+  assignedCompanyId String?
+  assignedCompany   User?   @relation("AssignedCompany", fields: [assignedCompanyId], references: [id])
+
+  wasteTypes          Json
+  estimatedWeightKg   Float
+  pickupAddress       String
+  latitude            Float?
+  longitude           Float?
+  placeId             String?
+  preferredPickupDate DateTime
+  images              String[]
+  additionalNotes     String?
+  status              BulkRequestStatus @default(OPEN_FOR_BIDDING)
+
+  verifiedWeights       Json?
+  verifiedTotalWeightKg Float?
+  collectionPhotos      String[]
+
+  quotations MarketplaceQuotation[]
+  rating     Rating?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([status])
+}
+
+model MarketplaceQuotation {
+  id        String                 @id @default(cuid())
+  requestId String
+  request   BulkMarketplaceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  companyId String
+  company   User   @relation("CompanyQuotations", fields: [companyId], references: [id])
+
+  purchasePrice       Float
+  vehicleType         VehicleType
+  estimatedPickupDate DateTime
+  estimatedPickupTime String?
+  additionalNotes     String?
+
+  status QuotationStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([requestId, companyId])
+  @@index([companyId])
 }

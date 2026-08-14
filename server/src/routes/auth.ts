@@ -10,7 +10,6 @@ import {
   revokeRefreshToken,
   RefreshTokenError,
 } from "../lib/authTokens";
-import { calculateMembershipLevel, getMembershipBadge } from "../lib/rewards";
 import {
   setAuthCookies,
   clearAuthCookies,
@@ -55,10 +54,6 @@ function loginErrorRedirect(reason: string): string {
 }
 
 function toPublicUser(user: User) {
-  const lifetimePoints = Math.max(user.totalGreenPoints ?? 0, user.greenPointsBalance ?? 0);
-  const computedMembershipLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
-  const computedMembershipBadge = getMembershipBadge(computedMembershipLevel);
-
   return {
     id: user.id,
     email: user.email,
@@ -69,8 +64,8 @@ function toPublicUser(user: User) {
     isEmailVerified: user.isEmailVerified,
     hasPassword: Boolean(user.passwordHash),
     avatarUrl: user.avatarUrl,
-    membershipLevel: computedMembershipLevel,
-    membershipBadge: computedMembershipBadge,
+    membershipLevel: user.membershipLevel,
+    membershipBadge: user.membershipBadge,
     totalGreenPoints: user.totalGreenPoints,
     giftClaimed: user.giftClaimed,
     selectedGift: user.selectedGift,
@@ -110,21 +105,9 @@ authRouter.post(
       sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    const { email, phone, password, fullName, role, accountType, referralCode } = parsed.data;
+    const { email, phone, password, fullName, role, accountType } = parsed.data;
 
     const passwordHash = await hashPassword(password);
-
-    let referredById: string | undefined = undefined;
-    if (referralCode) {
-      const referrer = await prisma.user.findUnique({
-        where: { referralCode },
-      });
-      if (!referrer) {
-        sendError(res, 400, "INVALID_REFERRAL_CODE", "The referral code is invalid.");
-        return;
-      }
-      referredById = referrer.id;
-    }
 
     let user: User;
     try {
@@ -136,7 +119,6 @@ authRouter.post(
           fullName, 
           role, 
           accountType,
-          referredById,
           collectorProfile: role === "COLLECTOR" ? {
             create: {
               vehicleType: "BICYCLE_VAN",

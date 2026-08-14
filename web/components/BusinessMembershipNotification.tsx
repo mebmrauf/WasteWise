@@ -67,7 +67,7 @@ export function BusinessMembershipNotification({
       } else {
         content = (
           <span>
-            You&apos;re a <strong>Gold Business Member</strong>! You now earn 10% extra Green Points and have earned a Digital Sustainability Certificate. Keep going to reach Platinum (4,501 Green Points) for exclusive gifts and higher bonuses!
+            You&apos;re a <strong>Gold Business Member</strong>! You now earn 10% extra Green Points and have earned a Digital Sustainability Certificate. Keep going to reach Platinum (4,500 Green Points) for exclusive gifts and higher bonuses!
           </span>
         );
       }

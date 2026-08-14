@@ -1,22 +1,24 @@
 "use client";
 
 import * as React from "react";
-import { Search, User, LayoutDashboard, Briefcase, History } from "lucide-react";
+import { Search, User, LayoutDashboard, Briefcase } from "lucide-react";
 import { DashboardNav, type DashboardNavItem } from "@/components/DashboardNav";
 import { PageContainer } from "@/components/PageContainer";
 import { useRequireRole } from "@/lib/auth/AuthContext";
 import { getMyProfile, type UserProfile } from "@/lib/api/users";
+import { useSidebarCollapsed } from "@/lib/hooks/useSidebarCollapsed";
+import { cn } from "@/lib/utils";
 
 const ALL_NAV_ITEMS: DashboardNavItem[] = [
   { label: "Dashboard", href: "/collector", icon: LayoutDashboard },
   { label: "Active Pickups", href: "/collector/active", icon: Briefcase },
   { label: "Find Jobs", href: "/collector/jobs", icon: Search },
-  { label: "History", href: "/collector/collection-history", icon: History },
   { label: "Profile", href: "/collector/profile", icon: User },
 ];
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useRequireRole(["COLLECTOR"]);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useSidebarCollapsed();
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
   const [isProfileLoading, setIsProfileLoading] = React.useState(true);
 
@@ -47,8 +49,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <DashboardNav accent="collector" roleLabel="COLLECTOR PORTAL" items={navItems} />
-      <div className="pb-16 md:pb-0 md:pl-rail lg:pl-sidebar">{children}</div>
+      <DashboardNav
+        accent="collector"
+        roleLabel="COLLECTOR PORTAL"
+        items={navItems}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+      />
+      <div className={cn("pb-16 md:pb-0 md:pl-rail", isSidebarCollapsed ? "lg:pl-rail" : "lg:pl-sidebar")}>
+        {children}
+      </div>
     </>
   );
 }

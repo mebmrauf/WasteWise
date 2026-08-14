@@ -6,7 +6,6 @@ import { requireCsrf } from "../lib/csrf";
 import { asyncHandler } from "../lib/asyncHandler";
 import { sendData, sendError } from "../lib/apiResponse";
 import { authorizePickupAccess } from "../lib/pickupAccess";
-import { createNotification } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
 import { logger } from "../lib/logger";
 import {
@@ -17,10 +16,7 @@ import {
 import { getLoadSizeKgRange } from "../lib/loadSize";
 import { emitToRoom } from "../realtime/emitToRoom";
 import { PICKUP_STATUS_EVENT } from "../realtime/pickupEvents";
-import { computeRecyclingReminder } from "../lib/recyclingPattern";
-import { isWithinRadiusKm } from "../lib/geoDistance";
 import { createPickupRequestSchema, ratePickupSchema } from "./pickups.schemas";
-
 
 export const pickupsRouter = Router();
 
@@ -270,30 +266,6 @@ pickupsRouter.get(
 );
 
 pickupsRouter.get(
-  "/reminders/summary",
-  requireAuth,
-  requireRole("USER"),
-  asyncHandler(async (req, res) => {
-    const completedPickups = await prisma.pickupRequest.findMany({
-      where: { requesterId: req.user!.id, status: PickupStatus.COMPLETED },
-      select: { updatedAt: true },
-      orderBy: { updatedAt: "asc" },
-    });
-
-    const reminder = computeRecyclingReminder(completedPickups.map((p) => p.updatedAt));
-
-    sendData(res, 200, {
-      hasPattern: reminder.hasPattern,
-      averageIntervalDays: reminder.averageIntervalDays,
-      lastPickupDate: reminder.lastPickupDate,
-      daysSinceLastPickup: reminder.daysSinceLastPickup,
-      isDue: reminder.isDue,
-      message: reminder.message,
-    });
-  }),
-);
-
-pickupsRouter.get(
   "/open",
   requireAuth,
   requireRole("COLLECTOR"),
@@ -351,25 +323,6 @@ pickupsRouter.get(
       orderBy: { createdAt: "desc" },
       take: PICKUP_LIST_LIMIT,
       include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } } },
-    });
-
-    sendData(res, 200, { pickups: pickups.map(toPickupSummary) });
-  }),
-);
-
-pickupsRouter.get(
-  "/collector-history",
-  requireAuth,
-  requireRole("COLLECTOR"),
-  asyncHandler(async (req, res) => {
-    const pickups = await prisma.pickupRequest.findMany({
-      where: {
-        assignedCollectorId: req.user!.id,
-        status: PickupStatus.COMPLETED,
-      },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true },
     });
 
     sendData(res, 200, { pickups: pickups.map(toPickupSummary) });
@@ -444,12 +397,6 @@ pickupsRouter.post(
       );
       return;
     }
-    // Grab pending bidders *before* the transaction rejects them, so we know
-    // who to notify that their offer fell through.
-    const pendingOffers = await prisma.offer.findMany({
-      where: { pickupRequestId: id, status: OfferStatus.PENDING },
-      select: { collectorId: true },
-    });
 
     const [updatedPickup] = await prisma.$transaction([
       prisma.pickupRequest.update({
@@ -465,16 +412,6 @@ pickupsRouter.post(
         data: { status: OfferStatus.REJECTED },
       }),
     ]);
-
-    for (const { collectorId } of pendingOffers) {
-      void createNotification({
-        userId: collectorId,
-        type: "PICKUP_STATUS_UPDATE",
-        title: "Pickup Request Cancelled",
-        message: "The household cancelled this pickup request, so your offer is no longer active.",
-        relatedPickupRequestId: id,
-      });
-    }
 
     try {
       emitToRoom(id, PICKUP_STATUS_EVENT, {

@@ -76,40 +76,24 @@ export function OfferListItem({
             <div className="flex flex-col items-end gap-3 text-right">
               {pickupItems.map((item) => {
                 const amount = offer.bidAmountsPerKg?.[item.category] ?? 0;
-                
-                if (typeof item.exactWeightKg === "number") {
-                  const exactTotal = amount * item.exactWeightKg;
-                  return (
-                    <div key={item.id} className="flex flex-col items-end border-b border-neutral-100 pb-2 last:border-0 last:pb-0">
-                      <span className="text-body-sm font-medium text-neutral-900">{item.category}</span>
-                      <span className="text-caption text-neutral-500">
-                        {item.exactWeightKg} kg @ {formatBdt(amount)}/kg
-                      </span>
-                      <span className="font-data text-body-sm text-neutral-900 mt-1">
-                        Total: {formatBdt(exactTotal)}
-                      </span>
-                    </div>
-                  );
-                } else {
-                  const range = LOAD_SIZE_KG_RANGES[item.loadSize as LoadSize];
-                  const totalMin = amount * range.minKg;
-                  const totalMax = amount * range.maxKg;
-                  return (
-                    <div key={item.id} className="flex flex-col items-end border-b border-neutral-100 pb-2 last:border-0 last:pb-0">
-                      <span className="text-body-sm font-medium text-neutral-900">{item.category}</span>
-                      <span className="text-caption text-neutral-500">
-                        {formatKgRange(item.loadSize)} @ {formatBdt(amount)}/kg
-                      </span>
-                      <span className="font-data text-body-sm text-neutral-900 mt-1">
-                        Total: {formatBdt(totalMin)} - {formatBdt(totalMax)}
-                      </span>
-                    </div>
-                  );
-                }
+                const range = LOAD_SIZE_KG_RANGES[item.loadSize as LoadSize];
+                const totalMin = amount * range.minKg;
+                const totalMax = amount * range.maxKg;
+                return (
+                  <div key={item.id} className="flex flex-col items-end border-b border-neutral-100 pb-2 last:border-0 last:pb-0">
+                    <span className="text-body-sm font-medium text-neutral-900">{item.category}</span>
+                    <span className="text-caption text-neutral-500">
+                      {formatKgRange(item.loadSize)} @ {formatBdt(amount)}/kg
+                    </span>
+                    <span className="font-data text-body-sm text-neutral-900 mt-1">
+                      Total: {formatBdt(totalMin)} - {formatBdt(totalMax)}
+                    </span>
+                  </div>
+                );
               })}
               {estimatedTotalBidRange && (
                 <div className="mt-1 text-body-sm text-neutral-900 font-bold border-t border-neutral-200 pt-3">
-                  Est. Grand Total: {estimatedTotalBidRange.min === estimatedTotalBidRange.max ? formatBdt(estimatedTotalBidRange.max) : `${formatBdt(estimatedTotalBidRange.min)} - ${formatBdt(estimatedTotalBidRange.max)}`}
+                  Est. Grand Total: {formatBdt(estimatedTotalBidRange.min)} - {formatBdt(estimatedTotalBidRange.max)}
                 </div>
               )}
             </div>

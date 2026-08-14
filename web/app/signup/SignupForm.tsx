@@ -57,7 +57,6 @@ const signupErrorMessages: Record<string, string> = {
   VALIDATION_ERROR:
     "Please check your details — make sure your email is valid and your password is at least 8 characters.",
   ACCOUNT_EXISTS: "An account with that email or phone number already exists. Try logging in instead.",
-  INVALID_REFERRAL_CODE: "The referral code you entered is invalid or expired.",
 };
 
 function resolveSignupErrorMessage(err: unknown): string {
@@ -69,10 +68,9 @@ function resolveSignupErrorMessage(err: unknown): string {
 
 export interface SignupFormProps {
   defaultRoleChoice: SignupRoleChoice;
-  defaultReferralCode?: string | null;
 }
 
-export function SignupForm({ defaultRoleChoice, defaultReferralCode }: SignupFormProps) {
+export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
   const { signup } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -108,7 +106,6 @@ export function SignupForm({ defaultRoleChoice, defaultReferralCode }: SignupFor
           role,
           ...(phone ? { phone } : {}),
           ...(accountType ? { accountType } : {}),
-          ...(referralCode ? { referralCode } : {}),
         })
           .then((newUser) => {
             const destination =

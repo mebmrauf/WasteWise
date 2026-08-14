@@ -4,11 +4,10 @@ import * as React from "react";
 import Link from "next/link";
 import { Battery, Camera, ClipboardList, Gift, Leaf, Medal, Package, Truck, Wind, BadgeCheck, Recycle } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
-import { DashboardFeatureTile } from "@/components/DashboardFeatureTile";
-import { SmartPickupReminderBanner } from "@/components/SmartPickupReminderBanner";
 import { StatusPill } from "@/components/StatusPill";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
+import { DashboardFeatureTile } from "@/components/DashboardFeatureTile";
 import { listPickups, type PickupRequestSummary } from "@/lib/api/pickups";
 import { PICKUP_STATUS_TONE, PICKUP_STATUS_LABEL } from "@/lib/pickupStatus";
 import { getRewardsBalance } from "@/lib/api/rewards";
@@ -191,10 +190,6 @@ export default function UserDashboardPage() {
         </div>
       </Card>
 
-      {/* Smart Pickup Reminder */}
-      <SmartPickupReminderBanner />
-
-      {/* Stats */}
       {isLoading ? (
         <div className="animate-pulse space-y-4">
           <div className="h-32 bg-neutral-200 rounded-lg w-full" />

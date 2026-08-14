@@ -60,7 +60,6 @@ const createQuotationSchema = z.object({
   estimatedPickupDate: z.string().datetime(),
   estimatedPickupTime: z.string().optional(),
   additionalNotes: z.string().optional(),
-  pricesPerKg: z.record(z.string(), z.number()).optional(),
 });
 
 // Create Bulk Request (Business only)
@@ -189,23 +188,7 @@ marketplaceRouter.get(
         },
         _count: {
           select: { quotations: true }
-        },
-        ...(isBusiness ? {
-          assignedCompany: {
-            select: { fullName: true }
-          },
-          quotations: {
-            where: { status: "ACCEPTED" }
-          },
-          rating: {
-            select: { score: true }
-          }
-        } : {}),
-        ...(isRecyclingCompany ? {
-          quotations: {
-            where: { companyId: req.user!.id }
-          }
-        } : {})
+        }
       },
       orderBy: { createdAt: "desc" },
     });
@@ -225,10 +208,6 @@ marketplaceRouter.get(
       include: {
         business: { select: { fullName: true, avatarUrl: true } },
         assignedCompany: { select: { fullName: true, avatarUrl: true, recyclingCompanyProfile: true } },
-        quotations: {
-          where: { companyId: req.user!.id }
-        },
-        rating: true
       }
     });
 
@@ -247,8 +226,7 @@ marketplaceRouter.get(
         return;
       }
     } else if (isRecyclingCompany) {
-      const hasAcceptedQuote = request.quotations.some((q: any) => q.status === "ACCEPTED");
-      if (request.status !== "OPEN_FOR_BIDDING" && request.assignedCompanyId !== req.user!.id && !hasAcceptedQuote) {
+      if (request.status !== "OPEN_FOR_BIDDING" && request.assignedCompanyId !== req.user!.id) {
         sendError(res, 403, "FORBIDDEN", "You do not have permission to view this request.");
         return;
       }
@@ -288,28 +266,23 @@ marketplaceRouter.post(
       return;
     }
 
-    const existingQuotation = await prisma.marketplaceQuotation.findUnique({
-      where: {
-        requestId_companyId: { requestId, companyId: req.user!.id }
-      }
-    });
-
-    if (existingQuotation) {
-      sendError(res, 400, "BAD_REQUEST", "You have already submitted a quotation for this request.");
-      return;
-    }
-
     const parsed = createQuotationSchema.safeParse(req.body);
     if (!parsed.success) {
       sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message || "Invalid input");
       return;
     }
 
-    // Create quotation
-    const quotation = await prisma.marketplaceQuotation.create({
-      data: {
+    // Upsert quotation
+    const quotation = await prisma.marketplaceQuotation.upsert({
+      where: {
+        requestId_companyId: { requestId, companyId: req.user!.id }
+      },
+      create: {
         requestId,
         companyId: req.user!.id,
+        ...parsed.data,
+      },
+      update: {
         ...parsed.data,
       }
     });
@@ -387,66 +360,38 @@ marketplaceRouter.post(
       return;
     }
 
-    const otherQuotations = await prisma.marketplaceQuotation.findMany({
-      where: { requestId, id: { not: quoteId } },
-      select: { companyId: true }
+    await prisma.$transaction(async (tx) => {
+      // 1. Mark accepted quotation
+      await tx.marketplaceQuotation.update({
+        where: { id: quoteId },
+        data: { status: "ACCEPTED" }
+      });
+
+      // 2. Mark other quotations as rejected
+      await tx.marketplaceQuotation.updateMany({
+        where: { requestId, id: { not: quoteId } },
+        data: { status: "REJECTED" }
+      });
+
+      // 3. Update Request status and assigned company
+      await tx.bulkMarketplaceRequest.update({
+        where: { id: requestId },
+        data: {
+          status: "RECYCLING_COMPANY_ASSIGNED",
+          assignedCompanyId: quotation.companyId,
+        }
+      });
+      
     });
 
-    try {
-      await prisma.$transaction(async (tx) => {
-        const currentRequest = await tx.bulkMarketplaceRequest.findUnique({ where: { id: requestId } });
-        if (currentRequest?.status !== "OPEN_FOR_BIDDING") {
-          throw new Error("NOT_OPEN");
-        }
-
-        // 1. Mark accepted quotation
-        await tx.marketplaceQuotation.update({
-          where: { id: quoteId },
-          data: { status: "ACCEPTED" }
-        });
-
-        // 2. Mark other quotations as rejected
-        await tx.marketplaceQuotation.updateMany({
-          where: { requestId, id: { not: quoteId } },
-          data: { status: "REJECTED" }
-        });
-
-        // 3. Update Request status and assigned company
-        await tx.bulkMarketplaceRequest.update({
-          where: { id: requestId },
-          data: {
-            status: "RECYCLING_COMPANY_ASSIGNED",
-            assignedCompanyId: quotation.companyId,
-          }
-        });
-      });
-    } catch (err: any) {
-      if (err.message === "NOT_OPEN") {
-        sendError(res, 400, "BAD_REQUEST", "Request is no longer open for bidding. Another quotation may have already been accepted.");
-        return;
-      }
-      throw err;
-    }
-
-    // Notify Selected Recycling Company
+    // Notify Recycling Company
     void createNotification({
       userId: quotation.companyId,
       type: "PICKUP_STATUS_UPDATE",
       title: "Quotation Accepted",
-      message: "🎉 Your quotation has been accepted. You have been selected to collect this bulk request.",
+      message: `Your quotation for request ${requestId.slice(0,8)} has been accepted! You are now assigned to this collection.`,
       emailPreference: "emailNotificationsEnabled",
     });
-
-    // Notify Rejected Recycling Companies
-    for (const other of otherQuotations) {
-      void createNotification({
-        userId: other.companyId,
-        type: "PICKUP_STATUS_UPDATE",
-        title: "Quotation Not Selected",
-        message: "Your quotation was not selected for this request. The Business has accepted another quotation.",
-        emailPreference: "emailNotificationsEnabled",
-      });
-    }
 
     sendData(res, 200, { success: true });
   })
@@ -509,7 +454,7 @@ marketplaceRouter.post(
   requireRole(Role.RECYCLING_COMPANY),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { verifiedWeights, verifiedTotalWeightKg, collectionPhotos, notes } = req.body;
+    const { verifiedWeights, verifiedTotalWeightKg, collectionPhotos } = req.body;
 
     const request = await prisma.bulkMarketplaceRequest.findUnique({ where: { id } });
     if (!request || request.assignedCompanyId !== req.user!.id) {
@@ -517,9 +462,9 @@ marketplaceRouter.post(
       return;
     }
 
-    let updatedNotes = request.additionalNotes;
-    if (notes) {
-      updatedNotes = updatedNotes ? `${updatedNotes}\n\nCollection Notes: ${notes}` : `Collection Notes: ${notes}`;
+    if (!collectionPhotos || collectionPhotos.length === 0) {
+      sendError(res, 400, "BAD_REQUEST", "At least one collection photo is required.");
+      return;
     }
 
     await prisma.bulkMarketplaceRequest.update({
@@ -527,8 +472,7 @@ marketplaceRouter.post(
       data: {
         verifiedWeights,
         verifiedTotalWeightKg,
-        collectionPhotos: collectionPhotos || [],
-        additionalNotes: updatedNotes,
+        collectionPhotos,
         status: "VERIFYING_WEIGHTS"
       }
     });

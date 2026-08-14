@@ -64,7 +64,7 @@ rewardsRouter.get(
     });
 
     const lifetimePoints = Math.max(user.totalGreenPoints, user.greenPointsBalance);
-    const membershipLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
+    const membershipLevel = calculateMembershipLevel(lifetimePoints);
     const membershipBadge = getMembershipBadge(membershipLevel);
 
     sendData(res, 200, {
@@ -128,7 +128,7 @@ rewardsRouter.post(
 
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: req.user!.id },
-      select: { greenPointsBalance: true, totalGreenPoints: true, accountType: true },
+      select: { greenPointsBalance: true, totalGreenPoints: true },
     });
     if (pointsSpent > user.greenPointsBalance) {
       sendError(
@@ -161,7 +161,7 @@ rewardsRouter.post(
     }
 
     const lifetimePoints = Math.max(user.totalGreenPoints, user.greenPointsBalance);
-    const newMembershipLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
+    const newMembershipLevel = calculateMembershipLevel(lifetimePoints);
     const newMembershipBadge = getMembershipBadge(newMembershipLevel);
 
     const result = await prisma.$transaction(async (tx) => {
@@ -237,11 +237,11 @@ rewardsRouter.post(
 
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: req.user!.id },
-      select: { greenPointsBalance: true, totalGreenPoints: true, giftClaimDate: true, accountType: true },
+      select: { greenPointsBalance: true, totalGreenPoints: true, giftClaimDate: true },
     });
 
     const lifetimePoints = Math.max(user.totalGreenPoints, user.greenPointsBalance);
-    const membershipLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
+    const membershipLevel = calculateMembershipLevel(lifetimePoints);
 
     if (membershipLevel !== "PLATINUM") {
       sendError(res, 403, "FORBIDDEN", "Only Platinum members can claim exclusive gifts.");
@@ -294,11 +294,11 @@ rewardsRouter.post(
   asyncHandler(async (req, res) => {
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: req.user!.id },
-      select: { greenPointsBalance: true, totalGreenPoints: true, lastDiscountClaimDate: true, accountType: true },
+      select: { greenPointsBalance: true, totalGreenPoints: true, lastDiscountClaimDate: true },
     });
 
     const lifetimePoints = Math.max(user.totalGreenPoints, user.greenPointsBalance);
-    const membershipLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
+    const membershipLevel = calculateMembershipLevel(lifetimePoints);
 
     if (membershipLevel !== "GOLD" && membershipLevel !== "PLATINUM") {
       sendError(res, 403, "FORBIDDEN", "Only Gold and Platinum members can claim Eco Shop discounts.");

@@ -21,27 +21,14 @@ import {
   type PickupRequestSummary,
 } from "@/lib/api/pickups";
 
-function estimateJobWeightRangeLabel(items: { loadSize: LoadSize; exactWeightKg?: number | null }[]): string {
-  let isAllExact = true;
-  let totalExact = 0;
-  
+function estimateJobWeightRangeLabel(items: { loadSize: LoadSize }[]): string {
   const totals = items.reduce(
     (sum, item) => {
-      if (typeof item.exactWeightKg === "number") {
-        totalExact += item.exactWeightKg;
-        return { minKg: sum.minKg + item.exactWeightKg, maxKg: sum.maxKg + item.exactWeightKg };
-      } else {
-        isAllExact = false;
-        const range = LOAD_SIZE_KG_RANGES[item.loadSize];
-        return { minKg: sum.minKg + range.minKg, maxKg: sum.maxKg + range.maxKg };
-      }
+      const range = LOAD_SIZE_KG_RANGES[item.loadSize];
+      return { minKg: sum.minKg + range.minKg, maxKg: sum.maxKg + range.maxKg };
     },
     { minKg: 0, maxKg: 0 },
   );
-
-  if (isAllExact && items.length > 0) {
-    return `${totalExact} Kg`;
-  }
   return `${totals.minKg}-${totals.maxKg} Kg`;
 }
 
@@ -119,12 +106,8 @@ export function AvailableJobsBoard() {
         return;
       }
       bidAmountsPerKg[item.category] = num;
-      if (typeof item.exactWeightKg === "number") {
-        totalEstimatedBid += num * item.exactWeightKg;
-      } else {
-        const range = LOAD_SIZE_KG_RANGES[item.loadSize];
-        totalEstimatedBid += num * range.maxKg;
-      }
+      const range = LOAD_SIZE_KG_RANGES[item.loadSize];
+      totalEstimatedBid += num * range.maxKg;
     }
 
     setBidErrors((prev) => {
@@ -216,7 +199,7 @@ export function AvailableJobsBoard() {
                     items: job.items.map((item) => ({
                       id: item.id,
                       category: item.category,
-                      quantityLabel: typeof item.exactWeightKg === "number" ? `${item.exactWeightKg} kg` : `${LOAD_SIZE_LABELS[item.loadSize]} (${formatKgRange(item.loadSize)})`,
+                      quantityLabel: `${LOAD_SIZE_LABELS[item.loadSize]} (${formatKgRange(item.loadSize)})`,
                     })),
                   }}
                   estimatedWeightRangeLabel={estimateJobWeightRangeLabel(job.items)}
