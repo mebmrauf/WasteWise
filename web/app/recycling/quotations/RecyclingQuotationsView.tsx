@@ -76,19 +76,19 @@ export function RecyclingQuotationsView() {
               </div>
 
               <div className="flex flex-wrap gap-4 text-body-sm">
-                <div className="bg-neutral-50 px-3 py-2 rounded-lg border border-neutral-100">
-                  <span className="text-neutral-500 block text-xs mb-1">Offered Price</span>
+                <div className="bg-neutral-50 px-3 py-1.5 rounded-lg border border-neutral-100">
+                  <span className="text-neutral-500 block text-xs mb-0.5">Offered Price</span>
                   <span className="font-semibold text-neutral-900">৳{quote.purchasePrice.toLocaleString()}</span>
                 </div>
-                <div className="bg-neutral-50 px-3 py-2 rounded-lg border border-neutral-100">
-                  <span className="text-neutral-500 block text-xs mb-1">Est. Pickup Date</span>
+                <div className="bg-neutral-50 px-3 py-1.5 rounded-lg border border-neutral-100">
+                  <span className="text-neutral-500 block text-xs mb-0.5">Est. Pickup Date</span>
                   <span className="font-semibold text-neutral-900 flex items-center gap-1">
                     <Icon icon={Calendar} size="sm" className="w-3 h-3" />
                     {format(new Date(quote.estimatedPickupDate), "MMM d, yyyy")}
                   </span>
                 </div>
-                <div className="bg-neutral-50 px-3 py-2 rounded-lg border border-neutral-100">
-                  <span className="text-neutral-500 block text-xs mb-1">Submitted On</span>
+                <div className="bg-neutral-50 px-3 py-1.5 rounded-lg border border-neutral-100">
+                  <span className="text-neutral-500 block text-xs mb-0.5">Submitted On</span>
                   <span className="font-semibold text-neutral-900">
                     {format(new Date(quote.createdAt), "MMM d, yyyy")}
                   </span>
@@ -97,7 +97,7 @@ export function RecyclingQuotationsView() {
             </div>
 
             <div className="flex flex-col items-end gap-2 min-w-[150px]">
-              <div className={cn("px-3 py-2 rounded-full border flex items-center gap-2 text-sm font-medium", statusConfig.color)}>
+              <div className={cn("px-3 py-1.5 rounded-full border flex items-center gap-1.5 text-sm font-medium", statusConfig.color)}>
                 <Icon icon={statusConfig.icon} className="w-4 h-4" />
                 <span>{statusConfig.label}</span>
               </div>

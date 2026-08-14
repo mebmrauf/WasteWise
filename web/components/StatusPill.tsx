@@ -29,7 +29,7 @@ export function StatusPill({ tone, children, className }: StatusPillProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-label",
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-label",
         toneClasses[tone],
         className
       )}

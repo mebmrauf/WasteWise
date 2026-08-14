@@ -24,7 +24,6 @@ interface AvailableJobListItemPickup {
 export interface AvailableJobListItemProps {
   pickup: AvailableJobListItemPickup;
   estimatedWeightRangeLabel: string;
-  isDirectRequest?: boolean;
   onSelect?: (pickupId: string) => void;
   className?: string;
 }
@@ -41,17 +40,11 @@ export function formatTimeSlot(startIso: string, endIso: string): string {
 export function AvailableJobListItem({
   pickup,
   estimatedWeightRangeLabel,
-  isDirectRequest,
   onSelect,
   className,
 }: AvailableJobListItemProps) {
   return (
     <Card className={cn("glass-panel border-0 shadow-md hover:shadow-lg transition-shadow flex flex-col gap-4 rounded-2xl p-6", className)}>
-      {isDirectRequest && (
-        <span className="self-start px-2 py-1 rounded-md bg-primary-50 text-primary-700 text-label font-medium">
-          Requested you directly
-        </span>
-      )}
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2 text-body-sm text-neutral-700">
           <Icon icon={MapPin} size="sm" className="text-neutral-500" />

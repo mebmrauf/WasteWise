@@ -172,7 +172,7 @@ export function RecyclingDashboardView() {
                       <div className="flex justify-between items-center gap-4">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700">
                               {displayStatus}
                             </span>
                           </div>

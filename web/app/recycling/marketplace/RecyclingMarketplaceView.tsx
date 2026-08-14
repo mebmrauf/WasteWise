@@ -6,7 +6,6 @@ import { Package, MapPin, Calendar, Clock, ChevronRight, X, Loader2 } from "luci
 import { Button } from "@/components/Button";
 import { Icon } from "@/components/Icon";
 import { ErrorBanner } from "@/components/ErrorBanner";
-import { ImageLightbox } from "@/components/ImageLightbox";
 import { format } from "date-fns";
 
 export function RecyclingMarketplaceView() {
@@ -81,19 +80,19 @@ export function RecyclingMarketplaceView() {
               </div>
 
               <div className="flex flex-wrap gap-4 text-body-sm">
-                <div className="bg-neutral-50 px-3 py-2 rounded-lg border border-neutral-100">
-                  <span className="text-neutral-500 block text-xs mb-1">Total Weight</span>
+                <div className="bg-neutral-50 px-3 py-1.5 rounded-lg border border-neutral-100">
+                  <span className="text-neutral-500 block text-xs mb-0.5">Total Weight</span>
                   <span className="font-semibold text-neutral-900">{req.estimatedWeightKg} kg</span>
                 </div>
-                <div className="bg-neutral-50 px-3 py-2 rounded-lg border border-neutral-100">
-                  <span className="text-neutral-500 block text-xs mb-1">Preferred Date</span>
+                <div className="bg-neutral-50 px-3 py-1.5 rounded-lg border border-neutral-100">
+                  <span className="text-neutral-500 block text-xs mb-0.5">Preferred Date</span>
                   <span className="font-semibold text-neutral-900 flex items-center gap-1">
                     <Icon icon={Calendar} size="sm" className="w-3 h-3" />
                     {format(new Date(req.preferredPickupDate), "MMM d, yyyy")}
                   </span>
                 </div>
-                <div className="bg-neutral-50 px-3 py-2 rounded-lg border border-neutral-100">
-                  <span className="text-neutral-500 block text-xs mb-1">Waste Types</span>
+                <div className="bg-neutral-50 px-3 py-1.5 rounded-lg border border-neutral-100">
+                  <span className="text-neutral-500 block text-xs mb-0.5">Waste Types</span>
                   <span className="font-semibold text-neutral-900">
                     {wasteTypesArr.map(w => w.category).join(", ")}
                   </span>
@@ -105,10 +104,26 @@ export function RecyclingMarketplaceView() {
               <div className="text-right mb-2">
                 <span className="text-body-sm text-neutral-500">{req._count?.quotations || 0} quotes so far</span>
               </div>
-              <Button onClick={() => setSelectedRequest(req)} className="w-full justify-between group">
-                Submit Quotation
-                <Icon icon={ChevronRight} size="sm" className="opacity-70 group-hover:opacity-100 transition-opacity" />
-              </Button>
+              {req.quotations && req.quotations.length > 0 ? (
+                req.quotations[0].status === "ACCEPTED" ? (
+                  <Button disabled variant="secondary" className="w-full bg-emerald-100 text-emerald-800 border-emerald-200">
+                    Quotation Accepted
+                  </Button>
+                ) : req.quotations[0].status === "REJECTED" ? (
+                  <Button disabled variant="secondary" className="w-full bg-red-100 text-red-800 border-red-200">
+                    Quotation Rejected
+                  </Button>
+                ) : (
+                  <Button disabled variant="secondary" className="w-full">
+                    Quotation Submitted
+                  </Button>
+                )
+              ) : (
+                <Button onClick={() => setSelectedRequest(req)} className="w-full justify-between group">
+                  Submit Quotation
+                  <Icon icon={ChevronRight} size="sm" className="opacity-70 group-hover:opacity-100 transition-opacity" />
+                </Button>
+              )}
             </div>
           </div>
         );
@@ -129,7 +144,22 @@ export function RecyclingMarketplaceView() {
 }
 
 function SubmitQuotationModal({ request, onClose, onSuccess }: { request: BulkMarketplaceRequest; onClose: () => void; onSuccess: () => void }) {
-  const [price, setPrice] = React.useState("");
+  const materials: { category: string; weightKg: number }[] = React.useMemo(() => {
+    if (typeof request.wasteTypes === 'string') {
+      try { return JSON.parse(request.wasteTypes); } catch (e) { return []; }
+    }
+    return (request.wasteTypes as any) || [];
+  }, [request.wasteTypes]);
+
+  const [prices, setPrices] = React.useState<Record<string, number>>({});
+  
+  const grandTotal = React.useMemo(() => {
+    return materials.reduce((sum, mat) => {
+      const pricePerKg = prices[mat.category] || 0;
+      return sum + (mat.weightKg * pricePerKg);
+    }, 0);
+  }, [materials, prices]);
+
   const [date, setDate] = React.useState("");
   const [time, setTime] = React.useState("");
   const [vehicle, setVehicle] = React.useState("PICKUP_TRUCK");
@@ -137,7 +167,6 @@ function SubmitQuotationModal({ request, onClose, onSuccess }: { request: BulkMa
   
   const [submitting, setSubmitting] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
-  const [previewImageUrl, setPreviewImageUrl] = React.useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,7 +174,8 @@ function SubmitQuotationModal({ request, onClose, onSuccess }: { request: BulkMa
       setSubmitting(true);
       setErrorMsg(null);
       await submitQuotation(request.id, {
-        purchasePrice: Number(price),
+        purchasePrice: grandTotal,
+        pricesPerKg: prices,
         vehicleType: vehicle,
         estimatedPickupDate: new Date(date).toISOString(),
         estimatedPickupTime: time || undefined,
@@ -188,38 +218,6 @@ function SubmitQuotationModal({ request, onClose, onSuccess }: { request: BulkMa
               </div>
             </div>
           </div>
-
-<<<<<<< Updated upstream
-          <div>
-            <label className="block text-body-sm font-medium text-neutral-700 mb-2">
-              Purchase Price (BDT)
-            </label>
-            <input
-              type="number"
-              required
-              min="0"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-              placeholder="e.g. 5000"
-            />
-=======
-          {request.images && request.images.length > 0 && (
-            <div>
-              <h4 className="font-medium text-neutral-900 mb-3">Photos</h4>
-              <div className="flex gap-3 overflow-x-auto pb-1">
-                {request.images.map((url, idx) => (
-                  <img
-                    key={idx}
-                    src={url}
-                    alt={`Waste photo ${idx + 1}`}
-                    className="h-24 w-24 shrink-0 rounded-lg object-cover border border-neutral-200 cursor-pointer"
-                    onClick={() => setPreviewImageUrl(url)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
 
           <div className="space-y-3">
             <h4 className="font-medium text-neutral-900">Price Breakdown</h4>
@@ -266,7 +264,6 @@ function SubmitQuotationModal({ request, onClose, onSuccess }: { request: BulkMa
                 </tfoot>
               </table>
             </div>
->>>>>>> Stashed changes
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -279,7 +276,7 @@ function SubmitQuotationModal({ request, onClose, onSuccess }: { request: BulkMa
                 required
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               />
             </div>
             <div>
@@ -290,7 +287,7 @@ function SubmitQuotationModal({ request, onClose, onSuccess }: { request: BulkMa
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               />
             </div>
           </div>
@@ -302,7 +299,7 @@ function SubmitQuotationModal({ request, onClose, onSuccess }: { request: BulkMa
             <select
               value={vehicle}
               onChange={(e) => setVehicle(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
             >
               <option value="PICKUP_TRUCK">Pickup Truck</option>
               <option value="TRUCK">Truck</option>
@@ -322,7 +319,7 @@ function SubmitQuotationModal({ request, onClose, onSuccess }: { request: BulkMa
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Any specific conditions or information for the business..."
-              className="w-full rounded-lg border border-neutral-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
             />
           </div>
 
@@ -333,10 +330,6 @@ function SubmitQuotationModal({ request, onClose, onSuccess }: { request: BulkMa
           </div>
         </form>
       </div>
-
-      {previewImageUrl && (
-        <ImageLightbox src={previewImageUrl} alt="Waste photo preview" onClose={() => setPreviewImageUrl(null)} />
-      )}
     </div>
   );
 }

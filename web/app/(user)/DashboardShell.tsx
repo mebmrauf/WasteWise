@@ -34,7 +34,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           icon: ClipboardList,
           active: onTrackDetail || onOffersDetail ? true : undefined,
         },
-        { label: "Find a Collector", href: "/dashboard/collectors", icon: BadgeCheck },
+        { label: "Verified Collectors", href: "/dashboard/collectors", icon: BadgeCheck },
         { label: "Waste Recognition", href: "/waste-recognition", icon: Camera },
         { label: "Green Rewards", href: "/dashboard/rewards", icon: Gift },
         { label: "Referral Program", href: "/referrals", icon: Users },

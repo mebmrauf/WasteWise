@@ -103,7 +103,7 @@ export function PillRadioGroup({
             onClick={() => onChange(option.id)}
             onKeyDown={(event) => handleKeyDown(event, index)}
             className={cn(
-              "rounded-full border px-5 py-3 text-label-lg transition-all font-medium",
+              "rounded-full border px-5 py-2.5 text-label-lg transition-all font-medium",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500",
               option.disabled
                 ? "cursor-not-allowed border-neutral-100 bg-neutral-50 text-neutral-400"

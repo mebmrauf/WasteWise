@@ -13,11 +13,13 @@ import { getMyProfile, updateMyProfile, type UpdateProfileInput } from "@/lib/ap
 
 interface NotificationPrefs {
   emailNotificationsEnabled: boolean;
+  smsNotificationsEnabled: boolean;
   rewardsEmailNotificationsEnabled: boolean;
 }
 
 const notificationPreferenceKeys = {
   email: "emailNotificationsEnabled",
+  sms: "smsNotificationsEnabled",
   rewardsEmail: "rewardsEmailNotificationsEnabled",
 } as const;
 
@@ -37,6 +39,7 @@ export function RecyclingSettingsView() {
       .then(({ user: profile }) => {
         setNotificationPrefs({
           emailNotificationsEnabled: profile.emailNotificationsEnabled,
+          smsNotificationsEnabled: profile.smsNotificationsEnabled,
           rewardsEmailNotificationsEnabled: profile.rewardsEmailNotificationsEnabled,
         });
       })
@@ -161,19 +164,19 @@ export function RecyclingSettingsView() {
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-body-sm font-medium text-neutral-700 mb-2">Company Name</label>
-              <input type="text" required value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full rounded-lg border border-neutral-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
+              <input type="text" required value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
             </div>
             <div>
               <label className="block text-body-sm font-medium text-neutral-700 mb-2">Trade License Number</label>
-              <input type="text" value={tradeLicense} onChange={(e) => setTradeLicense(e.target.value)} className="w-full rounded-lg border border-neutral-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
+              <input type="text" value={tradeLicense} onChange={(e) => setTradeLicense(e.target.value)} className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
             </div>
             <div className="md:col-span-2">
               <label className="block text-body-sm font-medium text-neutral-700 mb-2">Service Areas (Comma separated)</label>
-              <input type="text" value={serviceAreasStr} onChange={(e) => setServiceAreasStr(e.target.value)} placeholder="e.g. Dhaka, Chittagong, Sylhet" className="w-full rounded-lg border border-neutral-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
+              <input type="text" value={serviceAreasStr} onChange={(e) => setServiceAreasStr(e.target.value)} placeholder="e.g. Dhaka, Chittagong, Sylhet" className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
             </div>
             <div className="md:col-span-2">
               <label className="block text-body-sm font-medium text-neutral-700 mb-2">Accepted Waste Materials (Comma separated)</label>
-              <input type="text" value={acceptedMaterialsStr} onChange={(e) => setAcceptedMaterialsStr(e.target.value)} placeholder="e.g. PLASTIC, PAPER, ELECTRONIC" className="w-full rounded-lg border border-neutral-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
+              <input type="text" value={acceptedMaterialsStr} onChange={(e) => setAcceptedMaterialsStr(e.target.value)} placeholder="e.g. PLASTIC, PAPER, ELECTRONIC" className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
               <p className="text-xs text-neutral-500 mt-1">Available categories: PLASTIC, PAPER, ORGANIC, GLASS, METAL, ELECTRONIC, OTHER</p>
             </div>
           </div>
@@ -189,27 +192,27 @@ export function RecyclingSettingsView() {
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-body-sm font-medium text-neutral-700 mb-2">Contact Person (Full Name)</label>
-              <input type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full rounded-lg border border-neutral-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
+              <input type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
             </div>
             <div>
               <label className="block text-body-sm font-medium text-neutral-700 mb-2">Email Address (Read-only)</label>
-              <input type="email" disabled value={user?.email || ""} className="w-full rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-500 px-4 py-3 cursor-not-allowed" />
+              <input type="email" disabled value={user?.email || ""} className="w-full rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-500 px-4 py-2.5 cursor-not-allowed" />
             </div>
             <div>
               <label className="block text-body-sm font-medium text-neutral-700 mb-2">Account Type (Read-only)</label>
-              <input type="text" disabled value="♻️ Recycling Company" className="w-full rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-500 px-4 py-3 cursor-not-allowed" />
+              <input type="text" disabled value="♻️ Recycling Company" className="w-full rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-500 px-4 py-2.5 cursor-not-allowed" />
             </div>
             <div>
               <label className="block text-body-sm font-medium text-neutral-700 mb-2">Phone Number</label>
-              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full rounded-lg border border-neutral-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
+              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
             </div>
             <div>
               <label className="block text-body-sm font-medium text-neutral-700 mb-2">District / City</label>
-              <input type="text" required value={district} onChange={(e) => setDistrict(e.target.value)} className="w-full rounded-lg border border-neutral-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
+              <input type="text" required value={district} onChange={(e) => setDistrict(e.target.value)} className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
             </div>
             <div className="md:col-span-2">
               <label className="block text-body-sm font-medium text-neutral-700 mb-2">Full Address</label>
-              <textarea rows={3} value={address} onChange={(e) => setAddress(e.target.value)} className="w-full rounded-lg border border-neutral-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
+              <textarea rows={3} value={address} onChange={(e) => setAddress(e.target.value)} className="w-full rounded-lg border border-neutral-300 px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
             </div>
           </div>
         </div>
@@ -245,6 +248,16 @@ export function RecyclingSettingsView() {
               <input
                 type="checkbox"
                 className="h-5 w-5 accent-emerald-600 rounded shrink-0"
+                checked={notificationPrefs?.smsNotificationsEnabled ?? false}
+                disabled={!notificationPrefs}
+                onChange={(e) => void handleToggleNotification("sms", e.target.checked)}
+              />
+              Text me about collection updates
+            </label>
+            <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+              <input
+                type="checkbox"
+                className="h-5 w-5 accent-emerald-600 rounded shrink-0"
                 checked={notificationPrefs?.rewardsEmailNotificationsEnabled ?? false}
                 disabled={!notificationPrefs}
                 onChange={(e) => void handleToggleNotification("rewardsEmail", e.target.checked)}
@@ -257,9 +270,6 @@ export function RecyclingSettingsView() {
           )}
         </div>
       </div>
-
-      <ChangePasswordSection hasPassword={user?.hasPassword ?? false} />
-      <DeleteAccountSection hasPassword={user?.hasPassword ?? false} />
     </div>
   );
 }

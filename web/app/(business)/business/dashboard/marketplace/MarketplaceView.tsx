@@ -6,13 +6,8 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { ErrorBanner } from "@/components/ErrorBanner";
-<<<<<<< Updated upstream
-import { createBulkRequest, getMarketplaceRequests, type BulkMarketplaceRequest } from "@/lib/api/marketplace";
-import { Package, Clock, MapPin, Camera, Navigation, Search, Home } from "lucide-react";
-=======
-import { createBulkRequest, getMarketplaceRequests, getQuotations, acceptQuotation, uploadBulkRequestImage, type BulkMarketplaceRequest, type MarketplaceQuotation } from "@/lib/api/marketplace";
+import { createBulkRequest, getMarketplaceRequests, getQuotations, acceptQuotation, type BulkMarketplaceRequest, type MarketplaceQuotation } from "@/lib/api/marketplace";
 import { Package, Clock, MapPin, Camera, Navigation, Search, Home, X, Loader2 } from "lucide-react";
->>>>>>> Stashed changes
 import { format } from "date-fns";
 import { Card } from "@/components/Card";
 import { Icon } from "@/components/Icon";
@@ -24,11 +19,9 @@ import { fetchAddressSuggestions, fetchPlaceDetails, PlacesConfigError, fetchRev
 import { getMyProfile, type UserProfile } from "@/lib/api/users";
 import { AuthApiError } from "@/lib/api/auth";
 import { TimeSlotPicker, type TimeSlot } from "@/components/TimeSlotPicker";
-import { ImageLightbox } from "@/components/ImageLightbox";
 
 const ADDRESS_DEBOUNCE_MS = 300;
 const ADDRESS_MIN_QUERY_LENGTH = 3;
-const MAX_BULK_REQUEST_IMAGES = 4;
 
 interface TimeWindow extends TimeSlot {
   startHour: number;
@@ -64,6 +57,7 @@ function formatWindowSummary(dateStr: string, window: TimeWindow): string {
 export function MarketplaceView() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = React.useState<"create" | "list">("create");
+  const [reviewingRequest, setReviewingRequest] = React.useState<BulkMarketplaceRequest | null>(null);
   
   const [requests, setRequests] = React.useState<BulkMarketplaceRequest[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -76,10 +70,6 @@ export function MarketplaceView() {
   const [date, setDate] = React.useState("");
   const [timeWindowId, setTimeWindowId] = React.useState<string | null>(null);
   const [additionalNotes, setAdditionalNotes] = React.useState("");
-  const [images, setImages] = React.useState<string[]>([]);
-  const [previewImageUrl, setPreviewImageUrl] = React.useState<string | null>(null);
-  const [isUploadingImage, setIsUploadingImage] = React.useState(false);
-  const [imageUploadError, setImageUploadError] = React.useState<string | null>(null);
   
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
   const [profileError, setProfileError] = React.useState<string | null>(null);
@@ -295,28 +285,6 @@ export function MarketplaceView() {
     resolvedPlaceId !== null && 
     !isSubmitting;
 
-  const handleImageFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-
-    if (images.length >= MAX_BULK_REQUEST_IMAGES) {
-      setImageUploadError(`You can upload up to ${MAX_BULK_REQUEST_IMAGES} photos.`);
-      return;
-    }
-
-    setImageUploadError(null);
-    setIsUploadingImage(true);
-    try {
-      const { url } = await uploadBulkRequestImage(file);
-      setImages((prev) => [...prev, url]);
-    } catch (err: any) {
-      setImageUploadError(err.message || "Failed to upload image.");
-    } finally {
-      setIsUploadingImage(false);
-    }
-  };
-
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMsg(null);
@@ -381,7 +349,7 @@ export function MarketplaceView() {
         placeId: resolvedPlaceId || undefined,
         preferredPickupDate: buildTimeSlotIso(date, selectedWindow.startHour),
         additionalNotes: additionalNotes || undefined,
-        images,
+        images: [],
       });
       setSuccessMsg("Your bulk request was successfully posted to the marketplace!");
       setCategories([]);
@@ -391,7 +359,6 @@ export function MarketplaceView() {
       setCustomAddressQuery("");
       setSelectedCustomPlace(null);
       setAdditionalNotes("");
-      setImages([]);
       
       await loadRequests();
       setActiveTab("list");
@@ -478,7 +445,7 @@ export function MarketplaceView() {
                       <p className="text-caption text-neutral-500">Quotations</p>
                     </div>
                     {req.status === "OPEN_FOR_BIDDING" && req._count?.quotations ? (
-                      <Button variant="secondary" size="sm">Review Bids</Button>
+                      <Button variant="secondary" size="sm" onClick={() => setReviewingRequest(req)}>Review Bids</Button>
                     ) : null}
                   </div>
                 </div>
@@ -606,60 +573,11 @@ export function MarketplaceView() {
                       <p className="mt-1 text-body-sm text-neutral-500">Help recycling companies estimate better by providing photos.</p>
                     </div>
                   </div>
-                  {images.length < MAX_BULK_REQUEST_IMAGES ? (
-                    <label
-                      className={cn(
-                        "flex flex-col items-center justify-center text-center rounded-xl border-2 border-dashed border-neutral-200 bg-neutral-50/50 p-8 transition-colors",
-                        isUploadingImage ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-neutral-50 hover:border-primary-300",
-                      )}
-                    >
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        className="hidden"
-                        disabled={isUploadingImage}
-                        onChange={(e) => void handleImageFileSelected(e)}
-                      />
-                      {isUploadingImage ? (
-                        <Loader2 className="w-8 h-8 text-neutral-400 mb-2 animate-spin" />
-                      ) : (
-                        <Camera className="w-8 h-8 text-neutral-400 mb-2" />
-                      )}
-                      <p className="text-body font-medium text-neutral-700 mb-1">
-                        {isUploadingImage ? "Uploading…" : "Upload photos of the waste"}
-                      </p>
-                      <p className="text-caption text-neutral-400">
-                        JPEG, PNG, or WebP, up to 10MB &bull; {images.length} of {MAX_BULK_REQUEST_IMAGES} uploaded
-                      </p>
-                    </label>
-                  ) : (
-                    <p className="text-body-sm text-neutral-500 text-center rounded-xl border border-neutral-100 bg-neutral-50/50 p-4">
-                      Maximum of {MAX_BULK_REQUEST_IMAGES} photos reached. Remove one to upload another.
-                    </p>
-                  )}
-                  {imageUploadError && <p className="mt-2 text-body-sm text-error-700">{imageUploadError}</p>}
-
-                  {images.length > 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
-                      {images.map((url, idx) => (
-                        <div key={idx} className="relative group rounded-lg overflow-hidden border border-neutral-200">
-                          <img
-                            src={url}
-                            alt={`Upload ${idx + 1}`}
-                            className="w-full h-24 object-cover cursor-pointer"
-                            onClick={() => setPreviewImageUrl(url)}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setImages(images.filter((_, i) => i !== idx))}
-                            className="absolute top-1 right-1 bg-white/80 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-red-500"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <div className="border-2 border-dashed border-neutral-200 rounded-xl p-8 flex flex-col items-center justify-center text-center bg-neutral-50/50 cursor-pointer hover:bg-neutral-50 hover:border-primary-300 transition-colors">
+                    <Camera className="w-8 h-8 text-neutral-400 mb-2" />
+                    <p className="text-body font-medium text-neutral-700 mb-1">Upload photos of the waste</p>
+                    <p className="text-caption text-neutral-400">Drag and drop, or click to browse</p>
+                  </div>
                 </Card>
               </div>
 
@@ -871,12 +789,10 @@ export function MarketplaceView() {
           </div>
         )}
       </div>
-<<<<<<< Updated upstream
-=======
 
       {reviewingRequest && (
-        <ReviewBidsModal
-          request={reviewingRequest}
+        <ReviewBidsModal 
+          request={reviewingRequest} 
           onClose={() => setReviewingRequest(null)}
           onAccept={() => {
             setReviewingRequest(null);
@@ -884,11 +800,117 @@ export function MarketplaceView() {
           }}
         />
       )}
-
-      {previewImageUrl && (
-        <ImageLightbox src={previewImageUrl} alt="Waste photo preview" onClose={() => setPreviewImageUrl(null)} />
-      )}
->>>>>>> Stashed changes
     </PageContainer>
+  );
+}
+
+function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketplaceRequest; onClose: () => void; onAccept: () => void }) {
+  const [quotations, setQuotations] = React.useState<MarketplaceQuotation[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [acceptingId, setAcceptingId] = React.useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    async function load() {
+      try {
+        const data = await getQuotations(request.id);
+        setQuotations(data);
+      } catch (err: any) {
+        setErrorMsg(err.message || "Failed to load quotations");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [request.id]);
+
+  const handleAccept = async (quoteId: string) => {
+    try {
+      setAcceptingId(quoteId);
+      setErrorMsg(null);
+      await acceptQuotation(request.id, quoteId);
+      onAccept();
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to accept quotation");
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/50 p-4 backdrop-blur-sm">
+      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-xl border border-neutral-200 flex flex-col">
+        <div className="sticky top-0 bg-white border-b border-neutral-100 px-6 py-4 flex items-center justify-between z-10 shrink-0">
+          <h2 className="text-h4 text-neutral-900">Review Bids</h2>
+          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-50 text-neutral-500 hover:bg-neutral-100 transition-colors">
+            <Icon icon={X} size="sm" />
+          </button>
+        </div>
+        <div className="p-6 overflow-y-auto">
+          {errorMsg && <ErrorBanner className="mb-4">{errorMsg}</ErrorBanner>}
+          {loading ? (
+            <div className="flex h-32 items-center justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+            </div>
+          ) : quotations.length === 0 ? (
+            <p className="text-center text-neutral-500 py-8">No bids found for this request.</p>
+          ) : (
+            <div className="space-y-4">
+              {quotations.map(quote => (
+                <div key={quote.id} className="border border-neutral-200 rounded-xl p-5 hover:border-emerald-200 transition-colors">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      {quote.company?.avatarUrl ? (
+                        <img src={quote.company.avatarUrl} alt={quote.company.fullName} className="w-10 h-10 rounded-full object-cover bg-neutral-100" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold">
+                          {quote.company?.fullName?.charAt(0) || "C"}
+                        </div>
+                      )}
+                      <div>
+                        <h4 className="font-semibold text-neutral-900">{quote.company?.fullName}</h4>
+                        <p className="text-xs text-neutral-500">Status: {quote.status}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-bold text-emerald-600">BDT {quote.purchasePrice}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-4 text-sm bg-neutral-50 p-4 rounded-lg">
+                    <div>
+                      <span className="block text-neutral-500 text-xs mb-1">Proposed Pickup</span>
+                      <span className="font-medium text-neutral-900">
+                        {new Date(quote.estimatedPickupDate).toLocaleDateString()} {quote.estimatedPickupTime && `at ${quote.estimatedPickupTime}`}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-neutral-500 text-xs mb-1">Vehicle Type</span>
+                      <span className="font-medium text-neutral-900 capitalize">{quote.vehicleType.replace(/_/g, ' ').toLowerCase()}</span>
+                    </div>
+                    {quote.additionalNotes && (
+                      <div className="col-span-2">
+                        <span className="block text-neutral-500 text-xs mb-1">Additional Notes</span>
+                        <span className="text-neutral-700">{quote.additionalNotes}</span>
+                      </div>
+                    )}
+                  </div>
+                  {quote.status === "PENDING" && (
+                    <div className="mt-4 flex justify-end">
+                      <Button 
+                        onClick={() => handleAccept(quote.id)} 
+                        disabled={acceptingId !== null}
+                      >
+                        {acceptingId === quote.id ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Accept Quotation
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

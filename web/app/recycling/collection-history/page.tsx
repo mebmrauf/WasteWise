@@ -3,13 +3,11 @@
 import * as React from "react";
 import { PageContainer } from "@/components/PageContainer";
 import { getMarketplaceRequests, type BulkMarketplaceRequest } from "@/lib/api/marketplace";
-import { MapPin, CheckCircle2, Star } from "lucide-react";
+import { MapPin, CheckCircle2, Star, X, Package, Calendar, Tag, Building2, Truck, ImageIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
 import { RecyclingVerificationGate } from "../RecyclingVerificationGate";
-<<<<<<< Updated upstream
-=======
 import { Button } from "@/components/Button";
 
 function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplaceRequest; onClose: () => void }) {
@@ -41,7 +39,7 @@ function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplace
         <div className="p-6 overflow-y-auto flex flex-col gap-8">
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full uppercase tracking-wide flex items-center gap-2">
+              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full uppercase tracking-wide flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4" />
                 Business Confirmed &amp; Completed
               </span>
@@ -69,7 +67,7 @@ function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplace
               </h3>
               <div className="flex flex-col gap-4">
                 <div className="flex items-start gap-3">
-                  <Icon icon={Tag} className="text-emerald-500 shrink-0 mt-1" size="sm" />
+                  <Icon icon={Tag} className="text-emerald-500 shrink-0 mt-0.5" size="sm" />
                   <div>
                     <p className="text-xs text-neutral-500">Accepted Purchase Price</p>
                     <p className="font-semibold text-neutral-900">
@@ -78,7 +76,7 @@ function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplace
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Icon icon={Calendar} className="text-blue-500 shrink-0 mt-1" size="sm" />
+                  <Icon icon={Calendar} className="text-blue-500 shrink-0 mt-0.5" size="sm" />
                   <div>
                     <p className="text-xs text-neutral-500">Completed Date</p>
                     <p className="font-semibold text-neutral-900">
@@ -87,7 +85,7 @@ function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplace
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Icon icon={MapPin} className="text-rose-500 shrink-0 mt-1" size="sm" />
+                  <Icon icon={MapPin} className="text-rose-500 shrink-0 mt-0.5" size="sm" />
                   <div>
                     <p className="text-xs text-neutral-500">Pickup Address</p>
                     <p className="font-semibold text-neutral-900">{request.pickupAddress}</p>
@@ -102,7 +100,7 @@ function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplace
               </h3>
               <div className="flex flex-col gap-4">
                 <div className="flex items-start gap-3">
-                  <Icon icon={Package} className="text-purple-500 shrink-0 mt-1" size="sm" />
+                  <Icon icon={Package} className="text-purple-500 shrink-0 mt-0.5" size="sm" />
                   <div className="w-full">
                     <p className="text-xs text-neutral-500 mb-2">Individual Verified Weights</p>
                     <div className="flex flex-col gap-2">
@@ -118,7 +116,7 @@ function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplace
                   </div>
                 </div>
                 <div className="flex items-start gap-3 pt-2 border-t border-neutral-100">
-                  <Icon icon={Truck} className="text-amber-500 shrink-0 mt-1" size="sm" />
+                  <Icon icon={Truck} className="text-amber-500 shrink-0 mt-0.5" size="sm" />
                   <div>
                     <p className="text-xs text-neutral-500">Total Verified Weight</p>
                     <p className="font-bold text-neutral-900 text-lg">
@@ -148,12 +146,12 @@ function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplace
     </div>
   );
 }
->>>>>>> Stashed changes
 
 export default function CollectionHistoryPage() {
   const [requests, setRequests] = React.useState<BulkMarketplaceRequest[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+  const [selectedRequest, setSelectedRequest] = React.useState<BulkMarketplaceRequest | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -215,32 +213,26 @@ export default function CollectionHistoryPage() {
               return (
                 <div key={req.id} className="rounded-xl border border-neutral-200 bg-neutral-0 p-6 flex flex-col gap-4 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex justify-between items-start">
-                    <div>
+                    <div className="flex items-center gap-3">
                       <span className="px-2 py-1 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">
                         COMPLETED
                       </span>
-<<<<<<< Updated upstream
-                      <p className="text-caption text-neutral-400 mt-2">
-                        {format(new Date(req.updatedAt), "MMM d, yyyy")}
-                      </p>
-=======
-                      <span className="text-xs font-data text-neutral-400 bg-neutral-100 px-2 py-1 rounded-full">
+                      <span className="text-xs font-data text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">
                         #{req.id.slice(0, 8).toUpperCase()}
                       </span>
->>>>>>> Stashed changes
                     </div>
                     {req.rating && (
                       <div className="flex items-center gap-1 text-warning-500">
                         <Icon icon={Star} size="sm" className="fill-current" />
-                        <span className="text-sm font-semibold">{req.rating}</span>
+                        <span className="text-sm font-semibold">{req.rating.score}</span>
                       </div>
                     )}
                   </div>
 
                   <div>
                     <h3 className="text-h5 text-neutral-900">{req.business?.fullName}</h3>
-                    <p className="text-body-sm font-medium text-neutral-700 mt-1 line-clamp-1">
-                      {wasteTypesArr.map(w => w.category).join(", ")}
+                    <p className="text-caption text-neutral-400 mt-1">
+                      Completed: {format(new Date(req.updatedAt), "MMM d, yyyy")}
                     </p>
                   </div>
 
@@ -248,6 +240,10 @@ export default function CollectionHistoryPage() {
                     <div className="flex items-center gap-2">
                       <MapPin size={16} className="text-neutral-400 flex-shrink-0" />
                       <span className="line-clamp-1">{req.pickupAddress}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Package size={16} className="text-neutral-400 flex-shrink-0" />
+                      <span className="line-clamp-1">{wasteTypesArr.map(w => w.category).join(", ")}</span>
                     </div>
                   </div>
 
@@ -259,11 +255,17 @@ export default function CollectionHistoryPage() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-caption text-neutral-500">Purchase Price</p>
-                      <p className="text-body font-bold text-primary-600">
-                        ৳{acceptedQuote?.purchasePrice.toLocaleString() || "N/A"}
+                      <p className="text-caption text-neutral-500">Accepted Price</p>
+                      <p className="text-body font-bold text-primary-600 truncate">
+                        {acceptedQuote ? `৳${acceptedQuote.purchasePrice.toLocaleString()}` : "N/A"}
                       </p>
                     </div>
+                  </div>
+                  
+                  <div className="pt-2">
+                    <Button variant="secondary" className="w-full" onClick={() => setSelectedRequest(req)}>
+                      View Details
+                    </Button>
                   </div>
                 </div>
               );
@@ -271,6 +273,13 @@ export default function CollectionHistoryPage() {
           </div>
         )}
         </RecyclingVerificationGate>
+        
+        {selectedRequest && (
+          <CollectionHistoryModal 
+            request={selectedRequest} 
+            onClose={() => setSelectedRequest(null)} 
+          />
+        )}
       </div>
     </PageContainer>
   );

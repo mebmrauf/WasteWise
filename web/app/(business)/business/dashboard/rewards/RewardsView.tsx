@@ -633,7 +633,7 @@ export function RewardsView() {
                       key={tab}
                       onClick={() => setFilterTab(tab)}
                       className={cn(
-                        "px-4 py-2 rounded-full text-sm font-medium transition-colors",
+                        "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
                         filterTab === tab
                           ? "bg-primary-600 text-white"
                           : "bg-white text-neutral-600 hover:bg-neutral-100 border border-neutral-200"
@@ -670,7 +670,7 @@ export function RewardsView() {
                                   </div>
                                   <div>
                                     <p className="text-body font-medium text-neutral-900">{tx.title}</p>
-                                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                                    <div className="flex flex-wrap items-center gap-2 mt-0.5">
                                       <p className="text-caption text-neutral-500">{tx.subtitle}</p>
                                       {tx.rechargeStatus && (
                                         <>
@@ -705,7 +705,7 @@ export function RewardsView() {
                                   {tx.rewardReason.materials.length > 0 && (
                                     <div>
                                       <p className="text-caption font-semibold text-neutral-500 uppercase tracking-wider mb-2">Materials</p>
-                                      <div className="flex flex-col gap-2">
+                                      <div className="flex flex-col gap-1.5">
                                         {tx.rewardReason.materials.map((mat, i) => (
                                           <div key={i} className="flex justify-between items-center text-body-sm text-neutral-700 bg-neutral-50 px-3 py-2 rounded-lg">
                                             <span>{mat.category} <span className="text-neutral-400 ml-1">({mat.weight} kg)</span></span>
@@ -718,7 +718,7 @@ export function RewardsView() {
                                   {tx.rewardReason.bonuses.length > 0 && (
                                     <div className="mt-2">
                                       <p className="text-caption font-semibold text-neutral-500 uppercase tracking-wider mb-2">Bonuses</p>
-                                      <div className="flex flex-col gap-2">
+                                      <div className="flex flex-col gap-1.5">
                                         {tx.rewardReason.bonuses.map((bonus, i) => (
                                           <div key={i} className="flex justify-between items-center text-body-sm text-neutral-700 bg-success-50/50 px-3 py-2 rounded-lg">
                                             <span>{bonus.name}</span>

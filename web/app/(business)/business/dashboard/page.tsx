@@ -2,13 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Battery, Camera, ClipboardList, Gift, Leaf, Medal, Package, Truck, Wind, Recycle } from "lucide-react";
+import { Battery, Camera, ClipboardList, Gift, Leaf, Medal, Package, Truck, Wind, BadgeCheck, Recycle } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { StatusPill } from "@/components/StatusPill";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { DashboardFeatureTile } from "@/components/DashboardFeatureTile";
 import { listPickups, type PickupRequestSummary } from "@/lib/api/pickups";
+import { getMarketplaceRequests, type BulkMarketplaceRequest } from "@/lib/api/marketplace";
 import { PICKUP_STATUS_TONE, PICKUP_STATUS_LABEL } from "@/lib/pickupStatus";
 import { getRewardsBalance } from "@/lib/api/rewards";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -17,7 +18,7 @@ import { Icon } from "@/components/Icon";
 
 export default function UserDashboardPage() {
   const { user } = useAuth();
-  const [pickups, setPickups] = React.useState<PickupRequestSummary[]>([]);
+  const [pickups, setPickups] = React.useState<(PickupRequestSummary | BulkMarketplaceRequest)[]>([]);
   const [rewardsBalance, setRewardsBalance] = React.useState(0);
   const [membershipLevel, setMembershipLevel] = React.useState<"BRONZE" | "SILVER" | "GOLD" | "PLATINUM">((user?.membershipLevel as any) || "BRONZE");
   const [isLoading, setIsLoading] = React.useState(true);
@@ -26,11 +27,15 @@ export default function UserDashboardPage() {
 
   const fetchData = React.useCallback(async () => {
     try {
-      const [pickupsData, fetchedRewards] = await Promise.all([
+      const [pickupsData, marketplaceData, fetchedRewards] = await Promise.all([
         listPickups().catch(() => ({ pickups: [] })),
+        getMarketplaceRequests().catch(() => []),
         getRewardsBalance().catch(() => ({ greenPointsBalance: 0, membershipLevel: user?.membershipLevel || "BRONZE" })),
       ]);
-      setPickups(pickupsData.pickups);
+      const combined = [...pickupsData.pickups, ...marketplaceData].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setPickups(combined);
       setRewardsBalance(fetchedRewards.greenPointsBalance);
       if (fetchedRewards.membershipLevel) {
         setMembershipLevel(fetchedRewards.membershipLevel as any);
@@ -71,53 +76,100 @@ export default function UserDashboardPage() {
   const monthlyMap: Record<string, number> = {};
 
   completedPickups.forEach(p => {
-    let weight = 0;
-    p.items.forEach(item => {
-      const w = item.exactWeightKg || 0;
-      weight += w;
+    let requestTotalWeight = 0;
+    
+    if ('items' in p) {
+      // Smart Pickup
+      p.items.forEach(item => {
+        const w = item.exactWeightKg || 0;
+        requestTotalWeight += w;
 
-      const bidPerKg = p.bidAmountsPerKg?.[item.category] || 0;
-      totalEarnings += w * bidPerKg;
+        const bidPerKg = p.bidAmountsPerKg?.[item.category] || 0;
+        totalEarnings += w * bidPerKg;
 
-      // Category-specific eco impact multipliers
-      switch (item.category) {
-        case "PAPER":
-          treesSavedBase += w * 0.017;
-          co2OffsetBase += w * 1.0;
-          break;
-        case "PLASTIC":
-          co2OffsetBase += w * 1.5;
-          break;
-        case "METAL":
-          co2OffsetBase += w * 2.5;
-          break;
-        case "GLASS":
-          co2OffsetBase += w * 0.3;
-          break;
-        case "ORGANIC":
-          co2OffsetBase += w * 0.5;
-          break;
-        case "ELECTRONIC":
-          co2OffsetBase += w * 1.0;
-          break;
-        default:
-          co2OffsetBase += w * 0.5;
-          break;
+        // Category-specific eco impact multipliers
+        switch (item.category) {
+          case "PAPER":
+            treesSavedBase += w * 0.017;
+            co2OffsetBase += w * 1.0;
+            break;
+          case "PLASTIC":
+            co2OffsetBase += w * 1.5;
+            break;
+          case "METAL":
+            co2OffsetBase += w * 2.5;
+            break;
+          case "GLASS":
+            co2OffsetBase += w * 0.3;
+            break;
+          case "ORGANIC":
+            co2OffsetBase += w * 0.5;
+            break;
+          case "ELECTRONIC":
+            co2OffsetBase += w * 1.0;
+            break;
+          default:
+            co2OffsetBase += w * 0.5;
+            break;
+        }
+      });
+    } else {
+      // Bulk Pickup
+      const bReq = p as BulkMarketplaceRequest;
+      const acceptedQuote = bReq.quotations?.find((q: any) => q.status === "ACCEPTED");
+      if (acceptedQuote) {
+        totalEarnings += acceptedQuote.purchasePrice;
       }
-    });
-    totalRecycled += weight;
+      
+      let materials: any[] = [];
+      try {
+        materials = typeof bReq.wasteTypes === 'string' ? JSON.parse(bReq.wasteTypes) : bReq.wasteTypes;
+      } catch(e) {}
+      
+      materials.forEach((item: any) => {
+        const w = item.weightKg || 0;
+        requestTotalWeight += w;
+        
+        switch (item.category) {
+          case "PAPER":
+            treesSavedBase += w * 0.017;
+            co2OffsetBase += w * 1.0;
+            break;
+          case "PLASTIC":
+            co2OffsetBase += w * 1.5;
+            break;
+          case "METAL":
+            co2OffsetBase += w * 2.5;
+            break;
+          case "GLASS":
+            co2OffsetBase += w * 0.3;
+            break;
+          case "ORGANIC":
+            co2OffsetBase += w * 0.5;
+            break;
+          case "ELECTRONIC":
+            co2OffsetBase += w * 1.0;
+            break;
+          default:
+            co2OffsetBase += w * 0.5;
+            break;
+        }
+      });
+    }
+    
+    totalRecycled += requestTotalWeight;
 
     const dateStr = p.createdAt.split("T")[0];
     if (dateStr) {
       const year = dateStr.split("-")[0];
       const monthNum = parseInt(dateStr.split("-")[1] || "1", 10);
 
-      yearlyMap[year] = (yearlyMap[year] || 0) + weight;
+      yearlyMap[year] = (yearlyMap[year] || 0) + requestTotalWeight;
 
       if (year === currentYear) {
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         const monthLabel = monthNames[monthNum - 1] || "Unknown";
-        monthlyMap[monthLabel] = (monthlyMap[monthLabel] || 0) + weight;
+        monthlyMap[monthLabel] = (monthlyMap[monthLabel] || 0) + requestTotalWeight;
       }
     }
   });
@@ -133,16 +185,6 @@ export default function UserDashboardPage() {
 
   const co2Offset = co2OffsetBase.toFixed(1);
   const treesSaved = treesSavedBase.toFixed(2);
-
-  // Calculate total earnings across all completed pickups
-  let totalEarningsCalc = 0;
-  completedPickups.forEach(p => {
-    p.items.forEach(item => {
-      const w = item.exactWeightKg || 0;
-      const bidPerKg = p.bidAmountsPerKg?.[item.category] || 0;
-      totalEarningsCalc += w * bidPerKg;
-    });
-  });
 
   // Recent Pickups logic (up to 4 most recent requests)
   const recentPickupsList = [...pickups]
@@ -164,11 +206,11 @@ export default function UserDashboardPage() {
   const nextActivePickup = sortedActivePickups.length > 0 ? sortedActivePickups[0] : null;
 
   const isBusiness = user?.accountType === "BUSINESS";
-  const bulkPickups = pickups.filter(p => p.isBulk);
-  const openBulkRequests = bulkPickups.filter(p => p.status === "PENDING").length;
-  const activeBulkRequests = bulkPickups.filter(p => ["ASSIGNED", "EN_ROUTE", "ARRIVED", "VERIFYING_WEIGHTS"].includes(p.status)).length;
+  const bulkPickups = pickups.filter(p => ('wasteTypes' in p));
+  const openBulkRequests = bulkPickups.filter(p => (p.status as string) === "PENDING" || p.status === "OPEN_FOR_BIDDING").length;
+  const activeBulkRequests = bulkPickups.filter(p => ["ASSIGNED", "EN_ROUTE", "ARRIVED", "VERIFYING_WEIGHTS", "RECYCLING_COMPANY_ASSIGNED"].includes(p.status)).length;
   const completedBulkPickups = bulkPickups.filter(p => p.status === "COMPLETED").length;
-  const totalBulkRecycled = bulkPickups.filter(p => p.status === "COMPLETED").reduce((acc, p) => acc + p.items.reduce((sum, item) => sum + (item.exactWeightKg || 0), 0), 0);
+  const totalBulkRecycled = bulkPickups.filter(p => p.status === "COMPLETED").reduce((acc, p) => acc + ((p as any).verifiedTotalWeightKg || 0), 0);
 
   return (
     <PageContainer className="py-8 max-w-6xl">
@@ -184,7 +226,7 @@ export default function UserDashboardPage() {
         </div>
 
         <div className="relative z-10 flex items-center gap-6">
-          <Button href="/dashboard/pickups/new" size="lg" className="font-bold px-8 shadow-sm border-none bg-emerald-600 hover:bg-emerald-700 text-white">
+          <Button href="/business/dashboard/pickups/new" size="lg" className="font-bold px-8 shadow-sm border-none bg-emerald-600 hover:bg-emerald-700 text-white">
             Request Pickup
           </Button>
         </div>
@@ -211,7 +253,7 @@ export default function UserDashboardPage() {
             <Card className="p-6 text-center shadow-sm hover:shadow-md transition-shadow relative overflow-hidden bg-white">
               <div className="absolute right-4 top-4">
                 {activePickups > 0 && (
-                  <Link href="/dashboard/pickups" className="text-xs text-emerald-600 hover:underline font-medium">
+                  <Link href="/business/dashboard/pickups" className="text-xs text-emerald-600 hover:underline font-medium">
                     View &rarr;
                   </Link>
                 )}
@@ -242,7 +284,7 @@ export default function UserDashboardPage() {
                 icon={Truck}
                 label="Request Pickup"
                 description="Schedule a smart pickup easily."
-                href="/dashboard/pickups/new"
+                href="/business/dashboard/pickups/new"
                 className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"
                 iconContainerClassName="bg-emerald-100 text-emerald-600"
               />
@@ -250,15 +292,15 @@ export default function UserDashboardPage() {
                 icon={ClipboardList}
                 label="My Pickups"
                 description="Track and manage active requests."
-                href="/dashboard/pickups"
+                href="/business/dashboard/pickups"
                 className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"
                 iconContainerClassName="bg-blue-100 text-blue-600"
               />
               <DashboardFeatureTile
                 icon={Camera}
-                label="Scan Waste"
-                description="Use AI to identify materials."
-                href="/waste-recognition"
+                label="Bulk Marketplace"
+                description="Trade large volumes."
+                href="/business/dashboard/marketplace"
                 className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"
                 iconContainerClassName="bg-purple-100 text-purple-600"
               />
@@ -266,9 +308,17 @@ export default function UserDashboardPage() {
                 icon={Gift}
                 label="Green Rewards"
                 description="View and redeem your points."
-                href="/dashboard/rewards"
+                href="/business/dashboard/rewards"
                 className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"
                 iconContainerClassName="bg-yellow-100 text-yellow-600"
+              />
+              <DashboardFeatureTile
+                icon={BadgeCheck}
+                label="Verified Collectors"
+                description="Find trusted collectors near you."
+                href="/dashboard/collectors"
+                className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"
+                iconContainerClassName="bg-indigo-100 text-indigo-600"
               />
             </div>
           </div>
@@ -283,7 +333,7 @@ export default function UserDashboardPage() {
                 <p className="text-sm text-neutral-500 max-w-md mb-6">
                   You haven't recycled anything yet. Request your first pickup to start tracking your environmental impact and earning rewards.
                 </p>
-                <Button href="/dashboard/pickups/new" className="bg-emerald-600 hover:bg-emerald-700">Schedule First Pickup</Button>
+                <Button href="/business/dashboard/pickups/new" className="bg-emerald-600 hover:bg-emerald-700">Schedule First Pickup</Button>
               </Card>
             ) : (
               <WasteSoldChart areaData={areaData} barData={barData} currentYear={currentYear} />
@@ -295,7 +345,7 @@ export default function UserDashboardPage() {
               <div className="flex flex-col gap-5">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold text-neutral-900">Recent Requests</h2>
-                  <Link href="/dashboard/pickups" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 hover:underline">
+                  <Link href="/business/dashboard/pickups" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 hover:underline">
                     View All &rarr;
                   </Link>
                 </div>
@@ -303,26 +353,31 @@ export default function UserDashboardPage() {
                   {recentPickupsList.map(rp => (
                     <Card key={rp.id} className="flex items-center justify-between p-6 rounded-2xl shadow-sm border border-neutral-100 bg-white hover:shadow-md transition-shadow">
                       <div className="flex items-center gap-5 min-w-0">
-                        <div className={`flex h-12 w-12 items-center justify-center rounded-full shrink-0 ${rp.isBulk ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                          <Icon icon={rp.isBulk ? Package : Truck} size="md" />
+                        <div className={`flex h-12 w-12 items-center justify-center rounded-full shrink-0 ${('wasteTypes' in rp) ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                          <Icon icon={('wasteTypes' in rp) ? Package : Truck} size="md" />
                         </div>
                         <div className="min-w-0">
                           <div className="font-bold text-neutral-900 mb-1 truncate">
-                            {rp.isBulk ? "Bulk Pickup" : "Smart Pickup"} &bull; {new Date(rp.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                            {('wasteTypes' in rp) ? "Bulk Pickup" : "Smart Pickup"} &bull; {new Date(rp.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                           </div>
                           <div className="text-sm font-medium text-neutral-500 truncate">
-                            {rp.items.map(i => i.category).join(', ')}
+                            {('items' in rp) 
+                              ? rp.items.map(i => i.category).join(', ') 
+                              : (() => {
+                                  try {
+                                    const types = typeof rp.wasteTypes === 'string' ? JSON.parse(rp.wasteTypes) : rp.wasteTypes;
+                                    return types.map((w: any) => w.category).join(', ');
+                                  } catch (e) {
+                                    return 'Bulk Waste';
+                                  }
+                                })()
+                            }
                           </div>
                         </div>
                       </div>
                       <div className="text-right shrink-0 ml-4">
-<<<<<<< Updated upstream
-                        <StatusPill tone={PICKUP_STATUS_TONE[rp.status]} className="text-xs px-2.5 py-1">
-                          {PICKUP_STATUS_LABEL[rp.status]}
-=======
-                        <StatusPill tone={(PICKUP_STATUS_TONE as any)[rp.status] || "neutral"} className="text-xs px-3 py-1">
+                        <StatusPill tone={(PICKUP_STATUS_TONE as any)[rp.status] || "neutral"} className="text-xs px-2.5 py-1">
                           {(PICKUP_STATUS_LABEL as any)[rp.status] || rp.status.replace(/_/g, " ")}
->>>>>>> Stashed changes
                         </StatusPill>
                       </div>
                     </Card>
@@ -330,16 +385,7 @@ export default function UserDashboardPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-5 self-stretch">
-                <h2 className="text-xl font-semibold text-neutral-900">Recent Requests</h2>
-                <Card className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-                  <Icon icon={ClipboardList} size="lg" className="text-neutral-400" aria-hidden />
-                  <div>
-                    <p className="text-h4 text-neutral-900">No recent requests</p>
-                    <p className="mt-1 text-body-sm text-neutral-500">Your pickup requests will show up here.</p>
-                  </div>
-                </Card>
-              </div>
+              <div />
             )}
 
             <div className="flex flex-col gap-5">
@@ -356,7 +402,7 @@ export default function UserDashboardPage() {
                       {rewardsBalance}
                     </div>
                   </div>
-                  <Link href="/dashboard/rewards" className="shrink-0 px-6 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-emerald-700 transition-colors w-full sm:w-auto text-center">
+                  <Link href="/business/dashboard/rewards" className="shrink-0 px-6 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-emerald-700 transition-colors w-full sm:w-auto text-center">
                     {isBusiness ? "View Rewards" : "Redeem Points"}
                   </Link>
                 </Card>
@@ -402,11 +448,7 @@ export default function UserDashboardPage() {
                         {membershipLevel.charAt(0) + membershipLevel.slice(1).toLowerCase()}
                       </div>
 
-<<<<<<< Updated upstream
-                      <Link href="/dashboard/rewards" className="mt-auto inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 text-sm font-bold text-[#c2601c] border border-orange-200 hover:bg-orange-50 transition-colors shadow-sm self-start">
-=======
-                      <Link href="/business/dashboard/rewards" className="mt-auto inline-flex items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-bold text-[#c2601c] border border-orange-200 hover:bg-orange-50 transition-colors shadow-sm self-start">
->>>>>>> Stashed changes
+                      <Link href="/business/dashboard/rewards" className="mt-auto inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 text-sm font-bold text-[#c2601c] border border-orange-200 hover:bg-orange-50 transition-colors shadow-sm self-start">
                         View Perks
                       </Link>
                     </Card>

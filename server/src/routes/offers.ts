@@ -68,10 +68,6 @@ offersRouter.post(
       );
       return;
     }
-    if (pickup.isExclusiveToPreferred && pickup.preferredCollectorId !== req.user!.id) {
-      sendError(res, 403, "FORBIDDEN", "This pickup request was sent exclusively to another collector.");
-      return;
-    }
 
     let offer: Offer;
     try {
