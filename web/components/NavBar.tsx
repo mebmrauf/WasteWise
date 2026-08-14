@@ -19,6 +19,8 @@ export interface NavBarProps {
   actions?: React.ReactNode;
   accent?: RoleAccent;
   className?: string;
+  /** Dashboard shells already offset content for their sidebar — the header row should span the full width instead of being centered at the marketing max-width. */
+  fullWidth?: boolean;
 }
 
 const accentActiveTextClasses: Record<RoleAccent, string> = {
@@ -45,14 +47,26 @@ const accentHoverTextClasses: Record<RoleAccent, string> = {
   admin: "hover:text-role-admin-700",
 };
 
-export function NavBar({ brand, links = [], actions, accent = "user", className }: NavBarProps) {
+export function NavBar({ brand, links = [], actions, accent = "user", className, fullWidth = false }: NavBarProps) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const mobileMenuId = React.useId();
   const hasLinks = links.length > 0;
 
   return (
+<<<<<<< Updated upstream
     <header className={cn("sticky top-0 z-50 w-full border-b border-neutral-200 bg-neutral-0/80 backdrop-blur-md", className)}>
       <div className="flex h-16 w-full items-center justify-between px-4 md:px-8 lg:px-12">
+=======
+    <header className={cn(
+      "sticky top-0 z-50 w-full transition-all duration-300",
+      scrolled ? "bg-white/95 backdrop-blur-md shadow-sm py-0" : "bg-white/80 backdrop-blur-md py-2",
+      className
+    )}>
+      <div className={cn(
+        "flex h-[72px] w-full items-center justify-between px-6 md:px-12 lg:px-16",
+        fullWidth ? "max-w-none" : "mx-auto max-w-content",
+      )}>
+>>>>>>> Stashed changes
         <div className="flex items-center">{brand}</div>
 
         {hasLinks && (
@@ -70,6 +84,14 @@ export function NavBar({ brand, links = [], actions, accent = "user", className 
                     )}
                   >
                     {link.label}
+<<<<<<< Updated upstream
+=======
+                    <span className={cn(
+                      "absolute bottom-0 left-0 w-full h-1 bg-current transform origin-left transition-transform duration-300",
+                      link.active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100",
+                      accentUnderlineClasses[accent]
+                    )} />
+>>>>>>> Stashed changes
                   </a>
                 </li>
               ))}

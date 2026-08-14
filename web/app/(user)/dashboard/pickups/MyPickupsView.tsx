@@ -242,11 +242,11 @@ export function MyPickupsView() {
     return (
       <div className="relative pt-1 pb-3 px-2 sm:px-6 mt-4 mb-2">
         {/* Background track */}
-        <div className="absolute top-2.5 left-10 right-10 h-0.5 bg-neutral-200 rounded-full" />
+        <div className="absolute top-3 left-10 right-10 h-1 bg-neutral-200 rounded-full" />
         
         {/* Active track */}
         <div 
-          className="absolute top-2.5 left-10 h-0.5 bg-emerald-500 rounded-full transition-all duration-500" 
+          className="absolute top-3 left-10 h-1 bg-emerald-500 rounded-full transition-all duration-500" 
           style={{ width: widthPercent }}
         />
 
@@ -294,15 +294,15 @@ export function MyPickupsView() {
                   <h3 className="text-lg font-bold text-neutral-900 leading-tight truncate">
                     {isBulk ? "Bulk Waste Pickup" : "Smart Pickup"}
                   </h3>
-                  <span className="text-xs font-data text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">#{pickup.id.slice(-6).toUpperCase()}</span>
+                  <span className="text-xs font-data text-neutral-400 bg-neutral-100 px-2 py-1 rounded-full">#{pickup.id.slice(-6).toUpperCase()}</span>
                 </div>
-                <p className="text-sm font-medium text-neutral-500 mt-0.5">
+                <p className="text-sm font-medium text-neutral-500 mt-1">
                   {new Date(pickup.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <StatusPill tone={PICKUP_STATUS_TONE[pickup.status]} className="text-sm px-4 py-1.5 shadow-sm">
+              <StatusPill tone={PICKUP_STATUS_TONE[pickup.status]} className="text-sm px-4 py-2 shadow-sm">
                 {PICKUP_STATUS_LABEL[pickup.status]}
               </StatusPill>
               <button 
@@ -347,14 +347,14 @@ export function MyPickupsView() {
                   <div className="flex-1 flex items-center gap-4 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4">
                     <Icon icon={Calendar} size="sm" className="text-emerald-600 shrink-0" />
                     <div>
-                      <p className="text-caption text-neutral-500 mb-0.5">Time window</p>
+                      <p className="text-caption text-neutral-500 mb-1">Time window</p>
                       <p className="text-body-sm font-semibold text-neutral-900">{formatPickupWindow(pickup.timeSlotStart, pickup.timeSlotEnd)}</p>
                     </div>
                   </div>
                   <div className="flex-1 flex items-center gap-4 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4">
                     <Icon icon={MapPin} size="sm" className="text-emerald-600 shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-caption text-neutral-500 mb-0.5">Address</p>
+                      <p className="text-caption text-neutral-500 mb-1">Address</p>
                       <p className="text-body-sm font-semibold text-neutral-900 truncate" title={pickup.pickupFormattedAddress}>{pickup.pickupFormattedAddress}</p>
                     </div>
                   </div>
@@ -518,6 +518,7 @@ export function MyPickupsView() {
           </div>
 
           {/* Filters & Search */}
+<<<<<<< Updated upstream
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div className="flex bg-neutral-100 rounded-xl p-1 shrink-0 overflow-x-auto w-full md:w-auto">
               <button 
@@ -565,6 +566,32 @@ export function MyPickupsView() {
                   className="bg-white border border-neutral-200 text-sm rounded-xl pl-9 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 w-full"
                 />
               </div>
+=======
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8 w-full">
+            <select 
+              value={statusFilter} 
+              onChange={e => setStatusFilter(e.target.value)}
+              className="bg-white border border-neutral-200 text-sm font-medium rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-[200px] shrink-0"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="PENDING">Pending &amp; Bidding</option>
+              <option value="ASSIGNED">Collector Assigned</option>
+              <option value="EN_ROUTE">En Route</option>
+              <option value="ARRIVED">Arrived</option>
+              <option value="VERIFYING_WEIGHTS">Verifying Weights</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+            <div className="relative w-full sm:w-[360px] shrink-0">
+              <Icon icon={Search} size="sm" className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+              <input 
+                type="text" 
+                placeholder="Search material, ID, location..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="bg-white border border-neutral-200 text-sm font-medium rounded-xl pl-10 pr-4 py-3 outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+              />
+>>>>>>> Stashed changes
             </div>
           </div>
 

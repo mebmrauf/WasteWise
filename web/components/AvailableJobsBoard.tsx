@@ -10,6 +10,7 @@ import { Icon } from "@/components/Icon";
 import { Input } from "@/components/Input";
 
 import { AuthApiError } from "@/lib/api/auth";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { submitOffer } from "@/lib/api/offers";
 import {
   listOpenPickups,
@@ -33,6 +34,7 @@ function estimateJobWeightRangeLabel(items: { loadSize: LoadSize }[]): string {
 
 const bidErrorMessages: Record<string, string> = {
   COLLECTOR_NOT_VERIFIED: "Your collector account must be verified before you can submit an offer.",
+  FORBIDDEN: "This pickup request was sent exclusively to another collector.",
   PICKUP_NOT_OPEN:
     "This pickup is no longer open — it may already have been assigned. The list below has been refreshed.",
   OFFER_ALREADY_EXISTS: "You've already submitted an offer on this pickup.",
@@ -50,6 +52,7 @@ function resolveBidErrorMessage(err: unknown): string {
 type LoadState = "loading" | "ready" | "error" | "unverified";
 
 export function AvailableJobsBoard() {
+  const { user } = useAuth();
   const [loadState, setLoadState] = React.useState<LoadState>("loading");
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [jobs, setJobs] = React.useState<PickupRequestSummary[]>([]);
@@ -200,6 +203,7 @@ export function AvailableJobsBoard() {
                     })),
                   }}
                   estimatedWeightRangeLabel={estimateJobWeightRangeLabel(job.items)}
+                  isDirectRequest={Boolean(user) && job.preferredCollectorId === user!.id}
                   onSelect={(id) => setExpandedJobId(isExpanded ? null : id)}
                 />
 

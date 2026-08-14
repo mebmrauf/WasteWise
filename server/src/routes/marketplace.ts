@@ -1,13 +1,42 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
+import multer, { MulterError } from "multer";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireRole } from "../lib/rbac";
+import { requireCsrf } from "../lib/csrf";
 import { asyncHandler } from "../lib/asyncHandler";
 import { sendData, sendError } from "../lib/apiResponse";
 import { WasteCategory, VehicleType, Prisma, Role } from "@prisma/client";
 import { createNotification } from "../lib/notifications";
+import { isCloudinaryConfigured, uploadBulkRequestImage } from "../lib/cloudinary";
+import { detectImageSignature } from "../lib/imageSignature";
+import { logger } from "../lib/logger";
 
 export const marketplaceRouter = Router();
+
+const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+const imageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_IMAGE_BYTES },
+  fileFilter: (_req, file, cb) => {
+    if (!IMAGE_MIME_TYPES.has(file.mimetype)) {
+      cb(new Error("UNSUPPORTED_FILE_TYPE"));
+      return;
+    }
+    cb(null, true);
+  },
+});
+
+function runImageUpload(fieldName: string, req: Request, res: Response): Promise<void> {
+  return new Promise((resolve, reject) => {
+    imageUpload.single(fieldName)(req, res, (err: unknown) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+}
 
 // Zod schemas
 const createRequestSchema = z.object({
@@ -21,7 +50,7 @@ const createRequestSchema = z.object({
   longitude: z.number().optional(),
   placeId: z.string().optional(),
   preferredPickupDate: z.string().datetime(),
-  images: z.array(z.string()),
+  images: z.array(z.string()).max(4, "Up to 4 photos are allowed."),
   additionalNotes: z.string().optional(),
 });
 
@@ -68,6 +97,58 @@ marketplaceRouter.post(
     });
 
     sendData(res, 201, { request });
+  })
+);
+
+// Upload a photo for a Bulk Request being drafted (Business only)
+marketplaceRouter.post(
+  "/requests/images",
+  requireAuth,
+  requireRole(Role.USER),
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const dbUser = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!dbUser || dbUser.accountType !== "BUSINESS") {
+      sendError(res, 403, "FORBIDDEN", "Only Business accounts can upload Bulk Marketplace Request photos.");
+      return;
+    }
+
+    try {
+      await runImageUpload("image", req, res);
+    } catch (err) {
+      if (err instanceof MulterError && err.code === "LIMIT_FILE_SIZE") {
+        sendError(res, 400, "FILE_TOO_LARGE", "Image must be 10MB or smaller.");
+        return;
+      }
+      if (err instanceof Error && err.message === "UNSUPPORTED_FILE_TYPE") {
+        sendError(res, 400, "UNSUPPORTED_FILE_TYPE", "Image must be a JPEG, PNG, or WebP file.");
+        return;
+      }
+      throw err;
+    }
+
+    if (!req.file) {
+      sendError(res, 400, "FILE_REQUIRED", "An image file is required (multipart field name: image).");
+      return;
+    }
+
+    if (!detectImageSignature(req.file.buffer)) {
+      sendError(res, 400, "UNSUPPORTED_FILE_TYPE", "Image must be a JPEG, PNG, or WebP file.");
+      return;
+    }
+
+    if (!isCloudinaryConfigured()) {
+      sendError(res, 503, "CLOUDINARY_NOT_CONFIGURED", "Image upload is currently unavailable. Please try again later.");
+      return;
+    }
+
+    try {
+      const { url } = await uploadBulkRequestImage(req.file.buffer, req.user!.id);
+      sendData(res, 200, { url });
+    } catch (err) {
+      logger.error({ err }, "Cloudinary bulk request image upload failed");
+      sendError(res, 502, "IMAGE_UPLOAD_FAILED", "Couldn't upload that image. Please try again.");
+    }
   })
 );
 
@@ -436,7 +517,7 @@ marketplaceRouter.post(
       userId: request.assignedCompanyId!,
       type: "PICKUP_STATUS_UPDATE",
       title: "Collection Confirmed",
-      message: `The business has confirmed the collection for request ${id.slice(0,8)}.`,
+      message: `The business has confirmed the collection at ${request.pickupAddress} (${(request.verifiedTotalWeightKg ?? request.estimatedWeightKg).toFixed(1)} kg).`,
       emailPreference: "emailNotificationsEnabled",
     });
     

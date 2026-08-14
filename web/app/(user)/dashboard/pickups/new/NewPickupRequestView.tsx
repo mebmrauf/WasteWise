@@ -12,10 +12,7 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { Input } from "@/components/Input";
 import { PageContainer } from "@/components/PageContainer";
 import { PillRadioGroup } from "@/components/PillRadioGroup";
-import { Select, type SelectOption } from "@/components/Select";
 import { StepProgress } from "@/components/StepProgress";
-import { ALL_SERVICE_AREAS } from "@/lib/areas";
-import { getVerifiedCollectors, type CollectorDirectoryEntry } from "@/lib/api/collectors";
 import { SummaryPanel, SummaryRow } from "@/components/SummaryPanel";
 import { TimeSlotPicker, type TimeSlot } from "@/components/TimeSlotPicker";
 
@@ -99,8 +96,6 @@ export function NewPickupRequestView() {
   const [date, setDate] = React.useState("");
   const [timeWindowId, setTimeWindowId] = React.useState<string | null>(null);
 
-  const [serviceArea, setServiceArea] = React.useState<string>("");
-  const [localCollectors, setLocalCollectors] = React.useState<CollectorDirectoryEntry[]>([]);
   const [selectedCollectorId, setSelectedCollectorId] = React.useState<string>(preferredCollectorId || "");
 
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
@@ -160,29 +155,6 @@ export function NewPickupRequestView() {
     if (addressMode === "current") return currentLocationPlace?.formattedAddress;
     return null;
   }, [addressMode, profile, selectedCustomPlace, currentLocationPlace]);
-
-  React.useEffect(() => {
-    if (activeAddress && !serviceArea) {
-      const lowerAddress = activeAddress.toLowerCase();
-      const detected = ALL_SERVICE_AREAS.find(area => lowerAddress.includes(area.toLowerCase()));
-      if (detected) {
-        setServiceArea(detected);
-      }
-    }
-  }, [activeAddress, serviceArea]);
-
-  React.useEffect(() => {
-    if (serviceArea) {
-      getVerifiedCollectors({ serviceArea }).then(cols => {
-        cols.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
-        setLocalCollectors(cols);
-      }).catch(console.error);
-    } else {
-      setLocalCollectors([]);
-    }
-  }, [serviceArea]);
-
-
 
   function ensureAddressSessionToken(): string {
     if (!addressSessionTokenRef.current) {
@@ -315,8 +287,7 @@ export function NewPickupRequestView() {
     date !== "" &&
     selectedWindow !== null &&
     !isSlotInPast &&
-    resolvedPlaceId !== null &&
-    serviceArea !== "";
+    resolvedPlaceId !== null;
 
   function handleCategoriesChange(nextCategories: WasteCategory[]) {
     setCategories(nextCategories);
@@ -379,8 +350,7 @@ export function NewPickupRequestView() {
         formattedAddress,
         latitude,
         longitude,
-        serviceArea,
-        ...(selectedCollectorId ? { 
+        ...(selectedCollectorId ? {
           preferredCollectorId: selectedCollectorId, 
           isExclusiveToPreferred 
         } : {}),
@@ -663,52 +633,34 @@ export function NewPickupRequestView() {
               )}
             </div>
             
-            <div className="mt-6 pt-6 border-t border-neutral-100 flex flex-col gap-4">
-              <Select
-                label="Service Area (Required)"
-                value={serviceArea}
-                onChange={(e) => {
-                  setServiceArea(e.target.value);
-                  setSelectedCollectorId(""); // Reset collector when area changes
-                }}
-                options={[
-                  { value: "", label: "Select your zone...", disabled: true },
-                  ...ALL_SERVICE_AREAS.map(area => ({ value: area, label: area }))
-                ]}
-              />
-
-              {serviceArea && localCollectors.length > 0 && (
+            {selectedCollectorId && (
+              <div className="mt-6 pt-6 border-t border-neutral-100">
                 <div className="p-4 bg-primary-50 rounded-xl border border-primary-100">
-                  <h3 className="font-semibold text-primary-900 mb-2">Optional: Request a Specific Collector</h3>
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <h3 className="font-semibold text-primary-900">Requesting a Specific Collector</h3>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCollectorId("")}
+                      className="text-body-sm text-primary-700 underline"
+                    >
+                      Broadcast to everyone instead
+                    </button>
+                  </div>
                   <p className="text-body-sm text-primary-800 mb-4">
-                    Choose a highly-rated collector in your area to send this request directly to them.
+                    {preferredCollectorName ?? "This collector"} will be notified about this request.
                   </p>
-                  <Select
-                    label="Preferred Collector"
-                    value={selectedCollectorId}
-                    onChange={(e) => setSelectedCollectorId(e.target.value)}
-                    options={[
-                      { value: "", label: "Broadcast to everyone (Default)" },
-                      ...localCollectors.map(col => ({ 
-                        value: col.id, 
-                        label: `${col.fullName} - ⭐ ${col.averageRating ? col.averageRating.toFixed(1) : "New"}` 
-                      }))
-                    ]}
-                  />
-                  {selectedCollectorId && (
-                    <label className="flex items-center gap-2 mt-4 text-body-sm text-neutral-800 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={isExclusiveToPreferred}
-                        onChange={(e) => setIsExclusiveToPreferred(e.target.checked)}
-                        className="rounded text-primary-600 focus:ring-primary-500 w-4 h-4"
-                      />
-                      Send this request ONLY to the selected collector.
-                    </label>
-                  )}
+                  <label className="flex items-center gap-2 text-body-sm text-neutral-800 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isExclusiveToPreferred}
+                      onChange={(e) => setIsExclusiveToPreferred(e.target.checked)}
+                      className="rounded text-primary-600 focus:ring-primary-500 w-4 h-4"
+                    />
+                    Send this request ONLY to this collector.
+                  </label>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {validationMessage && <ErrorBanner className="mt-4">{validationMessage}</ErrorBanner>}
           </Card>

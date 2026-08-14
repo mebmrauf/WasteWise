@@ -92,7 +92,7 @@ export function PlatinumGiftModal({ isOpen, onClose, onClaimed }: PlatinumGiftMo
                 <div className="ml-auto flex items-center self-center">
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center
                     ${selectedGift === gift.id ? "border-primary-500" : "border-neutral-300"}`}>
-                    {selectedGift === gift.id && <div className="w-2.5 h-2.5 bg-primary-500 rounded-full" />}
+                    {selectedGift === gift.id && <div className="w-3 h-3 bg-primary-500 rounded-full" />}
                   </div>
                 </div>
               </button>

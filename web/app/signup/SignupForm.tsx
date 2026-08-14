@@ -147,7 +147,7 @@ export function SignupForm({ defaultRoleChoice }: SignupFormProps) {
                 disabled={isSubmitting}
                 onClick={() => setRoleChoice(card.value)}
                 className={cn(
-                  "flex flex-col items-start gap-0.5 rounded-md border px-3 py-2 text-left transition-colors",
+                  "flex flex-col items-start gap-1 rounded-md border px-3 py-2 text-left transition-colors",
                   "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
                   isSelected ? accent.selected : "border-neutral-300 bg-neutral-0 hover:border-neutral-400",
                   isSelected && accent.ring,

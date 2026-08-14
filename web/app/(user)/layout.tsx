@@ -13,6 +13,7 @@ export default function UserLayout({ children }: { children: ReactNode }) {
         }
         accent="user"
         actions={<NavAuthActions />}
+        fullWidth
       />
       <main>
         <DashboardShell>{children}</DashboardShell>

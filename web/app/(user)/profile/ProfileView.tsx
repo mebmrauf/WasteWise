@@ -52,7 +52,6 @@ interface ProfileExtras {
   placeId: string | null;
   avatarUrl: string | null;
   emailNotificationsEnabled: boolean;
-  smsNotificationsEnabled: boolean;
   rewardsEmailNotificationsEnabled: boolean;
 }
 
@@ -94,7 +93,6 @@ export function ProfileView() {
           placeId: profile.placeId,
           avatarUrl: resolveAvatarUrl(profile.avatarUrl),
           emailNotificationsEnabled: profile.emailNotificationsEnabled,
-          smsNotificationsEnabled: profile.smsNotificationsEnabled,
           rewardsEmailNotificationsEnabled: profile.rewardsEmailNotificationsEnabled,
         });
       })
@@ -313,7 +311,6 @@ export function ProfileView() {
 
   const notificationPreferenceKeys = {
     email: "emailNotificationsEnabled",
-    sms: "smsNotificationsEnabled",
     rewardsEmail: "rewardsEmailNotificationsEnabled",
   } as const;
 
@@ -465,6 +462,7 @@ export function ProfileView() {
               <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
                 <input
                   type="checkbox"
+<<<<<<< Updated upstream
                   className="h-5 w-5 accent-primary-600 rounded"
                   checked={extras?.smsNotificationsEnabled ?? false}
                   disabled={!extras}
@@ -477,6 +475,15 @@ export function ProfileView() {
                 <p className="text-caption text-neutral-500 pl-3">Loading your saved preferences…</p>
               )}
               {notificationError && <ErrorBanner>{notificationError}</ErrorBanner>}
+=======
+                  className="h-5 w-5 accent-primary-600 rounded shrink-0"
+                  checked={extras?.rewardsEmailNotificationsEnabled ?? false}
+                  disabled={!extras}
+                  onChange={(event) => void handleToggleNotification("rewardsEmail", event.target.checked)}
+                />
+                Email me about rewards &amp; referral updates
+              </label>
+>>>>>>> Stashed changes
             </div>
           </Card>
         </div>

@@ -272,7 +272,7 @@ export default function UserDashboardPage() {
               />
               <DashboardFeatureTile
                 icon={BadgeCheck}
-                label="Verified Collectors"
+                label="Find a Collector"
                 description="Find trusted collectors near you."
                 href="/dashboard/collectors"
                 className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"
@@ -324,7 +324,7 @@ export default function UserDashboardPage() {
                         </div>
                       </div>
                       <div className="text-right shrink-0 ml-4">
-                        <StatusPill tone={PICKUP_STATUS_TONE[rp.status]} className="text-xs px-2.5 py-1">
+                        <StatusPill tone={PICKUP_STATUS_TONE[rp.status]} className="text-xs px-3 py-1">
                           {PICKUP_STATUS_LABEL[rp.status]}
                         </StatusPill>
                       </div>
@@ -405,7 +405,7 @@ export default function UserDashboardPage() {
                         {membershipLevel.charAt(0) + membershipLevel.slice(1).toLowerCase()}
                       </div>
 
-                      <Link href="/dashboard/rewards" className="mt-auto inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 text-sm font-bold text-[#c2601c] border border-orange-200 hover:bg-orange-50 transition-colors shadow-sm self-start">
+                      <Link href="/dashboard/rewards" className="mt-auto inline-flex items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-bold text-[#c2601c] border border-orange-200 hover:bg-orange-50 transition-colors shadow-sm self-start">
                         View Perks
                       </Link>
                     </Card>

@@ -14,6 +14,7 @@ export default function CollectorLayout({ children }: { children: ReactNode }) {
         }
         accent="collector"
         actions={<NavAuthActions />}
+        fullWidth
       />
       <main>
         <DashboardShell>{children}</DashboardShell>

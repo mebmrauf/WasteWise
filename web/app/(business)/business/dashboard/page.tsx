@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Battery, Camera, ClipboardList, Gift, Leaf, Medal, Package, Truck, Wind, BadgeCheck, Recycle } from "lucide-react";
+import { Battery, Camera, ClipboardList, Gift, Leaf, Medal, Package, Truck, Wind, Recycle } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { StatusPill } from "@/components/StatusPill";
 import { Card } from "@/components/Card";
@@ -270,14 +270,6 @@ export default function UserDashboardPage() {
                 className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"
                 iconContainerClassName="bg-yellow-100 text-yellow-600"
               />
-              <DashboardFeatureTile
-                icon={BadgeCheck}
-                label="Verified Collectors"
-                description="Find trusted collectors near you."
-                href="/dashboard/collectors"
-                className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"
-                iconContainerClassName="bg-indigo-100 text-indigo-600"
-              />
             </div>
           </div>
 
@@ -324,8 +316,13 @@ export default function UserDashboardPage() {
                         </div>
                       </div>
                       <div className="text-right shrink-0 ml-4">
+<<<<<<< Updated upstream
                         <StatusPill tone={PICKUP_STATUS_TONE[rp.status]} className="text-xs px-2.5 py-1">
                           {PICKUP_STATUS_LABEL[rp.status]}
+=======
+                        <StatusPill tone={(PICKUP_STATUS_TONE as any)[rp.status] || "neutral"} className="text-xs px-3 py-1">
+                          {(PICKUP_STATUS_LABEL as any)[rp.status] || rp.status.replace(/_/g, " ")}
+>>>>>>> Stashed changes
                         </StatusPill>
                       </div>
                     </Card>
@@ -333,7 +330,16 @@ export default function UserDashboardPage() {
                 </div>
               </div>
             ) : (
-              <div />
+              <div className="flex flex-col gap-5 self-stretch">
+                <h2 className="text-xl font-semibold text-neutral-900">Recent Requests</h2>
+                <Card className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+                  <Icon icon={ClipboardList} size="lg" className="text-neutral-400" aria-hidden />
+                  <div>
+                    <p className="text-h4 text-neutral-900">No recent requests</p>
+                    <p className="mt-1 text-body-sm text-neutral-500">Your pickup requests will show up here.</p>
+                  </div>
+                </Card>
+              </div>
             )}
 
             <div className="flex flex-col gap-5">
@@ -396,7 +402,11 @@ export default function UserDashboardPage() {
                         {membershipLevel.charAt(0) + membershipLevel.slice(1).toLowerCase()}
                       </div>
 
+<<<<<<< Updated upstream
                       <Link href="/dashboard/rewards" className="mt-auto inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 text-sm font-bold text-[#c2601c] border border-orange-200 hover:bg-orange-50 transition-colors shadow-sm self-start">
+=======
+                      <Link href="/business/dashboard/rewards" className="mt-auto inline-flex items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-bold text-[#c2601c] border border-orange-200 hover:bg-orange-50 transition-colors shadow-sm self-start">
+>>>>>>> Stashed changes
                         View Perks
                       </Link>
                     </Card>

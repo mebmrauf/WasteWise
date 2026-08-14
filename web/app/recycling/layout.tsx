@@ -13,6 +13,7 @@ export default function RecyclingLayout({ children }: { children: React.ReactNod
         }
         accent="recyclingCompany"
         actions={<NavAuthActions />}
+        fullWidth
       />
       <main>
         <DashboardShell>{children}</DashboardShell>

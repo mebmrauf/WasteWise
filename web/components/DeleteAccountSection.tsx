@@ -71,6 +71,27 @@ export function DeleteAccountSection({ hasPassword }: DeleteAccountSectionProps)
         will show you as a deleted user.
       </p>
 
+<<<<<<< Updated upstream
+=======
+      <div className="mb-8 flex flex-col gap-3">
+        <div className="flex items-start gap-3 text-sm text-neutral-700 bg-white/50 p-3 rounded-lg border border-rose-100/50">
+          <Icon icon={X} size="sm" className="mt-1 shrink-0 text-rose-500" />
+          <span>Your login access, password, and saved preferences</span>
+        </div>
+        <div className="flex items-start gap-3 text-sm text-neutral-700 bg-white/50 p-3 rounded-lg border border-rose-100/50">
+          <Icon icon={X} size="sm" className="mt-1 shrink-0 text-rose-500" />
+          <span>Personal details, address, and profile photo</span>
+        </div>
+        <div className="flex items-start gap-3 text-sm text-neutral-700 bg-white/50 p-3 rounded-lg border border-rose-100/50">
+          <Icon icon={Check} size="sm" className="mt-1 shrink-0 text-emerald-600" />
+          <span>
+            Records shared with others (past pickups, offers, ratings, marketplace requests) stay
+            on their end, but show you as a deleted user.
+          </span>
+        </div>
+      </div>
+
+>>>>>>> Stashed changes
       {!isConfirming ? (
         <Button variant="destructive" onClick={handleOpen}>
           Delete my account

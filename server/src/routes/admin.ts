@@ -90,6 +90,20 @@ adminRouter.patch(
       }
     };
 
+<<<<<<< Updated upstream
+=======
+    void createNotification({
+      userId: id,
+      type: "VERIFICATION_UPDATE",
+      title: action === "APPROVE" ? "Collector Account Verified" : "Collector Verification Rejected",
+      message:
+        action === "APPROVE"
+          ? "You're verified! You can now view and bid on open pickup requests."
+          : `Your collector verification was rejected.${rejectionReason ? ` Reason: ${rejectionReason}` : " Please review your submitted documents and try again."}`,
+      emailPreference: "emailNotificationsEnabled",
+    });
+
+>>>>>>> Stashed changes
     sendData(res, 200, { collector: publicCollector });
   }),
 );
@@ -171,6 +185,17 @@ adminRouter.patch(
       },
     };
 
+    void createNotification({
+      userId: id,
+      type: "VERIFICATION_UPDATE",
+      title: action === "APPROVE" ? "Recycling Company Account Verified" : "Recycling Company Verification Rejected",
+      message:
+        action === "APPROVE"
+          ? "You're verified! You can now bid on Bulk Marketplace requests."
+          : `Your recycling company verification was rejected.${rejectionReason ? ` Reason: ${rejectionReason}` : " Please review your submitted documents and try again."}`,
+      emailPreference: "emailNotificationsEnabled",
+    });
+
     sendData(res, 200, { recyclingCompany: publicCompany });
   }),
 );
@@ -251,6 +276,17 @@ adminRouter.patch(
         fullName: updated.user.fullName,
       },
     };
+
+    void createNotification({
+      userId: id,
+      type: "VERIFICATION_UPDATE",
+      title: action === "APPROVE" ? "Business Account Verified" : "Business Verification Rejected",
+      message:
+        action === "APPROVE"
+          ? "You're verified! You can now post Bulk Marketplace Requests."
+          : `Your business verification was rejected.${rejectionReason ? ` Reason: ${rejectionReason}` : " Please review your submitted documents and try again."}`,
+      emailPreference: "emailNotificationsEnabled",
+    });
 
     sendData(res, 200, { business: publicBusiness });
   }),

@@ -242,11 +242,11 @@ export function MyPickupsView() {
     return (
       <div className="relative pt-1 pb-3 px-2 sm:px-6 mt-4 mb-2">
         {/* Background track */}
-        <div className="absolute top-2.5 left-10 right-10 h-0.5 bg-neutral-200 rounded-full" />
+        <div className="absolute top-3 left-10 right-10 h-1 bg-neutral-200 rounded-full" />
         
         {/* Active track */}
         <div 
-          className="absolute top-2.5 left-10 h-0.5 bg-emerald-500 rounded-full transition-all duration-500" 
+          className="absolute top-3 left-10 h-1 bg-emerald-500 rounded-full transition-all duration-500" 
           style={{ width: widthPercent }}
         />
 
@@ -272,8 +272,105 @@ export function MyPickupsView() {
     );
   };
 
+<<<<<<< Updated upstream
   const renderCard = (pickup: PickupRequestSummary) => {
     const isExpanded = expandedPickupId === pickup.id;
+=======
+  const renderCard = (pickup: PickupRequestSummary | BulkMarketplaceRequest) => {
+    const isBulkReq = 'wasteTypes' in pickup;
+    
+    if (isBulkReq) {
+      const bReq = pickup as BulkMarketplaceRequest;
+      const displayStatus = bReq.status.replace(/_/g, " ");
+      const acceptedQuote = bReq.quotations?.find((q: any) => q.status === "ACCEPTED");
+      let materials: any[] = [];
+      try {
+        materials = typeof bReq.wasteTypes === 'string' ? JSON.parse(bReq.wasteTypes) : bReq.wasteTypes;
+      } catch(e) {}
+      
+      return (
+        <Card key={bReq.id} className="relative flex flex-col border border-neutral-100 shadow-sm transition-shadow hover:shadow-md overflow-hidden rounded-2xl p-0 bg-white">
+          <div className="p-5 sm:p-6 flex flex-col gap-5">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-4">
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl shrink-0 bg-blue-50 text-blue-600">
+                  <Icon icon={Package} size="md" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-neutral-900 leading-tight truncate">
+                      Bulk Waste Pickup
+                    </h3>
+                    <span className="text-xs font-data text-neutral-400 bg-neutral-100 px-2 py-1 rounded-full">#{bReq.id.slice(0, 8).toUpperCase()}</span>
+                  </div>
+                  <p className="text-sm font-medium text-neutral-500 mt-1">
+                    {new Date(bReq.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="px-4 py-2 rounded-full text-sm font-semibold shadow-sm bg-blue-100 text-blue-800 tracking-wide uppercase">
+                  {displayStatus}
+                </span>
+                <Button variant="secondary" size="sm" onClick={() => setBulkDetailsPickup(bReq)}>
+                  View Details
+                </Button>
+                {bReq.status === "COMPLETED" && (
+                  (bReq as any).rating ? (
+                    <div className="flex items-center gap-1 bg-yellow-50 text-yellow-700 px-3 py-2 rounded-full text-sm font-medium border border-yellow-200">
+                      <Icon icon={Star} size="sm" className="fill-current w-4 h-4" />
+                      <span>{(bReq as any).rating.score}</span>
+                    </div>
+                  ) : (
+                    <Button className="bg-yellow-500 hover:bg-yellow-600 text-white border-transparent" size="sm" onClick={() => setCompanyRatingModalPickupId(bReq.id)}>
+                      Rate Company
+                    </Button>
+                  )
+                )}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-3 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4">
+                <p className="text-caption text-neutral-500 uppercase tracking-wider">Materials & Est. Weight</p>
+                <div className="flex flex-wrap gap-2">
+                  {materials.map((item, i) => (
+                    <div key={i} className="flex flex-col gap-1 items-start bg-white border border-neutral-100 p-2 rounded-lg shadow-sm">
+                      <WasteCategoryChip category={item.category} />
+                      <span className="text-caption text-neutral-500 font-medium px-1">
+                        {item.weightKg} kg
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                <div className="flex-1 flex items-center gap-4 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4">
+                  <Icon icon={Building2} size="sm" className="text-blue-600 shrink-0" />
+                  <div>
+                    <p className="text-caption text-neutral-500 mb-1">Assigned Recycling Company</p>
+                    <p className="text-body-sm font-semibold text-neutral-900">{bReq.assignedCompany?.fullName || "N/A"}</p>
+                  </div>
+                </div>
+                <div className="flex-1 flex items-center gap-4 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4">
+                  <Icon icon={Tag} size="sm" className="text-emerald-600 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-caption text-neutral-500 mb-1">Accepted Price</p>
+                    <p className="text-body-sm font-semibold text-emerald-600 truncate">
+                      {acceptedQuote ? `৳${acceptedQuote.purchasePrice.toLocaleString()}` : "N/A"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      );
+    }
+    
+    const pReq = pickup as PickupRequestSummary;
+    const isExpanded = expandedPickupId === pReq.id;
+>>>>>>> Stashed changes
     const isOffersView = isExpanded && expandedView === "offers";
     const isTrackView = isExpanded && expandedView === "track";
     
@@ -294,16 +391,28 @@ export function MyPickupsView() {
                   <h3 className="text-lg font-bold text-neutral-900 leading-tight truncate">
                     {isBulk ? "Bulk Waste Pickup" : "Smart Pickup"}
                   </h3>
+<<<<<<< Updated upstream
                   <span className="text-xs font-data text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">#{pickup.id.slice(-6).toUpperCase()}</span>
                 </div>
                 <p className="text-sm font-medium text-neutral-500 mt-0.5">
                   {new Date(pickup.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+=======
+                  <span className="text-xs font-data text-neutral-400 bg-neutral-100 px-2 py-1 rounded-full">#{pReq.id.slice(-6).toUpperCase()}</span>
+                </div>
+                <p className="text-sm font-medium text-neutral-500 mt-1">
+                  {new Date(pReq.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+>>>>>>> Stashed changes
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
+<<<<<<< Updated upstream
               <StatusPill tone={PICKUP_STATUS_TONE[pickup.status]} className="text-sm px-4 py-1.5 shadow-sm">
                 {PICKUP_STATUS_LABEL[pickup.status]}
+=======
+              <StatusPill tone={PICKUP_STATUS_TONE[pReq.status]} className="text-sm px-4 py-2 shadow-sm">
+                {PICKUP_STATUS_LABEL[pReq.status]}
+>>>>>>> Stashed changes
               </StatusPill>
               <button 
                 onClick={() => {
@@ -347,15 +456,25 @@ export function MyPickupsView() {
                   <div className="flex-1 flex items-center gap-4 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4">
                     <Icon icon={Calendar} size="sm" className="text-emerald-600 shrink-0" />
                     <div>
+<<<<<<< Updated upstream
                       <p className="text-caption text-neutral-500 mb-0.5">Time window</p>
                       <p className="text-body-sm font-semibold text-neutral-900">{formatPickupWindow(pickup.timeSlotStart, pickup.timeSlotEnd)}</p>
+=======
+                      <p className="text-caption text-neutral-500 mb-1">Time window</p>
+                      <p className="text-body-sm font-semibold text-neutral-900">{formatPickupWindow(pReq.timeSlotStart, pReq.timeSlotEnd)}</p>
+>>>>>>> Stashed changes
                     </div>
                   </div>
                   <div className="flex-1 flex items-center gap-4 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4">
                     <Icon icon={MapPin} size="sm" className="text-emerald-600 shrink-0" />
                     <div className="min-w-0">
+<<<<<<< Updated upstream
                       <p className="text-caption text-neutral-500 mb-0.5">Address</p>
                       <p className="text-body-sm font-semibold text-neutral-900 truncate" title={pickup.pickupFormattedAddress}>{pickup.pickupFormattedAddress}</p>
+=======
+                      <p className="text-caption text-neutral-500 mb-1">Address</p>
+                      <p className="text-body-sm font-semibold text-neutral-900 truncate" title={pReq.pickupFormattedAddress}>{pReq.pickupFormattedAddress}</p>
+>>>>>>> Stashed changes
                     </div>
                   </div>
                 </div>
@@ -522,19 +641,31 @@ export function MyPickupsView() {
             <div className="flex bg-neutral-100 rounded-xl p-1 shrink-0 overflow-x-auto w-full md:w-auto">
               <button 
                 onClick={() => setTypeFilter("ALL")}
+<<<<<<< Updated upstream
                 className={cn("px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors flex-1 md:flex-none", typeFilter === "ALL" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
+=======
+                className={cn("px-5 py-3 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap flex-1 lg:flex-none", typeFilter === "ALL" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
+>>>>>>> Stashed changes
               >
                 All
               </button>
               <button 
                 onClick={() => setTypeFilter("SMART")}
+<<<<<<< Updated upstream
                 className={cn("px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors flex-1 md:flex-none", typeFilter === "SMART" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
+=======
+                className={cn("px-5 py-3 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap flex-1 lg:flex-none", typeFilter === "SMART" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
+>>>>>>> Stashed changes
               >
                 Smart Pickup
               </button>
               <button 
                 onClick={() => setTypeFilter("BULK")}
+<<<<<<< Updated upstream
                 className={cn("px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors flex-1 md:flex-none", typeFilter === "BULK" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
+=======
+                className={cn("px-5 py-3 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap flex-1 lg:flex-none", typeFilter === "BULK" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
+>>>>>>> Stashed changes
               >
                 Bulk Pickup
               </button>
@@ -544,7 +675,11 @@ export function MyPickupsView() {
               <select 
                 value={statusFilter} 
                 onChange={e => setStatusFilter(e.target.value)}
+<<<<<<< Updated upstream
                 className="bg-white border border-neutral-200 text-sm font-medium rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 shrink-0 w-full sm:w-auto"
+=======
+                className="bg-white border border-neutral-200 text-sm font-medium rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-[200px] shrink-0"
+>>>>>>> Stashed changes
               >
                 <option value="ALL">All Statuses</option>
                 <option value="PENDING">Pending &amp; Bidding</option>
@@ -562,7 +697,11 @@ export function MyPickupsView() {
                   placeholder="Search material, ID, location..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
+<<<<<<< Updated upstream
                   className="bg-white border border-neutral-200 text-sm rounded-xl pl-9 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+=======
+                  className="bg-white border border-neutral-200 text-sm font-medium rounded-xl pl-10 pr-4 py-3 outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+>>>>>>> Stashed changes
                 />
               </div>
             </div>

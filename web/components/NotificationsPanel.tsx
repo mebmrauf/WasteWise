@@ -137,7 +137,7 @@ export function NotificationsPanel() {
                   >
                     <div className="mt-1 flex-shrink-0">
                       {!notification.isRead ? (
-                        <div className="h-2 w-2 rounded-full bg-primary-500 mt-1.5 shadow-sm" />
+                        <div className="h-2 w-2 rounded-full bg-primary-500 mt-2 shadow-sm" />
                       ) : (
                         <Icon icon={Check} size="sm" className="text-neutral-400" />
                       )}
@@ -162,7 +162,7 @@ export function NotificationsPanel() {
                     {!notification.isRead && (
                       <button
                         onClick={(e) => void handleMarkAsRead(notification.id, e)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-neutral-200 rounded-md text-neutral-500"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-neutral-200 rounded-md text-neutral-500"
                         title="Mark as read"
                       >
                         <Icon icon={Check} size="sm" />

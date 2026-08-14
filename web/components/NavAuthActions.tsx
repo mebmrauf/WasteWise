@@ -16,6 +16,29 @@ const DASHBOARD_HOME_BY_ROLE: Partial<Record<Role, string>> = {
   RECYCLING_COMPANY: "/recycling/dashboard",
 };
 
+function isInDashboardShellPath(
+  pathname: string | null,
+  role: Role,
+  accountType: "HOUSEHOLD" | "BUSINESS" | null,
+): boolean {
+  if (!pathname) return false;
+  if (role === "USER" && accountType === "BUSINESS") {
+    return pathname.startsWith("/business");
+  }
+  if (role === "USER") {
+    return (
+      pathname.startsWith("/dashboard") ||
+      pathname.startsWith("/profile") ||
+      pathname.startsWith("/waste-recognition") ||
+      pathname.startsWith("/referrals")
+    );
+  }
+  if (role === "COLLECTOR") return pathname.startsWith("/collector");
+  if (role === "RECYCLING_COMPANY") return pathname.startsWith("/recycling");
+  if (role === "ADMIN") return pathname.startsWith("/admin");
+  return false;
+}
+
 export function NavAuthActions() {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
@@ -32,15 +55,23 @@ export function NavAuthActions() {
   }, [user, isLoading, pathname, router]);
 
   if (isLoading) {
-    const isDashboardRoute = pathname?.startsWith("/dashboard") || pathname?.startsWith("/collector") || pathname?.startsWith("/admin");
+    const isDashboardRoute =
+      pathname?.startsWith("/dashboard") ||
+      pathname?.startsWith("/collector") ||
+      pathname?.startsWith("/admin") ||
+      pathname?.startsWith("/business") ||
+      pathname?.startsWith("/recycling") ||
+      pathname?.startsWith("/profile") ||
+      pathname?.startsWith("/waste-recognition") ||
+      pathname?.startsWith("/referrals");
 
     if (isDashboardRoute) {
       return (
         <div className="flex items-center gap-1 sm:gap-3 opacity-50 pointer-events-none">
-          <NotificationsPanel />
           <Button variant="ghost" size="sm" className="px-2 sm:px-3 md:hidden">
             <Icon icon={LogOut} size="sm" className="sm:hidden" />
           </Button>
+          <NotificationsPanel />
         </div>
       );
     }
@@ -63,11 +94,10 @@ export function NavAuthActions() {
     if (user.role === "USER" && user.accountType === "BUSINESS") {
       dashboardHomeHref = "/business/dashboard";
     }
-    const isInDashboardShell = pathname?.startsWith(dashboardHomeHref) || pathname?.startsWith("/profile") || pathname?.startsWith("/waste-recognition") || false;
+    const isInDashboardShell = isInDashboardShellPath(pathname, user.role, user.accountType);
 
     return (
       <div className="flex items-center gap-1 sm:gap-3">
-        <NotificationsPanel />
         <span className={cn(
           "text-body-sm text-neutral-600",
           isInDashboardShell ? "hidden" : "hidden sm:inline"
@@ -98,6 +128,7 @@ export function NavAuthActions() {
           <span className={cn(isInDashboardShell ? "hidden" : "hidden sm:inline")}>Log out</span>
           <Icon icon={LogOut} size="sm" className={cn(!isInDashboardShell && "sm:hidden")} />
         </Button>
+        <NotificationsPanel />
       </div>
     );
   }
