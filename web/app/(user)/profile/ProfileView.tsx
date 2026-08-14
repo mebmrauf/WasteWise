@@ -52,7 +52,6 @@ interface ProfileExtras {
   placeId: string | null;
   avatarUrl: string | null;
   emailNotificationsEnabled: boolean;
-  smsNotificationsEnabled: boolean;
   rewardsEmailNotificationsEnabled: boolean;
 }
 
@@ -94,7 +93,6 @@ export function ProfileView() {
           placeId: profile.placeId,
           avatarUrl: resolveAvatarUrl(profile.avatarUrl),
           emailNotificationsEnabled: profile.emailNotificationsEnabled,
-          smsNotificationsEnabled: profile.smsNotificationsEnabled,
           rewardsEmailNotificationsEnabled: profile.rewardsEmailNotificationsEnabled,
         });
       })
@@ -313,7 +311,6 @@ export function ProfileView() {
 
   const notificationPreferenceKeys = {
     email: "emailNotificationsEnabled",
-    sms: "smsNotificationsEnabled",
     rewardsEmail: "rewardsEmailNotificationsEnabled",
   } as const;
 
@@ -475,16 +472,6 @@ export function ProfileView() {
                   onChange={(event) => void handleToggleNotification("email", event.target.checked)}
                 />
                 Email me about pickup updates
-              </label>
-              <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
-                <input
-                  type="checkbox"
-                  className="h-5 w-5 accent-primary-600 rounded shrink-0"
-                  checked={extras?.smsNotificationsEnabled ?? false}
-                  disabled={!extras}
-                  onChange={(event) => void handleToggleNotification("sms", event.target.checked)}
-                />
-                Text me about pickup updates
               </label>
               <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
                 <input
