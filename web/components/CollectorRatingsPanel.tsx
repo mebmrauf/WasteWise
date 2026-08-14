@@ -92,7 +92,7 @@ export function CollectorRatingsPanel({
           ) : ratings.length > 0 ? (
             <div className="flex flex-col gap-3 overflow-y-auto pr-2 custom-scrollbar pb-2">
               {ratings.map((rating) => (
-                <div key={rating.id} className="bg-white/50 rounded-xl p-4 border border-white/40 shadow-sm shrink-0 transition-transform hover:-translate-y-0.5">
+                <div key={rating.id} className="bg-white/50 rounded-xl p-4 border border-white/40 shadow-sm shrink-0 transition-transform hover:-translate-y-1">
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex gap-1">
                       {[1, 2, 3, 4, 5].map((star) => (

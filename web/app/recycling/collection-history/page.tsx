@@ -8,6 +8,8 @@ import { format } from "date-fns";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
 import { RecyclingVerificationGate } from "../RecyclingVerificationGate";
+<<<<<<< Updated upstream
+=======
 import { Button } from "@/components/Button";
 
 function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplaceRequest; onClose: () => void }) {
@@ -39,7 +41,7 @@ function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplace
         <div className="p-6 overflow-y-auto flex flex-col gap-8">
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full uppercase tracking-wide flex items-center gap-1.5">
+              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full uppercase tracking-wide flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4" />
                 Business Confirmed &amp; Completed
               </span>
@@ -67,7 +69,7 @@ function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplace
               </h3>
               <div className="flex flex-col gap-4">
                 <div className="flex items-start gap-3">
-                  <Icon icon={Tag} className="text-emerald-500 shrink-0 mt-0.5" size="sm" />
+                  <Icon icon={Tag} className="text-emerald-500 shrink-0 mt-1" size="sm" />
                   <div>
                     <p className="text-xs text-neutral-500">Accepted Purchase Price</p>
                     <p className="font-semibold text-neutral-900">
@@ -76,7 +78,7 @@ function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplace
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Icon icon={Calendar} className="text-blue-500 shrink-0 mt-0.5" size="sm" />
+                  <Icon icon={Calendar} className="text-blue-500 shrink-0 mt-1" size="sm" />
                   <div>
                     <p className="text-xs text-neutral-500">Completed Date</p>
                     <p className="font-semibold text-neutral-900">
@@ -85,7 +87,7 @@ function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplace
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Icon icon={MapPin} className="text-rose-500 shrink-0 mt-0.5" size="sm" />
+                  <Icon icon={MapPin} className="text-rose-500 shrink-0 mt-1" size="sm" />
                   <div>
                     <p className="text-xs text-neutral-500">Pickup Address</p>
                     <p className="font-semibold text-neutral-900">{request.pickupAddress}</p>
@@ -100,7 +102,7 @@ function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplace
               </h3>
               <div className="flex flex-col gap-4">
                 <div className="flex items-start gap-3">
-                  <Icon icon={Package} className="text-purple-500 shrink-0 mt-0.5" size="sm" />
+                  <Icon icon={Package} className="text-purple-500 shrink-0 mt-1" size="sm" />
                   <div className="w-full">
                     <p className="text-xs text-neutral-500 mb-2">Individual Verified Weights</p>
                     <div className="flex flex-col gap-2">
@@ -116,7 +118,7 @@ function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplace
                   </div>
                 </div>
                 <div className="flex items-start gap-3 pt-2 border-t border-neutral-100">
-                  <Icon icon={Truck} className="text-amber-500 shrink-0 mt-0.5" size="sm" />
+                  <Icon icon={Truck} className="text-amber-500 shrink-0 mt-1" size="sm" />
                   <div>
                     <p className="text-xs text-neutral-500">Total Verified Weight</p>
                     <p className="font-bold text-neutral-900 text-lg">
@@ -146,6 +148,7 @@ function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplace
     </div>
   );
 }
+>>>>>>> Stashed changes
 
 export default function CollectionHistoryPage() {
   const [requests, setRequests] = React.useState<BulkMarketplaceRequest[]>([]);
@@ -217,9 +220,15 @@ export default function CollectionHistoryPage() {
                       <span className="px-2 py-1 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">
                         COMPLETED
                       </span>
-                      <span className="text-xs font-data text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">
+<<<<<<< Updated upstream
+                      <p className="text-caption text-neutral-400 mt-2">
+                        {format(new Date(req.updatedAt), "MMM d, yyyy")}
+                      </p>
+=======
+                      <span className="text-xs font-data text-neutral-400 bg-neutral-100 px-2 py-1 rounded-full">
                         #{req.id.slice(0, 8).toUpperCase()}
                       </span>
+>>>>>>> Stashed changes
                     </div>
                     {req.rating && (
                       <div className="flex items-center gap-1 text-warning-500">

@@ -45,7 +45,6 @@ function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], o
     pickupFormattedAddress: pickup.pickupFormattedAddress,
     latitude: pickup.latitude,
     longitude: pickup.longitude,
-    serviceArea: pickup.serviceArea,
     preferredCollectorId: pickup.preferredCollectorId,
     isExclusiveToPreferred: pickup.isExclusiveToPreferred,
     isBulk: pickup.isBulk,
@@ -94,7 +93,18 @@ pickupsRouter.post(
       sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    const { items, timeSlotStart, timeSlotEnd, placeId, formattedAddress, latitude, longitude, serviceArea, preferredCollectorId, isExclusiveToPreferred, isBulk, estimatedTotalWeight } = parsed.data;
+    const { items, timeSlotStart, timeSlotEnd, placeId, formattedAddress, latitude, longitude, preferredCollectorId, isExclusiveToPreferred, isBulk, estimatedTotalWeight } = parsed.data;
+
+    if (preferredCollectorId) {
+      const preferredCollector = await prisma.collectorProfile.findUnique({
+        where: { userId: preferredCollectorId },
+        select: { verificationStatus: true },
+      });
+      if (!preferredCollector || preferredCollector.verificationStatus !== VerificationStatus.APPROVED) {
+        sendError(res, 400, "VALIDATION_ERROR", "The selected collector is no longer available.");
+        return;
+      }
+    }
 
     if (isBulk) {
       const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
@@ -176,7 +186,6 @@ pickupsRouter.post(
         pickupFormattedAddress: resolvedAddress.formattedAddress,
         latitude: resolvedAddress.latitude,
         longitude: resolvedAddress.longitude,
-        serviceArea,
         preferredCollectorId,
         isExclusiveToPreferred,
         isBulk,
@@ -190,8 +199,24 @@ pickupsRouter.post(
       include: { items: true, weightRecord: true, offers: { where: { status: OfferStatus.ACCEPTED } } },
     });
 
-    // Notify verified collectors whose service radius covers this pickup.
-    if (resolvedAddress.latitude !== null && resolvedAddress.longitude !== null) {
+<<<<<<< Updated upstream
+=======
+    // A collector requested by name is always notified directly, even if the
+    // pickup falls outside their configured radius — the requester chose them
+    // deliberately, so that choice should reach them regardless.
+    if (preferredCollectorId) {
+      void createNotification({
+        userId: preferredCollectorId,
+        type: "GENERIC",
+        title: "New Pickup Request For You",
+        message: `A household specifically requested you for a pickup at ${resolvedAddress.formattedAddress}.`,
+        relatedPickupRequestId: pickup.id,
+      });
+    }
+
+    // An exclusive request only goes to the preferred collector — everyone
+    // else is excluded from bidding on it, so don't notify them either.
+    if (!isExclusiveToPreferred && resolvedAddress.latitude !== null && resolvedAddress.longitude !== null) {
       const pickupLocation = { lat: resolvedAddress.latitude, lng: resolvedAddress.longitude };
 
       const candidateCollectors = await prisma.collectorProfile.findMany({
@@ -205,6 +230,8 @@ pickupsRouter.post(
       });
 
       for (const collector of candidateCollectors) {
+        if (collector.userId === preferredCollectorId) continue;
+
         const isInRange = isWithinRadiusKm(
           pickupLocation,
           { lat: collector.serviceAreaLatitude as number, lng: collector.serviceAreaLongitude as number },
@@ -222,6 +249,7 @@ pickupsRouter.post(
       }
     }
 
+>>>>>>> Stashed changes
     sendData(res, 201, { pickup: toPickupDetail(pickup, pickup.weightRecord) });
   }),
 );

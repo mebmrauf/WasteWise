@@ -219,7 +219,7 @@ export function WasteRecognitionView() {
                   
                   {isScanning && (
                     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
-                      <div className="absolute left-0 top-0 h-1.5 w-full bg-primary-500 shadow-[0_0_20px_rgba(16,185,129,1)] animate-[scan_2s_ease-in-out_infinite]" />
+                      <div className="absolute left-0 top-0 h-2 w-full bg-primary-500 shadow-[0_0_20px_rgba(16,185,129,1)] animate-[scan_2s_ease-in-out_infinite]" />
                       <div className="relative flex flex-col items-center gap-4">
                         <div className="h-16 w-16 rounded-full bg-primary-500/20 flex items-center justify-center animate-pulse">
                           <Icon icon={Camera} size="xl" className="text-primary-300" />
@@ -359,7 +359,7 @@ export function WasteRecognitionView() {
                         {CATEGORY_LABELS[scan.detectedCategory]}
                       </span>
                     </div>
-                    <span className={scan.isRecyclable ? "text-caption font-bold text-green-700 bg-green-100 px-3 py-1.5 rounded-full" : "text-caption font-bold text-neutral-600 bg-neutral-200 px-3 py-1.5 rounded-full"}>
+                    <span className={scan.isRecyclable ? "text-caption font-bold text-green-700 bg-green-100 px-3 py-2 rounded-full" : "text-caption font-bold text-neutral-600 bg-neutral-200 px-3 py-2 rounded-full"}>
                       {scan.isRecyclable ? "Recyclable" : "Not recyclable"}
                     </span>
                   </li>

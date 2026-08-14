@@ -57,24 +57,24 @@ export default function ForPartnersPage() {
                 
                 <ul className="space-y-4 mb-10 flex-1">
                   <li className="flex items-start gap-3">
-                    <CheckCircle2 className="text-green-600 shrink-0 mt-0.5" size={20} />
+                    <CheckCircle2 className="text-green-600 shrink-0 mt-1" size={20} />
                     <span className="text-neutral-700">Accept Smart Pickup requests</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <CheckCircle2 className="text-green-600 shrink-0 mt-0.5" size={20} />
+                    <CheckCircle2 className="text-green-600 shrink-0 mt-1" size={20} />
                     <span className="text-neutral-700">Verify weights and categories digitally</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <CheckCircle2 className="text-green-600 shrink-0 mt-0.5" size={20} />
+                    <CheckCircle2 className="text-green-600 shrink-0 mt-1" size={20} />
                     <span className="text-neutral-700">Earn consistent income</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <CheckCircle2 className="text-green-600 shrink-0 mt-0.5" size={20} />
+                    <CheckCircle2 className="text-green-600 shrink-0 mt-1" size={20} />
                     <span className="text-neutral-700">Manage assigned pickups effortlessly</span>
                   </li>
                 </ul>
                 
-                <Button size="lg" href="/signup?role=collector" className="w-full bg-[#114E29] hover:bg-green-800 text-white rounded-[12px] h-[52px] text-[16px] transition-transform hover:-translate-y-0.5 border-none shadow-sm">
+                <Button size="lg" href="/signup?role=collector" className="w-full bg-[#114E29] hover:bg-green-800 text-white rounded-[12px] h-[52px] text-[16px] transition-transform hover:-translate-y-1 border-none shadow-sm">
                   Join as Collector
                 </Button>
               </div>
@@ -95,28 +95,28 @@ export default function ForPartnersPage() {
                   
                   <ul className="space-y-4 mb-10 flex-1">
                     <li className="flex items-start gap-3">
-                      <CheckCircle2 className="text-green-400 shrink-0 mt-0.5" size={20} />
+                      <CheckCircle2 className="text-green-400 shrink-0 mt-1" size={20} />
                       <span className="text-white/90">View marketplace requests</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <CheckCircle2 className="text-green-400 shrink-0 mt-0.5" size={20} />
+                      <CheckCircle2 className="text-green-400 shrink-0 mt-1" size={20} />
                       <span className="text-white/90">Submit competitive quotations</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <CheckCircle2 className="text-green-400 shrink-0 mt-0.5" size={20} />
+                      <CheckCircle2 className="text-green-400 shrink-0 mt-1" size={20} />
                       <span className="text-white/90">Purchase bulk waste easily</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <CheckCircle2 className="text-green-400 shrink-0 mt-0.5" size={20} />
+                      <CheckCircle2 className="text-green-400 shrink-0 mt-1" size={20} />
                       <span className="text-white/90">Manage collection history</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <CheckCircle2 className="text-green-400 shrink-0 mt-0.5" size={20} />
+                      <CheckCircle2 className="text-green-400 shrink-0 mt-1" size={20} />
                       <span className="text-white/90">Build ratings and reputation</span>
                     </li>
                   </ul>
                   
-                  <Button size="lg" variant="primary" href="/signup?role=recyclingCompany" className="w-full bg-green-500 hover:bg-green-600 text-neutral-900 rounded-[12px] h-[52px] text-[16px] font-bold border-none transition-transform hover:-translate-y-0.5 shadow-sm">
+                  <Button size="lg" variant="primary" href="/signup?role=recyclingCompany" className="w-full bg-green-500 hover:bg-green-600 text-neutral-900 rounded-[12px] h-[52px] text-[16px] font-bold border-none transition-transform hover:-translate-y-1 shadow-sm">
                     Register as Recycling Company
                   </Button>
                 </div>

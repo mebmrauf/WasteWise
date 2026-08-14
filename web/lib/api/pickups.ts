@@ -83,7 +83,6 @@ export interface PickupRequestSummary {
   pickupFormattedAddress: string;
   latitude: number | null;
   longitude: number | null;
-  serviceArea: string | null;
   preferredCollectorId: string | null;
   isExclusiveToPreferred: boolean;
   isBulk: boolean;
@@ -132,7 +131,6 @@ export interface CreatePickupRequestInput {
   formattedAddress?: string;
   latitude?: number;
   longitude?: number;
-  serviceArea?: string;
   preferredCollectorId?: string;
   isExclusiveToPreferred?: boolean;
   isBulk?: boolean;

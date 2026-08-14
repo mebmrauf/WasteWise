@@ -207,7 +207,7 @@ export default function ReferralsPage() {
                           {new Date(item.registrationDate).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                             item.firstPickupStatus === "Completed" ? "bg-green-100 text-green-800" :
                             item.firstPickupStatus === "In Progress" ? "bg-blue-100 text-blue-800" :
                             "bg-neutral-100 text-neutral-800"
@@ -216,7 +216,7 @@ export default function ReferralsPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                             item.rewardStatus === "Rewarded" ? "bg-emerald-100 text-emerald-800" :
                             item.rewardStatus === "Pending Approval" ? "bg-amber-100 text-amber-800" :
                             "bg-neutral-100 text-neutral-800"

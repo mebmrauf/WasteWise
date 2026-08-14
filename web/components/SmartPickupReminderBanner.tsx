@@ -48,14 +48,14 @@ export function SmartPickupReminderBanner() {
   return (
     <Card className="mb-8 flex flex-col gap-4 border-warning-500/30 bg-warning-50 p-6 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-warning-500/15">
+        <div className="mt-1 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-warning-500/15">
           <Icon icon={Clock} size="sm" className="text-warning-700" />
         </div>
         <div>
           <p className="text-body font-semibold text-warning-700">
             You usually recycle every {intervalDays} day{intervalDays === 1 ? "" : "s"}
           </p>
-          <p className="mt-0.5 text-body-sm text-warning-700/80">
+          <p className="mt-1 text-body-sm text-warning-700/80">
             It&apos;s been {reminder.daysSinceLastPickup} — want to line up your next pickup now?
           </p>
         </div>

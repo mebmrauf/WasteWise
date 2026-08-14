@@ -43,3 +43,32 @@ export function uploadAvatarImage(buffer: Buffer, userId: string): Promise<{ pub
 export async function deleteAvatarImage(publicId: string): Promise<void> {
   await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
 }
+
+const BULK_REQUEST_IMAGE_FOLDER = "wastewise/bulk-request-images";
+
+function uploadImage(buffer: Buffer, folder: string, publicId: string): Promise<{ url: string }> {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        public_id: publicId,
+        folder,
+        resource_type: "image",
+        format: "webp",
+        transformation: [{ width: 1600, height: 1600, crop: "limit" }],
+      },
+      (err, result) => {
+        if (err || !result) {
+          reject(err ?? new Error("Cloudinary upload returned no result"));
+          return;
+        }
+        resolve({ url: result.secure_url });
+      },
+    );
+    stream.end(buffer);
+  });
+}
+
+export function uploadBulkRequestImage(buffer: Buffer, businessId: string): Promise<{ url: string }> {
+  const publicId = `${businessId}-${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+  return uploadImage(buffer, BULK_REQUEST_IMAGE_FOLDER, publicId);
+}

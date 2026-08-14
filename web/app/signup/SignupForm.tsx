@@ -93,8 +93,6 @@ export function SignupForm({ defaultRoleChoice, defaultReferralCode }: SignupFor
         const phone = String(formData.get("phone") ?? "").trim();
         const password = String(formData.get("password") ?? "");
         const confirmPassword = String(formData.get("confirmPassword") ?? "");
-        const rawReferralCode = String(formData.get("referralCode") ?? "").trim();
-        const referralCode = rawReferralCode ? rawReferralCode : undefined;
         const { role, accountType } = resolveRoleChoice(roleChoice);
 
         if (password !== confirmPassword) {
@@ -152,7 +150,7 @@ export function SignupForm({ defaultRoleChoice, defaultReferralCode }: SignupFor
                 disabled={isSubmitting}
                 onClick={() => setRoleChoice(card.value)}
                 className={cn(
-                  "flex flex-col items-start gap-0.5 rounded-md border px-3 py-2 text-left transition-colors",
+                  "flex flex-col items-start gap-1 rounded-md border px-3 py-2 text-left transition-colors",
                   "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
                   isSelected ? accent.selected : "border-neutral-300 bg-neutral-0 hover:border-neutral-400",
                   isSelected && accent.ring,
@@ -203,15 +201,6 @@ export function SignupForm({ defaultRoleChoice, defaultReferralCode }: SignupFor
         autoComplete="new-password"
         required
         minLength={8}
-        disabled={isSubmitting}
-      />
-
-      <Input
-        label="Referral Code (Optional)"
-        name="referralCode"
-        type="text"
-        autoComplete="off"
-        defaultValue={defaultReferralCode ?? undefined}
         disabled={isSubmitting}
       />
 

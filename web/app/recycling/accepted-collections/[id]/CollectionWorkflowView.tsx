@@ -2,13 +2,16 @@
 
 import * as React from "react";
 import { getMarketplaceRequest, updateBulkRequestStatus, submitBulkCollectionProof, type BulkMarketplaceRequest } from "@/lib/api/marketplace";
-import { Package, MapPin, Loader2, Truck, UploadCloud, CheckCircle2, Navigation, X, Tag, Calendar, Building2 } from "lucide-react";
+<<<<<<< Updated upstream
+import { Package, MapPin, Loader2, Truck, UploadCloud, CheckCircle2, Navigation, X } from "lucide-react";
+=======
+import { Package, MapPin, Loader2, Truck, CheckCircle2, Tag, Calendar, Building2 } from "lucide-react";
 import { format } from "date-fns";
+>>>>>>> Stashed changes
 import { Button } from "@/components/Button";
 import { Icon } from "@/components/Icon";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
 
 export function CollectionWorkflowView({ requestId }: { requestId: string }) {
   const router = useRouter();
@@ -19,9 +22,12 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
 
   // Proof form state
   const [weights, setWeights] = React.useState<Record<string, number>>({});
+<<<<<<< Updated upstream
   const [photos, setPhotos] = React.useState<string[]>([]);
   const [photoInput, setPhotoInput] = React.useState("");
+=======
   const [notes, setNotes] = React.useState("");
+>>>>>>> Stashed changes
 
   const fetchRequest = React.useCallback(async () => {
     try {
@@ -75,13 +81,6 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
     }));
   };
 
-  const handleAddPhoto = () => {
-    if (photoInput && photoInput.startsWith("http")) {
-      setPhotos([...photos, photoInput]);
-      setPhotoInput("");
-    }
-  };
-
   const handleSubmitProof = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -94,8 +93,11 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
       await submitBulkCollectionProof(requestId, {
         verifiedWeights: weights,
         verifiedTotalWeightKg: totalWeight,
+<<<<<<< Updated upstream
         collectionPhotos: photos,
+=======
         notes: notes || undefined,
+>>>>>>> Stashed changes
       });
       await fetchRequest();
     } catch (err: any) {
@@ -154,6 +156,8 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
 
   return (
     <div className="mt-6 space-y-6 max-w-3xl">
+<<<<<<< Updated upstream
+=======
       <div className="rounded-2xl border border-neutral-200 bg-neutral-0 p-6 shadow-sm flex flex-col gap-6">
         <h2 className="text-h4 text-neutral-900 border-b border-neutral-100 pb-4">Collection Details</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -168,14 +172,14 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
             <div>
               <p className="text-xs text-neutral-500 uppercase tracking-widest font-semibold mb-1">Pickup Address</p>
               <div className="flex items-start gap-2">
-                <Icon icon={MapPin} className="text-rose-500 shrink-0 mt-0.5" size="sm" />
+                <Icon icon={MapPin} className="text-rose-500 shrink-0 mt-1" size="sm" />
                 <span className="font-medium text-neutral-900">{request.pickupAddress}</span>
               </div>
             </div>
             <div>
               <p className="text-xs text-neutral-500 uppercase tracking-widest font-semibold mb-1">Pickup Schedule</p>
               <div className="flex items-start gap-2">
-                <Icon icon={Calendar} className="text-blue-500 shrink-0 mt-0.5" size="sm" />
+                <Icon icon={Calendar} className="text-blue-500 shrink-0 mt-1" size="sm" />
                 <span className="font-medium text-neutral-900">
                   {acceptedQuote ? format(new Date(acceptedQuote.estimatedPickupDate), "MMM d, yyyy") : "N/A"}
                   {acceptedQuote?.estimatedPickupTime ? ` at ${acceptedQuote.estimatedPickupTime}` : ""}
@@ -208,6 +212,7 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
         </div>
       </div>
 
+>>>>>>> Stashed changes
       <div className="rounded-2xl border border-neutral-200 bg-neutral-0 p-6 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
@@ -240,7 +245,7 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
         <form onSubmit={handleSubmitProof} className="rounded-2xl border border-neutral-200 bg-neutral-0 p-6 shadow-sm">
           <h3 className="text-h4 text-neutral-900 mb-2">Submit Collection Proof</h3>
           <p className="text-body-sm text-neutral-500 mb-6">
-            Upload photos of the collected waste and enter the exact verified weights for each material.
+            Enter the exact verified weights for each material.
           </p>
 
           <div className="space-y-6">
@@ -248,7 +253,7 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
               <h4 className="font-medium text-neutral-900 mb-3">Verified Weights (kg)</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {Object.keys(weights).map((category) => (
-                  <div key={category} className="flex flex-col gap-1.5">
+                  <div key={category} className="flex flex-col gap-2">
                     <label className="text-body-sm text-neutral-600 capitalize">
                       {category.toLowerCase()}
                     </label>
@@ -271,7 +276,8 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
             </div>
 
             <div>
-              <h4 className="font-medium text-neutral-900 mb-3">Collection Photos (Optional)</h4>
+<<<<<<< Updated upstream
+              <h4 className="font-medium text-neutral-900 mb-3">Collection Photos</h4>
               <div className="flex gap-2 mb-3">
                 <input
                   type="url"
@@ -301,6 +307,16 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
                   ))}
                 </div>
               )}
+=======
+              <h4 className="font-medium text-neutral-900 mb-3">Notes (Optional)</h4>
+              <textarea
+                rows={3}
+                placeholder="Any additional information about the collection..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-body-sm"
+              />
+>>>>>>> Stashed changes
             </div>
 
             <div>
@@ -322,25 +338,6 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
           </div>
         </form>
       )}
-
-      {/* Request Details */}
-      <div className="rounded-2xl border border-neutral-200 bg-neutral-0 p-6 shadow-sm">
-        <h4 className="font-medium text-neutral-900 mb-4">Request Details</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
-          <div>
-            <p className="text-caption text-neutral-500">Business</p>
-            <p className="text-body text-neutral-900">{request.business?.fullName}</p>
-          </div>
-          <div>
-            <p className="text-caption text-neutral-500">Pickup Address</p>
-            <p className="text-body text-neutral-900">{request.pickupAddress}</p>
-          </div>
-          <div>
-            <p className="text-caption text-neutral-500">Estimated Total Weight</p>
-            <p className="text-body text-neutral-900">{request.estimatedWeightKg} kg</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

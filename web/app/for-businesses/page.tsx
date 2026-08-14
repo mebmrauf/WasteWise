@@ -28,7 +28,7 @@ export default function ForBusinessesPage() {
         {/* HERO SECTION */}
         <section className="relative bg-gradient-to-br from-green-50/50 to-neutral-50 py-24 lg:py-32">
           <PageContainer className="relative z-10 flex flex-col items-center text-center max-w-4xl mx-auto px-6 md:px-12 lg:px-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-[14px] font-semibold mb-8 shadow-[0_2px_10px_rgb(0,0,0,0.04)] border border-green-200/50">
+            <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-green-50 text-green-700 text-[14px] font-semibold mb-8 shadow-[0_2px_10px_rgb(0,0,0,0.04)] border border-green-200/50">
               Enterprise Solutions
             </div>
             <h1 className="text-[40px] md:text-[56px] lg:text-[64px] font-bold text-neutral-900 mb-6 tracking-tight leading-[1.1] max-w-[800px]">
@@ -37,7 +37,7 @@ export default function ForBusinessesPage() {
             <p className="text-[18px] md:text-[20px] text-neutral-600 mb-10 leading-8 max-w-[600px]">
               Turn your commercial waste into value. Request bulk pickups, track your environmental impact, and get competitive quotations from verified recycling companies.
             </p>
-            <Button size="lg" href="/signup?accountType=BUSINESS" className="bg-[#114E29] hover:bg-green-800 text-white rounded-full px-8 h-[52px] text-[16px] transition-transform hover:-translate-y-0.5 border-none shadow-sm">
+            <Button size="lg" href="/signup?accountType=BUSINESS" className="bg-[#114E29] hover:bg-green-800 text-white rounded-full px-8 h-[52px] text-[16px] transition-transform hover:-translate-y-1 border-none shadow-sm">
               Register as Business
             </Button>
           </PageContainer>

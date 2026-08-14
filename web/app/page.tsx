@@ -60,10 +60,18 @@ export default async function Home() {
 
       <main className="flex flex-col min-h-screen">
         {/* HERO SECTION */}
+<<<<<<< Updated upstream
+        <section className="relative bg-gradient-to-br from-neutral-50 to-green-50 pt-20 pb-24 lg:pt-32 lg:pb-32 overflow-hidden">
+          <div className="absolute top-0 right-0 -mr-32 -mt-32 w-[600px] h-[600px] bg-green-200/40 blur-3xl rounded-full pointer-events-none" />
+          <PageContainer className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="flex flex-col max-w-xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-100 text-green-700 text-caption font-medium mb-6 w-max border border-green-200">
+=======
         <section className="relative bg-gradient-to-br from-neutral-50 to-green-50/30 py-24 lg:py-32">
           <PageContainer className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center px-6 md:px-12 lg:px-16">
             <div className="flex flex-col max-w-[600px]">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-body-sm font-medium mb-8 w-max border border-green-200/50">
+              <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-green-50 text-green-700 text-body-sm font-medium mb-8 w-max border border-green-200/50">
+>>>>>>> Stashed changes
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
@@ -76,11 +84,19 @@ export default async function Home() {
               <p className="text-[18px] md:text-[20px] text-neutral-600 mb-10 leading-8 max-w-[540px]">
                 WasteWise brings the informal scrap collection network online. Post a pickup request, track verified collectors in real-time, and earn Green Points for doing your part.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 mb-12">
-                <Button size="lg" href="/signup" className="bg-[#114E29] hover:bg-green-800 text-white rounded-full px-8 h-[52px] text-[16px] transition-transform hover:-translate-y-0.5 border-none shadow-sm">
+<<<<<<< Updated upstream
+              <div className="flex flex-wrap gap-4">
+                <Button size="lg" href="/signup" className="bg-[#114E29] hover:bg-green-800 text-white rounded-full px-8 shadow-lg shadow-green-900/20">
                   Request a pickup
                 </Button>
-                <Button size="lg" variant="secondary" href="/signup?role=collector" className="rounded-full px-8 h-[52px] border-neutral-300 text-[16px] transition-transform hover:-translate-y-0.5 bg-white hover:bg-neutral-50 shadow-sm">
+                <Button size="lg" variant="secondary" href="/signup?role=collector" className="rounded-full px-8 border-neutral-300">
+=======
+              <div className="flex flex-col sm:flex-row gap-4 mb-12">
+                <Button size="lg" href="/signup" className="bg-[#114E29] hover:bg-green-800 text-white rounded-full px-8 h-[52px] text-[16px] transition-transform hover:-translate-y-1 border-none shadow-sm">
+                  Request a pickup
+                </Button>
+                <Button size="lg" variant="secondary" href="/signup?role=collector" className="rounded-full px-8 h-[52px] border-neutral-300 text-[16px] transition-transform hover:-translate-y-1 bg-white hover:bg-neutral-50 shadow-sm">
+>>>>>>> Stashed changes
                   Join as a collector
                 </Button>
               </div>
@@ -141,7 +157,7 @@ export default async function Home() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
               {/* Connector line (desktop only) */}
-              <div className="hidden md:block absolute top-12 left-1/6 right-1/6 h-0.5 bg-neutral-100 -z-10" />
+              <div className="hidden md:block absolute top-12 left-1/6 right-1/6 h-1 bg-neutral-100 -z-10" />
 
               <div className="flex flex-col items-center text-center group">
                 <div className="w-24 h-24 rounded-full bg-green-50 border-8 border-white shadow-sm flex items-center justify-center text-[#114E29] mb-6 group-hover:scale-110 transition-transform">
@@ -268,6 +284,32 @@ export default async function Home() {
                 </ul>
               </div>
 
+<<<<<<< Updated upstream
+              <div className="bg-neutral-900 rounded-3xl p-8 md:p-12 text-white shadow-2xl">
+                <h2 className="text-h3 text-white mb-6">For Scrap Collectors</h2>
+                <p className="text-white/70 mb-8">
+                  Stop wandering streets hoping for scrap. Turn your daily foot traffic into a formal, structured business.
+                </p>
+                <ul className="space-y-6 mb-10">
+                  <li className="flex items-start gap-4">
+                    <Route className="text-green-400 shrink-0 mt-1" />
+                    <div>
+                      <h4 className="font-bold text-white">Route Optimization</h4>
+                      <p className="text-white/60 text-body-sm mt-1">We sequence your daily jobs into one optimized map route.</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-4">
+                    <ClipboardList className="text-green-400 shrink-0 mt-1" />
+                    <div>
+                      <h4 className="font-bold text-white">Income Dashboard</h4>
+                      <p className="text-white/60 text-body-sm mt-1">Build a provable income history to show banks and landlords.</p>
+                    </div>
+                  </li>
+                </ul>
+                <Button size="lg" variant="primary" href="/signup?role=collector" className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-neutral-900 font-bold border-none">
+                  Apply to become a collector
+                </Button>
+=======
               <div className="bg-neutral-900 rounded-[20px] p-8 md:p-12 text-white shadow-2xl relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="relative z-10">
@@ -291,10 +333,11 @@ export default async function Home() {
                       </div>
                     </li>
                   </ul>
-                  <Button size="lg" variant="primary" href="/signup?role=collector" className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-neutral-900 h-[52px] px-8 text-[16px] font-bold border-none transition-transform hover:-translate-y-0.5">
+                  <Button size="lg" variant="primary" href="/signup?role=collector" className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-neutral-900 h-[52px] px-8 text-[16px] font-bold border-none transition-transform hover:-translate-y-1">
                     Apply to become a collector
                   </Button>
                 </div>
+>>>>>>> Stashed changes
               </div>
 
             </div>

@@ -248,7 +248,7 @@ export default function AdminDashboardPage() {
           >
             {tab.label}
             {pendingCounts[tab.key] > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center rounded-full bg-amber-100 text-amber-800 text-xs font-semibold h-5 min-w-5 px-1.5">
+              <span className="ml-2 inline-flex items-center justify-center rounded-full bg-amber-100 text-amber-800 text-xs font-semibold h-5 min-w-5 px-2">
                 {pendingCounts[tab.key]}
               </span>
             )}

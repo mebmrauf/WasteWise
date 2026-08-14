@@ -37,7 +37,7 @@ function CollectionHistoryModal({ request, onClose }: { request: PickupRequestSu
         <div className="p-6 overflow-y-auto flex flex-col gap-8">
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full uppercase tracking-wide flex items-center gap-1.5">
+              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full uppercase tracking-wide flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4" />
                 Collection Completed
               </span>
@@ -61,7 +61,7 @@ function CollectionHistoryModal({ request, onClose }: { request: PickupRequestSu
               </h3>
               <div className="flex flex-col gap-4">
                 <div className="flex items-start gap-3">
-                  <Icon icon={Tag} className="text-emerald-500 shrink-0 mt-0.5" size="sm" />
+                  <Icon icon={Tag} className="text-emerald-500 shrink-0 mt-1" size="sm" />
                   <div>
                     <p className="text-xs text-neutral-500">Earned Amount</p>
                     <p className="font-semibold text-neutral-900">
@@ -70,7 +70,7 @@ function CollectionHistoryModal({ request, onClose }: { request: PickupRequestSu
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Icon icon={Calendar} className="text-blue-500 shrink-0 mt-0.5" size="sm" />
+                  <Icon icon={Calendar} className="text-blue-500 shrink-0 mt-1" size="sm" />
                   <div>
                     <p className="text-xs text-neutral-500">Completed Date</p>
                     <p className="font-semibold text-neutral-900">
@@ -87,7 +87,7 @@ function CollectionHistoryModal({ request, onClose }: { request: PickupRequestSu
               </h3>
               <div className="flex flex-col gap-4">
                 <div className="flex items-start gap-3">
-                  <Icon icon={Package} className="text-purple-500 shrink-0 mt-0.5" size="sm" />
+                  <Icon icon={Package} className="text-purple-500 shrink-0 mt-1" size="sm" />
                   <div className="w-full">
                     <div className="flex flex-col gap-2 mt-1">
                       {request.items.map((item, i) => (
@@ -184,7 +184,7 @@ export default function CollectionHistoryPage() {
 
         {!isApproved ? (
           <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4">
-            <Icon icon={AlertCircle} className="text-blue-600 mt-0.5 shrink-0" />
+            <Icon icon={AlertCircle} className="text-blue-600 mt-1 shrink-0" />
             <div className="flex-1">
               <h3 className="text-body font-bold text-blue-900">Account Pending Verification</h3>
               <p className="mt-1 text-body-sm text-blue-700">
@@ -218,7 +218,7 @@ export default function CollectionHistoryPage() {
                           <span className="px-2 py-1 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">
                             COMPLETED
                           </span>
-                          <span className="text-xs font-data text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">
+                          <span className="text-xs font-data text-neutral-400 bg-neutral-100 px-2 py-1 rounded-full">
                             #{req.id.slice(-6).toUpperCase()}
                           </span>
                         </div>

@@ -1,4 +1,4 @@
-import { authFetch } from "./auth";
+import { authFetch, readCsrfToken } from "./auth";
 
 export interface BulkMarketplaceRequest {
   id: string;
@@ -133,6 +133,16 @@ export async function updateBulkRequestStatus(requestId: string, status: string)
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status }),
+  });
+}
+
+export async function uploadBulkRequestImage(file: File): Promise<{ url: string }> {
+  const formData = new FormData();
+  formData.append("image", file);
+  return authFetch<{ url: string }>("/marketplace/requests/images", {
+    method: "POST",
+    body: formData,
+    headers: { "x-csrf-token": readCsrfToken() },
   });
 }
 

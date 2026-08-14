@@ -58,19 +58,20 @@ export function ChangePasswordSection({ hasPassword }: ChangePasswordSectionProp
   }
 
   return (
-    <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-200 transition-all">
-      <p className="text-body text-neutral-600 mb-6">
+    <Card className="mt-8 p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
+      <h3 className="text-xl font-bold text-neutral-900 mb-2">
+        {hasPassword ? "Change password" : "Set a password"}
+      </h3>
+      <p className="text-body-sm text-neutral-600 mb-6 max-w-form">
         {hasPassword
           ? "Update the password you use to sign in."
           : "Your account currently only signs in via Google or Facebook. Set a password to also sign in with your email."}
       </p>
 
-      <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-5 max-w-md">
+      <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-4 max-w-sm">
         {error && <ErrorBanner>{error}</ErrorBanner>}
         {success && !error && (
-          <p className="text-body-sm text-success-700 bg-success-50 p-3 rounded-xl border border-success-100">
-            Your password has been successfully updated.
-          </p>
+          <p className="text-body-sm text-success-700">Your password has been updated.</p>
         )}
 
         {hasPassword && (
@@ -106,9 +107,9 @@ export function ChangePasswordSection({ hasPassword }: ChangePasswordSectionProp
           required
         />
 
-        <div className="pt-2">
-          <Button type="submit" disabled={isSaving} className="w-full sm:w-auto px-8">
-            {isSaving ? "Saving…" : hasPassword ? "Update Password" : "Set Password"}
+        <div>
+          <Button type="submit" size="sm" disabled={isSaving}>
+            {isSaving ? "Saving…" : hasPassword ? "Update password" : "Set password"}
           </Button>
         </div>
       </form>

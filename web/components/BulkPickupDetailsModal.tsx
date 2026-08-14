@@ -111,14 +111,14 @@ export function BulkPickupDetailsModal({ request, onClose, onUpdate }: BulkPicku
               {acceptedQuote ? (
                 <div className="flex flex-col gap-4">
                   <div className="flex items-start gap-3">
-                    <Icon icon={Tag} className="text-emerald-500 shrink-0 mt-0.5" size="sm" />
+                    <Icon icon={Tag} className="text-emerald-500 shrink-0 mt-1" size="sm" />
                     <div>
                       <p className="text-xs text-neutral-500">Purchase Price</p>
                       <p className="font-semibold text-neutral-900">৳{acceptedQuote.purchasePrice.toLocaleString()}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <Icon icon={Calendar} className="text-blue-500 shrink-0 mt-0.5" size="sm" />
+                    <Icon icon={Calendar} className="text-blue-500 shrink-0 mt-1" size="sm" />
                     <div>
                       <p className="text-xs text-neutral-500">Estimated Pickup Date</p>
                       <p className="font-semibold text-neutral-900">
@@ -128,7 +128,7 @@ export function BulkPickupDetailsModal({ request, onClose, onUpdate }: BulkPicku
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <Icon icon={Truck} className="text-amber-500 shrink-0 mt-0.5" size="sm" />
+                    <Icon icon={Truck} className="text-amber-500 shrink-0 mt-1" size="sm" />
                     <div>
                       <p className="text-xs text-neutral-500">Vehicle Type</p>
                       <p className="font-semibold text-neutral-900 capitalize">{acceptedQuote.vehicleType.replace(/_/g, " ").toLowerCase()}</p>
@@ -153,7 +153,7 @@ export function BulkPickupDetailsModal({ request, onClose, onUpdate }: BulkPicku
               </h3>
               <div className="flex flex-col gap-4">
                 <div className="flex items-start gap-3">
-                  <Icon icon={Package} className="text-purple-500 shrink-0 mt-0.5" size="sm" />
+                  <Icon icon={Package} className="text-purple-500 shrink-0 mt-1" size="sm" />
                   <div>
                     <p className="text-xs text-neutral-500">Materials</p>
                     <div className="flex flex-wrap gap-2 mt-1">
@@ -179,7 +179,7 @@ export function BulkPickupDetailsModal({ request, onClose, onUpdate }: BulkPicku
                 </div>
 
                 <div className="flex items-start gap-3 mt-2">
-                  <Icon icon={MapPin} className="text-rose-500 shrink-0 mt-0.5" size="sm" />
+                  <Icon icon={MapPin} className="text-rose-500 shrink-0 mt-1" size="sm" />
                   <div>
                     <p className="text-xs text-neutral-500">Pickup Address</p>
                     <p className="font-medium text-neutral-900">{request.pickupAddress}</p>
@@ -194,20 +194,6 @@ export function BulkPickupDetailsModal({ request, onClose, onUpdate }: BulkPicku
               </div>
             </div>
           </div>
-
-          {/* Collection Photos (if completed) */}
-          {request.collectionPhotos && request.collectionPhotos.length > 0 && (
-             <div className="flex flex-col gap-4">
-               <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wider border-b border-neutral-100 pb-2">
-                 Collection Photos
-               </h3>
-               <div className="flex gap-4 overflow-x-auto pb-2">
-                 {request.collectionPhotos.map((photo, index) => (
-                   <img key={index} src={photo} alt="Collection Proof" className="h-32 w-48 object-cover rounded-xl border border-neutral-200" />
-                 ))}
-               </div>
-             </div>
-          )}
 
           {/* Rating Section */}
           {request.status === "COMPLETED" && (

@@ -64,7 +64,7 @@ export function CompanyRatingsPanel({
           </h4>
           
           <div className="flex flex-col gap-3 overflow-y-auto pr-2 custom-scrollbar pb-2">
-            <Link href="/recycling/marketplace" className="bg-white/50 rounded-xl p-3 border border-white/40 shadow-sm flex items-center justify-between hover:-translate-y-0.5 transition-transform">
+            <Link href="/recycling/marketplace" className="bg-white/50 rounded-xl p-3 border border-white/40 shadow-sm flex items-center justify-between hover:-translate-y-1 transition-transform">
               <div className="flex items-center gap-3">
                 <div className="bg-blue-50 p-2 rounded-lg text-blue-600"><Icon icon={Store} className="w-4 h-4" /></div>
                 <span className="text-sm font-medium text-neutral-700">Open Requests</span>
@@ -72,7 +72,7 @@ export function CompanyRatingsPanel({
               <span className="font-bold text-neutral-900">{stats.openRequests}</span>
             </Link>
 
-            <Link href="/recycling/quotations" className="bg-white/50 rounded-xl p-3 border border-white/40 shadow-sm flex items-center justify-between hover:-translate-y-0.5 transition-transform">
+            <Link href="/recycling/quotations" className="bg-white/50 rounded-xl p-3 border border-white/40 shadow-sm flex items-center justify-between hover:-translate-y-1 transition-transform">
               <div className="flex items-center gap-3">
                 <div className="bg-amber-50 p-2 rounded-lg text-amber-600"><Icon icon={ClipboardList} className="w-4 h-4" /></div>
                 <span className="text-sm font-medium text-neutral-700">Active Quotes</span>
@@ -80,7 +80,7 @@ export function CompanyRatingsPanel({
               <span className="font-bold text-neutral-900">{stats.activeQuotations}</span>
             </Link>
 
-            <Link href="/recycling/accepted-collections" className="bg-white/50 rounded-xl p-3 border border-white/40 shadow-sm flex items-center justify-between hover:-translate-y-0.5 transition-transform">
+            <Link href="/recycling/accepted-collections" className="bg-white/50 rounded-xl p-3 border border-white/40 shadow-sm flex items-center justify-between hover:-translate-y-1 transition-transform">
               <div className="flex items-center gap-3">
                 <div className="bg-indigo-50 p-2 rounded-lg text-indigo-600"><Icon icon={Truck} className="w-4 h-4" /></div>
                 <span className="text-sm font-medium text-neutral-700">Active Pickups</span>
@@ -88,7 +88,7 @@ export function CompanyRatingsPanel({
               <span className="font-bold text-neutral-900">{stats.scheduledPickups}</span>
             </Link>
 
-            <Link href="/recycling/collection-history" className="bg-white/50 rounded-xl p-3 border border-white/40 shadow-sm flex items-center justify-between hover:-translate-y-0.5 transition-transform">
+            <Link href="/recycling/collection-history" className="bg-white/50 rounded-xl p-3 border border-white/40 shadow-sm flex items-center justify-between hover:-translate-y-1 transition-transform">
               <div className="flex items-center gap-3">
                 <div className="bg-emerald-50 p-2 rounded-lg text-emerald-600"><Icon icon={CheckCircle2} className="w-4 h-4" /></div>
                 <span className="text-sm font-medium text-neutral-700">Completed</span>

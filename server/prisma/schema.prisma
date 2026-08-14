@@ -8,6 +8,8 @@ datasource db {
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
+<<<<<<< Updated upstream
+=======
 model User {
   id                                    String                      @id @default(cuid())
   email                                 String                      @unique
@@ -164,9 +166,6 @@ model CollectorProfile {
   lastLocationUpdatedAt         DateTime?
   createdAt                     DateTime           @default(now())
   updatedAt                     DateTime           @updatedAt
-  serviceArea                   String             @default("")
-  vehicleNumber                 String             @default("")
-  user                          User               @relation("CollectorProfileUser", fields: [userId], references: [id], onDelete: Cascade)
   verificationReviewedByAdmin   User?              @relation("CollectorVerificationReviewer", fields: [verificationReviewedByAdminId], references: [id])
 }
 
@@ -450,6 +449,7 @@ model MarketplaceQuotation {
   @@index([companyId])
 }
 
+>>>>>>> Stashed changes
 enum Role {
   USER
   COLLECTOR
@@ -492,7 +492,6 @@ enum VehicleType {
   MOTORCYCLE_VAN
   PICKUP_TRUCK
   TRUCK
-  OTHER
 }
 
 enum WasteCategory {

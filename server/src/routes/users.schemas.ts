@@ -94,4 +94,3 @@ export const changePasswordSchema = z
       .max(72, "Password must be at most 72 characters"),
   })
   .strict();
-
