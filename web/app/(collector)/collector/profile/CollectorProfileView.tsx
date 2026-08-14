@@ -14,7 +14,9 @@ import { Input } from "@/components/Input";
 import { PageContainer } from "@/components/PageContainer";
 import { Select } from "@/components/Select";
 import { StatusPill } from "@/components/StatusPill";
-
+import { AddressAutocomplete, type AddressSuggestion } from "@/components/AddressAutocomplete";
+import { Map } from "@/components/Map";
+import { fetchAddressSuggestions, fetchPlaceDetails, fetchReverseGeocode, PlacesConfigError } from "@/lib/api/places";
 import { useRequireRole } from "@/lib/auth/AuthContext";
 import { AuthApiError } from "@/lib/api/auth";
 import {
@@ -86,6 +88,34 @@ function draftFromProfile(profile: CollectorProfileSummary | null): CollectorDet
   };
 }
 
+interface ServiceAreaLocation {
+  placeId: string;
+  formattedAddress: string;
+  lat: number;
+  lng: number;
+}
+
+const DEFAULT_SERVICE_RADIUS_KM = 5;
+const MIN_SERVICE_RADIUS_KM = 1;
+const MAX_SERVICE_RADIUS_KM = 100;
+
+function serviceAreaLocationFromProfile(profile: CollectorProfileSummary | null): ServiceAreaLocation | null {
+  if (
+    !profile?.serviceAreaPlaceId ||
+    !profile.serviceAreaFormattedAddress ||
+    profile.serviceAreaLatitude === null ||
+    profile.serviceAreaLongitude === null
+  ) {
+    return null;
+  }
+  return {
+    placeId: profile.serviceAreaPlaceId,
+    formattedAddress: profile.serviceAreaFormattedAddress,
+    lat: profile.serviceAreaLatitude,
+    lng: profile.serviceAreaLongitude,
+  };
+}
+
 export function CollectorProfileView() {
   const { user, isLoading, refetchUser } = useRequireRole(["COLLECTOR"]);
 
@@ -103,6 +133,10 @@ export function CollectorProfileView() {
   const [extrasError, setExtrasError] = React.useState<string | null>(null);
 
   const [details, setDetails] = React.useState<CollectorDetailsDraft>(draftFromProfile(null));
+  const [serviceAreaLocation, setServiceAreaLocation] = React.useState<ServiceAreaLocation | null>(null);
+  const [serviceAreaRadiusKm, setServiceAreaRadiusKm] = React.useState<number>(DEFAULT_SERVICE_RADIUS_KM);
+  const [isLocatingServiceArea, setIsLocatingServiceArea] = React.useState(false);
+  const [serviceAreaLocateError, setServiceAreaLocateError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!user) return;
@@ -119,6 +153,9 @@ export function CollectorProfileView() {
           rewardsEmailNotificationsEnabled: profile.rewardsEmailNotificationsEnabled,
         });
         setDetails(draftFromProfile(profile.collectorProfile));
+        const savedLocation = serviceAreaLocationFromProfile(profile.collectorProfile);
+        setServiceAreaLocation(savedLocation);
+        setServiceAreaRadiusKm(profile.collectorProfile?.serviceAreaRadiusKm ?? DEFAULT_SERVICE_RADIUS_KM);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -140,13 +177,139 @@ export function CollectorProfileView() {
     error: string | null;
   }>({ isUploading: false, error: null });
 
+  const [addressSuggestions, setAddressSuggestions] = React.useState<AddressSuggestion[]>([]);
+  const [isLoadingAddressSuggestions, setIsLoadingAddressSuggestions] = React.useState(false);
+  const [addressSuggestionsError, setAddressSuggestionsError] = React.useState<string | null>(null);
+  const addressSessionTokenRef = React.useRef<string | null>(null);
+  const addressDebounceTimerRef = React.useRef<number | null>(null);
+  const addressRequestSeqRef = React.useRef(0);
+
+  React.useEffect(() => {
+    return () => {
+      if (addressDebounceTimerRef.current !== null) {
+        window.clearTimeout(addressDebounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  function ensureAddressSessionToken(): string {
+    if (!addressSessionTokenRef.current) {
+      addressSessionTokenRef.current = crypto.randomUUID();
+    }
+    return addressSessionTokenRef.current;
+  }
+
+  function rotateAddressSessionToken() {
+    addressSessionTokenRef.current = crypto.randomUUID();
+  }
+
+  function clearPendingAddressDebounce() {
+    if (addressDebounceTimerRef.current !== null) {
+      window.clearTimeout(addressDebounceTimerRef.current);
+      addressDebounceTimerRef.current = null;
+    }
+  }
+
+  async function runAddressSuggestionsFetch(query: string) {
+    const seq = ++addressRequestSeqRef.current;
+    setIsLoadingAddressSuggestions(true);
+    setAddressSuggestionsError(null);
+    try {
+      const token = ensureAddressSessionToken();
+      const results = await fetchAddressSuggestions(query, token);
+      if (seq !== addressRequestSeqRef.current) return;
+      setAddressSuggestions(results);
+      setIsLoadingAddressSuggestions(false);
+    } catch (err) {
+      if (seq !== addressRequestSeqRef.current) return;
+      setAddressSuggestions([]);
+      setIsLoadingAddressSuggestions(false);
+      setAddressSuggestionsError(
+        err instanceof PlacesConfigError
+          ? "Address search isn't available right now."
+          : "Couldn't load address suggestions. Try again.",
+      );
+    }
+  }
+
+  function handleAddressQueryChange(nextQuery: string) {
+    setDetails((prev) => ({ ...prev, serviceArea: nextQuery }));
+    clearPendingAddressDebounce();
+
+    const trimmed = nextQuery.trim();
+    if (trimmed.length < 3) {
+      addressRequestSeqRef.current += 1;
+      setAddressSuggestions([]);
+      setIsLoadingAddressSuggestions(false);
+      setAddressSuggestionsError(null);
+      return;
+    }
+
+    addressDebounceTimerRef.current = window.setTimeout(() => {
+      void runAddressSuggestionsFetch(trimmed);
+    }, 400);
+  }
+
+  async function handleSelectAddressSuggestion(suggestion: AddressSuggestion) {
+    clearPendingAddressDebounce();
+    addressRequestSeqRef.current += 1;
+    rotateAddressSessionToken();
+    setDetails((prev) => ({ ...prev, serviceArea: suggestion.description }));
+    setAddressSuggestions([]);
+    setIsLoadingAddressSuggestions(false);
+    setAddressSuggestionsError(null);
+    setServiceAreaLocateError(null);
+
+    try {
+      const details = await fetchPlaceDetails(suggestion.placeId);
+      if (details.latitude && details.longitude) {
+        setServiceAreaLocation({
+          placeId: details.placeId,
+          formattedAddress: details.formattedAddress,
+          lat: details.latitude,
+          lng: details.longitude,
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleServiceAreaMapClick(position: { lat: number; lng: number }) {
+    // Optimistically move the marker, then resolve a real address for it —
+    // this is what makes the map draggable/clickable rather than fixed to
+    // whatever the last text search returned.
+    setServiceAreaLocation((prev) => (prev ? { ...prev, lat: position.lat, lng: position.lng } : prev));
+    setIsLocatingServiceArea(true);
+    setServiceAreaLocateError(null);
+    try {
+      const resolved = await fetchReverseGeocode(position.lat, position.lng);
+      setServiceAreaLocation({
+        placeId: resolved.placeId,
+        formattedAddress: resolved.formattedAddress,
+        lat: resolved.latitude,
+        lng: resolved.longitude,
+      });
+      setDetails((prev) => ({ ...prev, serviceArea: resolved.formattedAddress }));
+      setIsLocatingServiceArea(false);
+    } catch (err) {
+      console.error(err);
+      setIsLocatingServiceArea(false);
+      setServiceAreaLocateError("Couldn't look up that spot on the map. Try clicking again.");
+    }
+  }
+
   const [detailsSave, setDetailsSave] = React.useState<FieldSaveState>(idleSaveState);
   const savedDetails = draftFromProfile(extras?.collectorProfile ?? null);
+  const savedServiceAreaLocation = serviceAreaLocationFromProfile(extras?.collectorProfile ?? null);
+  const savedServiceAreaRadiusKm = extras?.collectorProfile?.serviceAreaRadiusKm ?? DEFAULT_SERVICE_RADIUS_KM;
   const detailsChanged =
     details.vehicleType !== savedDetails.vehicleType ||
     details.vehicleNumber !== savedDetails.vehicleNumber ||
     details.licenseNumber !== savedDetails.licenseNumber ||
-    details.serviceArea !== savedDetails.serviceArea;
+    details.serviceArea !== savedDetails.serviceArea ||
+    serviceAreaLocation?.placeId !== savedServiceAreaLocation?.placeId ||
+    (serviceAreaLocation !== null && serviceAreaRadiusKm !== savedServiceAreaRadiusKm);
 
   const hasRequiredDetails =
     details.vehicleNumber.trim().length > 0 &&
@@ -218,9 +381,20 @@ export function CollectorProfileView() {
         vehicleNumber: details.vehicleNumber,
         licenseNumber: details.licenseNumber,
         serviceArea: details.serviceArea,
+        ...(serviceAreaLocation
+          ? {
+              serviceAreaPlaceId: serviceAreaLocation.placeId,
+              serviceAreaFormattedAddress: serviceAreaLocation.formattedAddress,
+              serviceAreaLatitude: serviceAreaLocation.lat,
+              serviceAreaLongitude: serviceAreaLocation.lng,
+              serviceAreaRadiusKm,
+            }
+          : {}),
       });
       setExtras((prev) => (prev ? { ...prev, collectorProfile: updated } : prev));
       setDetails(draftFromProfile(updated));
+      setServiceAreaLocation(serviceAreaLocationFromProfile(updated));
+      setServiceAreaRadiusKm(updated.serviceAreaRadiusKm ?? DEFAULT_SERVICE_RADIUS_KM);
       setDetailsSave({ isSaving: false, error: null });
     } catch (err) {
       setDetailsSave({
@@ -346,21 +520,59 @@ export function CollectorProfileView() {
             onChange={(event) => setDetails((prev) => ({ ...prev, licenseNumber: event.target.value }))}
           />
           <div>
-            <Select
-              label="Service area"
+            <AddressAutocomplete
+              label="Service area base location"
               value={details.serviceArea}
               disabled={!extras || detailsSave.isSaving}
-              onChange={(event) =>
-                setDetails((prev) => ({ ...prev, serviceArea: event.target.value }))
-              }
-              options={[
-                { value: "", label: "Select an area..." },
-                ...ALL_SERVICE_AREAS.map((area: string) => ({ value: area, label: area }))
-              ]}
+              onChange={handleAddressQueryChange}
+              suggestions={addressSuggestions}
+              onSelectSuggestion={(suggestion) => void handleSelectAddressSuggestion(suggestion)}
+              isLoading={isLoadingAddressSuggestions}
+              error={addressSuggestionsError}
             />
             <p className="mt-1 text-label text-neutral-500">
-              The area you collect from — shown to help match you with nearby pickup requests.
+              Search for your base location to drop a pin, then click anywhere on the map to fine-tune it. Pickup requests within your radius will notify you automatically.
             </p>
+            {serviceAreaLocation && (
+              <div className="mt-4 space-y-3">
+                <div className="relative h-48 w-full overflow-hidden rounded-lg sm:h-64 border border-neutral-200 shadow-inner">
+                  <Map
+                    center={{ lat: serviceAreaLocation.lat, lng: serviceAreaLocation.lng }}
+                    zoom={12}
+                    marker={{ lat: serviceAreaLocation.lat, lng: serviceAreaLocation.lng }}
+                    circleRadiusMeters={serviceAreaRadiusKm * 1000}
+                    onMapClick={handleServiceAreaMapClick}
+                  />
+                  {isLocatingServiceArea && (
+                    <div className="absolute right-2 top-2 rounded-md bg-neutral-0/90 px-2 py-1 text-label text-neutral-600 shadow-sm">
+                      Locating…
+                    </div>
+                  )}
+                </div>
+                {serviceAreaLocateError && (
+                  <p className="text-body-sm text-error-700">{serviceAreaLocateError}</p>
+                )}
+                <div className="flex items-center gap-3">
+                  <label htmlFor="service-area-radius" className="text-label text-neutral-800 whitespace-nowrap">
+                    Coverage radius
+                  </label>
+                  <input
+                    id="service-area-radius"
+                    type="range"
+                    min={MIN_SERVICE_RADIUS_KM}
+                    max={MAX_SERVICE_RADIUS_KM}
+                    step={1}
+                    value={serviceAreaRadiusKm}
+                    disabled={detailsSave.isSaving}
+                    onChange={(event) => setServiceAreaRadiusKm(Number(event.target.value))}
+                    className="flex-1 accent-primary-600"
+                  />
+                  <span className="w-16 text-right text-body-sm font-medium text-neutral-800">
+                    {serviceAreaRadiusKm} km
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {detailsSave.error && <ErrorBanner>{detailsSave.error}</ErrorBanner>}
@@ -376,6 +588,11 @@ export function CollectorProfileView() {
           </div>
         </div>
       </Card>
+
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        <ChangePasswordSection hasPassword={user.hasPassword} />
+        <DeleteAccountSection hasPassword={user.hasPassword} />
+      </div>
 
       <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all w-full">
         <h3 className="text-xl font-bold text-neutral-900 mb-6">Notification Preferences</h3>

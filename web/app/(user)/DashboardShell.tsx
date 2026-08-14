@@ -6,8 +6,6 @@ import { ClipboardList, Gift, HandCoins, MapPin, Megaphone, Truck, User, Camera,
 import { DashboardNav, type DashboardNavItem } from "@/components/DashboardNav";
 import { PageContainer } from "@/components/PageContainer";
 import { useRequireRole } from "@/lib/auth/AuthContext";
-import { useSidebarCollapsed } from "@/lib/hooks/useSidebarCollapsed";
-import { cn } from "@/lib/utils";
 
 function isPickupDetailRoute(pathname: string | null, segment: "track" | "offers"): boolean {
   if (!pathname) return false;
@@ -18,7 +16,6 @@ function isPickupDetailRoute(pathname: string | null, segment: "track" | "offers
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useRequireRole(["USER"], { allowedAccountTypes: ["HOUSEHOLD"] });
   const pathname = usePathname();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useSidebarCollapsed();
   const onTrackDetail = isPickupDetailRoute(pathname, "track");
   const onOffersDetail = isPickupDetailRoute(pathname, "offers");
 
@@ -58,16 +55,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <DashboardNav
-        accent="user"
-        roleLabel="USER PORTAL"
-        items={dashboardNavItems}
-        isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-      />
-      <div className={cn("pb-16 md:pb-0 md:pl-rail", isSidebarCollapsed ? "lg:pl-rail" : "lg:pl-sidebar")}>
-        {children}
-      </div>
+      <DashboardNav accent="user" roleLabel="USER PORTAL" items={dashboardNavItems} />
+      <div className="pb-16 md:pb-0 md:pl-rail lg:pl-sidebar">{children}</div>
     </>
   );
 }

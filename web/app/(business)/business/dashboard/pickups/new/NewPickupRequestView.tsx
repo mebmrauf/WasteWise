@@ -459,8 +459,6 @@ export function NewPickupRequestView() {
                     className="bg-white"
                   />
                 )}
-                
-                <p className="text-body-sm text-neutral-500 mt-1">For small recycling requests (1–49 kg). For 50 kg or more, use Bulk Waste Pickup.</p>
               </div>
 
               <div className="h-px w-full bg-neutral-100" />

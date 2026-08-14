@@ -105,10 +105,26 @@ export function RecyclingMarketplaceView() {
               <div className="text-right mb-2">
                 <span className="text-body-sm text-neutral-500">{req._count?.quotations || 0} quotes so far</span>
               </div>
-              <Button onClick={() => setSelectedRequest(req)} className="w-full justify-between group">
-                Submit Quotation
-                <Icon icon={ChevronRight} size="sm" className="opacity-70 group-hover:opacity-100 transition-opacity" />
-              </Button>
+              {req.quotations && req.quotations.length > 0 ? (
+                req.quotations[0].status === "ACCEPTED" ? (
+                  <Button disabled variant="secondary" className="w-full bg-emerald-100 text-emerald-800 border-emerald-200">
+                    Quotation Accepted
+                  </Button>
+                ) : req.quotations[0].status === "REJECTED" ? (
+                  <Button disabled variant="secondary" className="w-full bg-red-100 text-red-800 border-red-200">
+                    Quotation Rejected
+                  </Button>
+                ) : (
+                  <Button disabled variant="secondary" className="w-full">
+                    Quotation Submitted
+                  </Button>
+                )
+              ) : (
+                <Button onClick={() => setSelectedRequest(req)} className="w-full justify-between group">
+                  Submit Quotation
+                  <Icon icon={ChevronRight} size="sm" className="opacity-70 group-hover:opacity-100 transition-opacity" />
+                </Button>
+              )}
             </div>
           </div>
         );
@@ -129,7 +145,22 @@ export function RecyclingMarketplaceView() {
 }
 
 function SubmitQuotationModal({ request, onClose, onSuccess }: { request: BulkMarketplaceRequest; onClose: () => void; onSuccess: () => void }) {
-  const [price, setPrice] = React.useState("");
+  const materials: { category: string; weightKg: number }[] = React.useMemo(() => {
+    if (typeof request.wasteTypes === 'string') {
+      try { return JSON.parse(request.wasteTypes); } catch (e) { return []; }
+    }
+    return (request.wasteTypes as any) || [];
+  }, [request.wasteTypes]);
+
+  const [prices, setPrices] = React.useState<Record<string, number>>({});
+  
+  const grandTotal = React.useMemo(() => {
+    return materials.reduce((sum, mat) => {
+      const pricePerKg = prices[mat.category] || 0;
+      return sum + (mat.weightKg * pricePerKg);
+    }, 0);
+  }, [materials, prices]);
+
   const [date, setDate] = React.useState("");
   const [time, setTime] = React.useState("");
   const [vehicle, setVehicle] = React.useState("PICKUP_TRUCK");
@@ -145,7 +176,8 @@ function SubmitQuotationModal({ request, onClose, onSuccess }: { request: BulkMa
       setSubmitting(true);
       setErrorMsg(null);
       await submitQuotation(request.id, {
-        purchasePrice: Number(price),
+        purchasePrice: grandTotal,
+        pricesPerKg: prices,
         vehicleType: vehicle,
         estimatedPickupDate: new Date(date).toISOString(),
         estimatedPickupTime: time || undefined,

@@ -51,6 +51,15 @@ export function NavBar({ brand, links = [], actions, accent = "user", className,
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const mobileMenuId = React.useId();
   const hasLinks = links.length > 0;
+  const [scrolled, setScrolled] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
 <<<<<<< Updated upstream
@@ -78,9 +87,9 @@ export function NavBar({ brand, links = [], actions, accent = "user", className,
                     href={link.href}
                     aria-current={link.active ? "page" : undefined}
                     className={cn(
-                      "text-body-sm text-neutral-600 transition-colors",
+                      "text-[16px] text-neutral-600 transition-all duration-300 relative group py-1",
                       accentHoverTextClasses[accent],
-                      link.active && ["border-b-2 pb-1", accentActiveTextClasses[accent], accentUnderlineClasses[accent]]
+                      link.active && [accentActiveTextClasses[accent]]
                     )}
                   >
                     {link.label}

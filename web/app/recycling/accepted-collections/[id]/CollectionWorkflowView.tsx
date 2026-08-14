@@ -83,10 +83,7 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
 
   const handleSubmitProof = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (photos.length === 0) {
-      setErrorMsg("Please add at least one collection photo.");
-      return;
-    }
+    
     
     const totalWeight = Object.values(weights).reduce((sum, val) => sum + (Number(val) || 0), 0);
     
@@ -118,6 +115,14 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
     );
   }
 
+  if (errorMsg) {
+    return (
+      <div className="mt-6 space-y-6 max-w-3xl">
+        <ErrorBanner>{errorMsg}</ErrorBanner>
+      </div>
+    );
+  }
+
   if (!request) {
     return <div className="text-center p-8 text-neutral-500">Request not found.</div>;
   }
@@ -138,6 +143,16 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
   }
 
   const totalVerifiedWeight = Object.values(weights).reduce((sum, val) => sum + (Number(val) || 0), 0);
+  
+  const acceptedQuote = request.quotations?.find((q) => q.status === "ACCEPTED");
+  let materials: { category: string; weightKg: number }[] = [];
+  try {
+    if (typeof request.wasteTypes === "string") {
+      materials = JSON.parse(request.wasteTypes);
+    } else if (Array.isArray(request.wasteTypes)) {
+      materials = request.wasteTypes as any;
+    }
+  } catch (e) {}
 
   return (
     <div className="mt-6 space-y-6 max-w-3xl">
@@ -212,21 +227,9 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
         </div>
         
         {status === "RECYCLING_COMPANY_ASSIGNED" && (
-          <Button onClick={() => handleStatusUpdate("EN_ROUTE")} disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Navigation className="w-4 h-4 mr-2" />}
-            Start Collection
-          </Button>
-        )}
-        {status === "EN_ROUTE" && (
-          <Button onClick={() => handleStatusUpdate("ARRIVED")} disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700">
-            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <MapPin className="w-4 h-4 mr-2" />}
-            Mark as Arrived
-          </Button>
-        )}
-        {status === "ARRIVED" && (
-          <Button onClick={() => handleStatusUpdate("IN_PROGRESS")} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={() => handleStatusUpdate("IN_PROGRESS")} disabled={isSubmitting}>
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Package className="w-4 h-4 mr-2" />}
-            Begin Waste Collection
+            Start Collection
           </Button>
         )}
         {status === "VERIFYING_WEIGHTS" && (
@@ -315,10 +318,21 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
               />
 >>>>>>> Stashed changes
             </div>
+
+            <div>
+              <h4 className="font-medium text-neutral-900 mb-3">Notes (Optional)</h4>
+              <textarea
+                rows={3}
+                placeholder="Any additional information about the collection..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-body-sm"
+              />
+            </div>
             
             <div className="pt-2">
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Submit Proof & Complete"}
+                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Submit Proof & Request Confirmation"}
               </Button>
             </div>
           </div>
