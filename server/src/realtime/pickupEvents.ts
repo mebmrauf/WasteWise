@@ -395,7 +395,9 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
         pickupRequestId,
         points: basePoints,
         basePoints,
-        rewardReason: { materials: rewardReason.materials, bonuses: [] },
+        rewardReason: userToUpdate.accountType === "BUSINESS" 
+          ? (rewardReason as any) 
+          : { materials: rewardReason.materials, bonuses: [] },
         type: GreenPointsTransactionType.EARNED,
         category: "PICKUP",
         description: "Pickup completed",
@@ -403,6 +405,11 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
     });
 
     for (const bonus of rewardReason.bonuses) {
+      let category = "BONUS";
+      if (userToUpdate.accountType === "BUSINESS" && bonus.name.includes("Member Bonus")) {
+        category = "LOYALTY";
+      }
+
       await tx.greenPointsTransaction.create({
         data: {
           userId: access.pickup.requesterId,
@@ -410,7 +417,7 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
           points: bonus.points,
           bonusPoints: bonus.points,
           type: GreenPointsTransactionType.EARNED,
-          category: "BONUS",
+          category: category as any,
           description: bonus.name,
         }
       });

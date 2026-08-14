@@ -23,9 +23,7 @@ import { RECHARGE_STATUS_LABEL, RECHARGE_STATUS_TONE } from "@/lib/rechargeStatu
 import { formatBdt, cn } from "@/lib/utils";
 import { RedeemRechargeWizard } from "./RedeemRechargeWizard";
 import { BusinessMembershipNotification } from "@/components/BusinessMembershipNotification";
-import { PlatinumGiftModal } from "@/components/PlatinumGiftModal";
-import { claimDiscount } from "@/lib/api/rewards";
-
+import { claimDiscount, claimTreePlantation } from "@/lib/api/rewards";
 type LoadState = "loading" | "ready" | "error";
 type Mode = "overview" | "redeem";
 
@@ -48,14 +46,33 @@ interface UnifiedTransaction {
   title: string;
   subtitle: string;
   rewardReason?: RewardReason | null;
+  basePoints?: number | null;
+  bonusPoints?: number | null;
+  totalPoints?: number | null;
   rechargeStatus?: MobileRechargeTransaction["status"];
 }
 
-const GIFT_NAMES: Record<string, string> = {
-  TREE_SAPLING: "Tree Sapling",
-  ECO_TOTE_BAG: "Eco-friendly Tote Bag",
-  REUSABLE_WATER_BOTTLE: "Reusable Water Bottle",
-};
+
+function getMonthsAndDaysRemaining(targetDateStr: string): string {
+  const now = new Date();
+  const target = new Date(targetDateStr);
+  if (target <= now) return "Ready to claim!";
+  
+  let months = target.getMonth() - now.getMonth() + (12 * (target.getFullYear() - now.getFullYear()));
+  let days = target.getDate() - now.getDate();
+  
+  if (days < 0) {
+    months--;
+    const previousMonth = new Date(target.getFullYear(), target.getMonth(), 0);
+    days += previousMonth.getDate();
+  }
+  
+  const parts = [];
+  if (months > 0) parts.push(`${months} month${months > 1 ? 's' : ''}`);
+  if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`);
+  
+  return parts.length > 0 ? parts.join(' ') : "Less than a day";
+}
 
 export function RewardsView() {
   const [loadState, setLoadState] = React.useState<LoadState>("loading");
@@ -67,20 +84,14 @@ export function RewardsView() {
   const [membershipLevel, setMembershipLevel] = React.useState<"BRONZE" | "SILVER" | "GOLD" | "PLATINUM">("BRONZE");
   const [membershipBadge, setMembershipBadge] = React.useState<string>("Bronze Badge");
   
-  const [lastDiscountClaimDate, setLastDiscountClaimDate] = React.useState<string | null>(null);
-  const [nextDiscountEligibleDate, setNextDiscountEligibleDate] = React.useState<string | null>(null);
-  const [discountCouponClaimed, setDiscountCouponClaimed] = React.useState(false);
-  const [isClaimingDiscount, setIsClaimingDiscount] = React.useState(false);
-
-  const [selectedGift, setSelectedGift] = React.useState<string | null>(null);
-  const [giftClaimDate, setGiftClaimDate] = React.useState<string | null>(null);
-  const [nextGiftEligibleDate, setNextGiftEligibleDate] = React.useState<string | null>(null);
-  const [giftClaimed, setGiftClaimed] = React.useState(false);
-  
-  const [isGiftModalOpen, setIsGiftModalOpen] = React.useState(false);
-
   const [accountType, setAccountType] = React.useState<"HOUSEHOLD" | "BUSINESS" | null>(null);
   const [environmentalImpact, setEnvironmentalImpact] = React.useState<any>(null);
+
+  const [sustainabilityCertificateUrl, setSustainabilityCertificateUrl] = React.useState<string | null>(null);
+  const [lastTreePlantationClaimDate, setLastTreePlantationClaimDate] = React.useState<string | null>(null);
+  const [nextTreePlantationEligibleDate, setNextTreePlantationEligibleDate] = React.useState<string | null>(null);
+  const [treePlantationClaimed, setTreePlantationClaimed] = React.useState(false);
+  const [isClaimingTree, setIsClaimingTree] = React.useState(false);
 
   const [greenPointsTransactions, setGreenPointsTransactions] = React.useState<GreenPointsTransaction[]>([]);
   const [mobileRechargeTransactions, setMobileRechargeTransactions] = React.useState<MobileRechargeTransaction[]>([]);
@@ -101,14 +112,10 @@ export function RewardsView() {
         setAccountType(balanceResult.accountType);
         setEnvironmentalImpact(balanceResult.environmentalImpact);
 
-        setLastDiscountClaimDate(balanceResult.lastDiscountClaimDate);
-        setNextDiscountEligibleDate(balanceResult.nextDiscountEligibleDate);
-        setDiscountCouponClaimed(balanceResult.discountCouponClaimed);
-        
-        setSelectedGift(balanceResult.selectedGift);
-        setGiftClaimDate(balanceResult.giftClaimDate);
-        setNextGiftEligibleDate(balanceResult.nextGiftEligibleDate);
-        setGiftClaimed(balanceResult.giftClaimed);
+        setSustainabilityCertificateUrl(balanceResult.sustainabilityCertificateUrl || null);
+        setLastTreePlantationClaimDate(balanceResult.lastTreePlantationClaimDate || null);
+        setNextTreePlantationEligibleDate(balanceResult.nextTreePlantationEligibleDate || null);
+        setTreePlantationClaimed(balanceResult.treePlantationClaimed || false);
 
         setGreenPointsTransactions(historyResult.greenPointsTransactions);
         setMobileRechargeTransactions(historyResult.mobileRechargeTransactions);
@@ -147,18 +154,31 @@ export function RewardsView() {
   let nextLevelPoints = isBusiness ? 1501 : 501;
   let nextLevelName = "Silver";
   let progressPercentage = 0;
+
   if (membershipLevel === "BRONZE") {
     nextLevelPoints = isBusiness ? 1501 : 501;
     nextLevelName = "Silver";
-    progressPercentage = (totalPoints / nextLevelPoints) * 100;
+    if (isBusiness) {
+      progressPercentage = (totalPoints / 1500) * 100;
+    } else {
+      progressPercentage = (totalPoints / nextLevelPoints) * 100;
+    }
   } else if (membershipLevel === "SILVER") {
     nextLevelPoints = isBusiness ? 3001 : 1501;
     nextLevelName = "Gold";
-    progressPercentage = (totalPoints / nextLevelPoints) * 100;
+    if (isBusiness) {
+      progressPercentage = ((totalPoints - 1501) / 1500) * 100;
+    } else {
+      progressPercentage = (totalPoints / nextLevelPoints) * 100;
+    }
   } else if (membershipLevel === "GOLD") {
     nextLevelPoints = isBusiness ? 4501 : 3000;
     nextLevelName = "Platinum";
-    progressPercentage = (totalPoints / nextLevelPoints) * 100;
+    if (isBusiness) {
+      progressPercentage = ((totalPoints - 3001) / 1500) * 100;
+    } else {
+      progressPercentage = (totalPoints / nextLevelPoints) * 100;
+    }
   } else {
     progressPercentage = 100;
   }
@@ -169,32 +189,36 @@ export function RewardsView() {
   if (membershipLevel === "BRONZE") {
     benefits.push("Bronze Badge");
   } else if (membershipLevel === "SILVER") {
-    benefits.push("5% Extra Green Points", "Silver Badge");
+    benefits.push("+5% Extra Green Points", "Silver Badge");
   } else if (membershipLevel === "GOLD") {
-    benefits.push("10% Extra Green Points", "5% discount in Eco Shop", "Gold Badge");
+    benefits.push("+10% Extra Green Points", "Sustainability Certificate", "Gold Badge");
   } else if (membershipLevel === "PLATINUM") {
-    benefits.push("15% Extra Green Points", "Exclusive Eco Gifts", "Platinum Badge");
+    benefits.push("+15% Extra Green Points", "Sustainability Certificate", "Tree Plantation", "Platinum Badge");
   }
 
-  const isEligibleForDiscount =
-    (membershipLevel === "GOLD" || membershipLevel === "PLATINUM") &&
-    (!nextDiscountEligibleDate || new Date() >= new Date(nextDiscountEligibleDate));
+  const isEligibleForTreePlantation =
+    isBusiness && membershipLevel === "PLATINUM" &&
+    (!nextTreePlantationEligibleDate || new Date() >= new Date(nextTreePlantationEligibleDate));
 
-  const isEligibleForGift =
-    membershipLevel === "PLATINUM" &&
-    (!nextGiftEligibleDate || new Date() >= new Date(nextGiftEligibleDate));
 
-  async function handleClaimDiscount() {
-    setIsClaimingDiscount(true);
+  async function handleClaimTreePlantation() {
+    if (!window.confirm("WasteWise will plant one tree in your Business's name. Do you want to continue?")) {
+      return;
+    }
+    
+    setIsClaimingTree(true);
     try {
-      const result = await claimDiscount();
-      setLastDiscountClaimDate(result.lastDiscountClaimDate);
-      setNextDiscountEligibleDate(result.nextDiscountEligibleDate);
-      setDiscountCouponClaimed(result.discountCouponClaimed);
-    } catch (err) {
-      alert("Failed to claim discount. Please try again.");
+      const result = await claimTreePlantation();
+      setLastTreePlantationClaimDate(result.lastTreePlantationClaimDate);
+      setNextTreePlantationEligibleDate(result.nextTreePlantationEligibleDate);
+      setTreePlantationClaimed(result.treePlantationClaimed);
+      
+      alert("Tree plantation reward claimed successfully! WasteWise will plant one tree in your Business's name.");
+      fetchAll();
+    } catch (err: any) {
+      alert(err.message || "Failed to claim tree plantation. Please try again.");
     } finally {
-      setIsClaimingDiscount(false);
+      setIsClaimingTree(false);
     }
   }
 
@@ -225,6 +249,9 @@ export function RewardsView() {
         title: tx.description,
         subtitle: formatDateTime(tx.createdAt),
         rewardReason: tx.rewardReason,
+        basePoints: tx.basePoints,
+        bonusPoints: tx.bonusPoints,
+        totalPoints: tx.totalPoints,
       });
     });
 
@@ -303,11 +330,6 @@ export function RewardsView() {
       <div className="mb-6">
         <BusinessMembershipNotification 
           level={membershipLevel} 
-          goldEligible={membershipLevel === "GOLD" && isEligibleForDiscount}
-          goldNextDate={membershipLevel === "GOLD" && !isEligibleForDiscount ? nextDiscountEligibleDate : null}
-          platinumEligible={membershipLevel === "PLATINUM" && isEligibleForGift}
-          platinumNextDate={membershipLevel === "PLATINUM" && !isEligibleForGift ? nextGiftEligibleDate : null}
-          
         />
       </div>
 
@@ -399,7 +421,7 @@ export function RewardsView() {
             )}
 
             {/* Sustainability Certificate (BUSINESS GOLD+) */}
-            {isBusiness && (membershipLevel === "GOLD" || membershipLevel === "PLATINUM") && (
+            {isBusiness && (membershipLevel === "GOLD" || membershipLevel === "PLATINUM") && sustainabilityCertificateUrl && (
               <div className="p-6 md:p-8 bg-white border-t border-neutral-100">
                 <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                   <div>
@@ -411,16 +433,16 @@ export function RewardsView() {
                     </p>
                   </div>
                   <div>
-                    <Button onClick={() => alert("Downloading certificate...")} className="whitespace-nowrap bg-amber-600 hover:bg-amber-700 text-white border-none">
-                      Download Certificate
+                    <Button onClick={() => window.open("/business/dashboard/rewards/certificate", "_blank")} className="whitespace-nowrap bg-amber-600 hover:bg-amber-700 text-white border-none">
+                      View Certificate
                     </Button>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Tree Plantation (BUSINESS PLATINUM) */}
-            {isBusiness && membershipLevel === "PLATINUM" && (
+            {/* Tree Plantation (BUSINESS ONLY) */}
+            {isBusiness && (
               <div className="p-6 md:p-8 bg-white border-t border-neutral-100">
                 <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                   <div>
@@ -428,143 +450,46 @@ export function RewardsView() {
                       <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-700"><CheckCircle2 className="w-4 h-4" /></div> Tree Plantation Reward
                     </h3>
                     <p className="text-neutral-500 text-sm mt-1 max-w-md">
-                      As a Platinum Business member, you are eligible to claim a Tree Plantation in your organization's name every 6 months.
+                      WasteWise will plant one tree in your Business's name as a sustainability reward. You are eligible to claim a Tree Plantation every 6 months.
                     </p>
+                  </div>
+                  <div className="flex flex-col items-end min-w-[200px]">
+                    {membershipLevel !== "PLATINUM" ? (
+                      <Button disabled className="whitespace-nowrap w-full">
+                        🌳 Claim Tree Plantation
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={handleClaimTreePlantation} 
+                        disabled={!isEligibleForTreePlantation || isClaimingTree}
+                        className={cn(
+                          "whitespace-nowrap w-full",
+                          isEligibleForTreePlantation && !isClaimingTree ? "bg-green-600 hover:bg-green-700 text-white border-none" : ""
+                        )}
+                      >
+                        {isClaimingTree ? "Claiming..." : (isEligibleForTreePlantation ? "🌳 Claim Tree Plantation" : "Claimed")}
+                      </Button>
+                    )}
                     
-                    {giftClaimDate && (
-                      <div className="mt-4 p-4 rounded-xl border border-neutral-100 bg-neutral-50 inline-block">
-                        <p className="text-sm font-semibold text-neutral-900 mb-2">Claim Status</p>
-                        <p className="text-sm text-neutral-700 flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-success-500" /> Tree Plantation Request
-                        </p>
-                        <div className="mt-2 text-xs text-neutral-500 grid grid-cols-2 gap-x-4 gap-y-1">
-                          <span>Claimed on:</span>
-                          <span className="font-medium text-neutral-700">{new Date(giftClaimDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                          {nextGiftEligibleDate && (
-                            <>
-                              <span>Next eligible claim:</span>
-                              <span className="font-medium text-neutral-700">{new Date(nextGiftEligibleDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                            </>
-                          )}
-                        </div>
+                    {membershipLevel !== "PLATINUM" && (
+                      <div className="text-xs text-neutral-500 text-right mt-2 flex flex-col gap-1 w-full">
+                        <span>Available for Platinum Business Members.</span>
                       </div>
                     )}
-                  </div>
-                  <div>
-                    <Button 
-                      onClick={() => setIsGiftModalOpen(true)} 
-                      disabled={!isEligibleForGift}
-                      className="whitespace-nowrap"
-                    >
-                      {isEligibleForGift ? "Claim Tree Plantation" : "Claimed"}
-                    </Button>
-                    {!isEligibleForGift && nextGiftEligibleDate && (
-                      <p className="text-xs text-neutral-500 text-center mt-2">
-                        Available again on {new Date(nextGiftEligibleDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-                      </p>
+
+                    {membershipLevel === "PLATINUM" && !isEligibleForTreePlantation && nextTreePlantationEligibleDate && lastTreePlantationClaimDate && (
+                      <div className="text-xs text-neutral-500 text-right mt-2 flex flex-col gap-1 w-full">
+                        <span>Last claimed: {new Date(lastTreePlantationClaimDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                        <span>Next eligible on: {new Date(nextTreePlantationEligibleDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                        <span className="font-semibold text-amber-600">Eligible again in: {getMonthsAndDaysRemaining(nextTreePlantationEligibleDate)}</span>
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Gold Discount Section (HOUSEHOLD ONLY) */}
-            {!isBusiness && (membershipLevel === "GOLD" || membershipLevel === "PLATINUM") && (
-              <div className="p-6 md:p-8 bg-white border-t border-neutral-100">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                  <div>
-                    <h3 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-yellow-100 text-yellow-700"><Tag className="w-4 h-4" /></div> Eco Shop Discount
-                    </h3>
-                    <p className="text-neutral-500 text-sm mt-1 max-w-md">
-                      As a {membershipLevel === "PLATINUM" ? "Platinum" : "Gold"} member, you are eligible to claim a 5% OFF coupon for the Eco Shop every 6 months.
-                    </p>
-                    
-                    {lastDiscountClaimDate && (
-                      <div className="mt-4 p-4 rounded-xl border border-neutral-100 bg-neutral-50 inline-block">
-                        <p className="text-sm font-semibold text-neutral-900 mb-2">Coupon Status</p>
-                        <p className="text-sm text-neutral-700 flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-success-500" /> 5% OFF Coupon
-                        </p>
-                        <div className="mt-2 text-xs text-neutral-500 grid grid-cols-2 gap-x-4 gap-y-1">
-                          <span>Claimed on:</span>
-                          <span className="font-medium text-neutral-700">{new Date(lastDiscountClaimDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                          {nextDiscountEligibleDate && (
-                            <>
-                              <span>Next eligible claim:</span>
-                              <span className="font-medium text-neutral-700">{new Date(nextDiscountEligibleDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <Button 
-                      onClick={handleClaimDiscount} 
-                      disabled={!isEligibleForDiscount || isClaimingDiscount}
-                      className="whitespace-nowrap"
-                    >
-                      {isClaimingDiscount ? "Claiming..." : (isEligibleForDiscount ? "Claim Discount" : "Claimed")}
-                    </Button>
-                    {!isEligibleForDiscount && nextDiscountEligibleDate && (
-                      <p className="text-xs text-neutral-500 text-center mt-2">
-                        Available again on {new Date(nextDiscountEligibleDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
 
-            {/* Platinum Gift Section (HOUSEHOLD ONLY) */}
-            {!isBusiness && membershipLevel === "PLATINUM" && (
-              <div className="p-6 md:p-8 bg-white border-t border-neutral-100">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                  <div>
-                    <h3 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-pink-100 text-pink-700"><Gift className="w-4 h-4" /></div> Exclusive Eco Gift
-                    </h3>
-                    <p className="text-neutral-500 text-sm mt-1 max-w-md">
-                      As a Platinum member, you are eligible to claim one exclusive eco-friendly gift every 6 months.
-                    </p>
-                    
-                    {selectedGift && (
-                      <div className="mt-4 p-4 rounded-xl border border-neutral-100 bg-neutral-50 inline-block">
-                        <p className="text-sm font-semibold text-neutral-900 mb-2">Gift Status</p>
-                        <p className="text-sm text-neutral-700 flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-success-500" /> {GIFT_NAMES[selectedGift] || selectedGift}
-                        </p>
-                        <div className="mt-2 text-xs text-neutral-500 grid grid-cols-2 gap-x-4 gap-y-1">
-                          <span>Claimed on:</span>
-                          <span className="font-medium text-neutral-700">{new Date(giftClaimDate!).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                          {nextGiftEligibleDate && (
-                            <>
-                              <span>Next eligible claim:</span>
-                              <span className="font-medium text-neutral-700">{new Date(nextGiftEligibleDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <Button 
-                      onClick={() => setIsGiftModalOpen(true)} 
-                      disabled={!isEligibleForGift}
-                      className="whitespace-nowrap"
-                    >
-                      {isEligibleForGift ? "Claim Gift" : "Claimed"}
-                    </Button>
-                    {!isEligibleForGift && nextGiftEligibleDate && (
-                      <p className="text-xs text-neutral-500 text-center mt-2">
-                        Available again on {new Date(nextGiftEligibleDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </Card>
 
 
@@ -659,9 +584,9 @@ export function RewardsView() {
                               key={tx.id} 
                               className={cn(
                                 "flex flex-col p-4 md:p-5 rounded-2xl transition-all border-neutral-100 bg-white/60 backdrop-blur-sm",
-                                isPickup && "cursor-pointer hover:shadow-md"
+                                isPickup && !isBusiness && "cursor-pointer hover:shadow-md"
                               )}
-                              onClick={() => isPickup && toggleExpand(tx.id)}
+                              onClick={() => isPickup && !isBusiness && toggleExpand(tx.id)}
                             >
                               <div className="flex flex-wrap items-start justify-between gap-4">
                                 <div className="flex items-center gap-4">
@@ -692,7 +617,7 @@ export function RewardsView() {
                                   >
                                     {tx.points > 0 ? "+" : ""}{tx.points.toLocaleString()} pts
                                   </span>
-                                  {isPickup && (
+                                  {isPickup && !isBusiness && (
                                     <div className="text-neutral-400">
                                       {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                     </div>
@@ -700,34 +625,77 @@ export function RewardsView() {
                                 </div>
                               </div>
 
-                              {isPickup && isExpanded && tx.rewardReason && (
+                              {isPickup && (isBusiness || isExpanded) && (
                                 <div className="mt-4 md:pl-14 flex flex-col gap-3 border-t border-neutral-100 pt-4" onClick={(e) => e.stopPropagation()}>
-                                  {tx.rewardReason.materials.length > 0 && (
-                                    <div>
-                                      <p className="text-caption font-semibold text-neutral-500 uppercase tracking-wider mb-2">Materials</p>
-                                      <div className="flex flex-col gap-1.5">
-                                        {tx.rewardReason.materials.map((mat, i) => (
-                                          <div key={i} className="flex justify-between items-center text-body-sm text-neutral-700 bg-neutral-50 px-3 py-2 rounded-lg">
-                                            <span>{mat.category} <span className="text-neutral-400 ml-1">({mat.weight} kg)</span></span>
-                                            <span className="font-medium text-neutral-900">+{mat.points} pts</span>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {tx.rewardReason.bonuses.length > 0 && (
-                                    <div className="mt-2">
-                                      <p className="text-caption font-semibold text-neutral-500 uppercase tracking-wider mb-2">Bonuses</p>
-                                      <div className="flex flex-col gap-1.5">
-                                        {tx.rewardReason.bonuses.map((bonus, i) => (
-                                          <div key={i} className="flex justify-between items-center text-body-sm text-neutral-700 bg-success-50/50 px-3 py-2 rounded-lg">
+                                  {isBusiness ? (
+                                    <>
+                                      <div className="flex flex-col gap-2 font-mono text-sm bg-neutral-50 p-4 rounded-xl border border-neutral-200 shadow-sm">
+                                        <div className="flex justify-between text-neutral-600">
+                                          <span>Base Pickup Reward</span>
+                                          <span>+{tx.basePoints ?? tx.rewardReason?.basePoints ?? tx.points} GP</span>
+                                        </div>
+                                        {tx.rewardReason?.bonuses?.map((bonus, i) => (
+                                          <div key={i} className="flex justify-between text-neutral-600">
                                             <span>{bonus.name}</span>
-                                            <span className="font-medium text-success-700">+{bonus.points} pts</span>
+                                            <span>+{bonus.points} GP</span>
                                           </div>
                                         ))}
+                                        <hr className="border-neutral-300 my-1" />
+                                        <div className="flex justify-between font-semibold text-neutral-900">
+                                          <span>Total Earned</span>
+                                          <span>+{tx.totalPoints ?? tx.rewardReason?.totalPoints ?? tx.points} GP</span>
+                                        </div>
                                       </div>
-                                    </div>
-                                  )}
+                                      
+                                      {/* Find if any LOYALTY or BONUS transaction occurred at the same time */}
+                                      {(() => {
+                                        const sameTimeTx = greenPointsTransactions.filter(
+                                          (t) => (t.category === "LOYALTY" || t.category === "BONUS") && t.id !== tx.originalId && 
+                                            Math.abs(new Date(t.createdAt).getTime() - new Date(tx.createdAt).getTime()) < 2000
+                                        );
+                                        return sameTimeTx.length > 0 ? (
+                                          <div className="mt-2 flex flex-col gap-1.5">
+                                            <p className="text-caption font-semibold text-neutral-500 uppercase tracking-wider mb-1">Special Rewards Unlocked</p>
+                                            {sameTimeTx.map(t => (
+                                              <div key={t.id} className="flex items-center gap-2 text-body-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg font-medium">
+                                                <Award className="w-4 h-4 shrink-0" />
+                                                <span>{t.description}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        ) : null;
+                                      })()}
+                                    </>
+                                  ) : tx.rewardReason ? (
+                                    <>
+                                      {tx.rewardReason.materials && tx.rewardReason.materials.length > 0 && (
+                                        <div>
+                                          <p className="text-caption font-semibold text-neutral-500 uppercase tracking-wider mb-2">Materials</p>
+                                          <div className="flex flex-col gap-1.5">
+                                            {tx.rewardReason.materials.map((mat, i) => (
+                                              <div key={i} className="flex justify-between items-center text-body-sm text-neutral-700 bg-neutral-50 px-3 py-2 rounded-lg">
+                                                <span>{mat.category} <span className="text-neutral-400 ml-1">({mat.weight} kg)</span></span>
+                                                <span className="font-medium text-neutral-900">+{mat.points} pts</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {tx.rewardReason.bonuses && tx.rewardReason.bonuses.length > 0 && (
+                                        <div className="mt-2">
+                                          <p className="text-caption font-semibold text-neutral-500 uppercase tracking-wider mb-2">Bonuses</p>
+                                          <div className="flex flex-col gap-1.5">
+                                            {tx.rewardReason.bonuses.map((bonus, i) => (
+                                              <div key={i} className="flex justify-between items-center text-body-sm text-neutral-700 bg-success-50/50 px-3 py-2 rounded-lg">
+                                                <span>{bonus.name}</span>
+                                                <span className="font-medium text-success-700">+{bonus.points} pts</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                      </>
+                                    ) : null}
                                 </div>
                               )}
                             </Card>
@@ -743,16 +711,6 @@ export function RewardsView() {
         </div>
       )}
 
-      <PlatinumGiftModal 
-        isOpen={isGiftModalOpen} 
-        onClose={() => setIsGiftModalOpen(false)} 
-        onClaimed={(gift, date, nextDate) => {
-          setSelectedGift(gift);
-          setGiftClaimDate(date);
-          setNextGiftEligibleDate(nextDate);
-          setGiftClaimed(true);
-        }} 
-      />
     </PageContainer>
   );
 }
