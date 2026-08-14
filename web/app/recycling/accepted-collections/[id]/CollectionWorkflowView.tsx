@@ -19,8 +19,6 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
 
   // Proof form state
   const [weights, setWeights] = React.useState<Record<string, number>>({});
-  const [photos, setPhotos] = React.useState<string[]>([]);
-  const [photoInput, setPhotoInput] = React.useState("");
   const [notes, setNotes] = React.useState("");
 
   const fetchRequest = React.useCallback(async () => {
@@ -75,12 +73,7 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
     }));
   };
 
-  const handleAddPhoto = () => {
-    if (photoInput && photoInput.startsWith("http")) {
-      setPhotos([...photos, photoInput]);
-      setPhotoInput("");
-    }
-  };
+
 
   const handleSubmitProof = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +87,6 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
       await submitBulkCollectionProof(requestId, {
         verifiedWeights: weights,
         verifiedTotalWeightKg: totalWeight,
-        collectionPhotos: photos,
         notes: notes || undefined,
       });
       await fetchRequest();
@@ -270,38 +262,7 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
               </div>
             </div>
 
-            <div>
-              <h4 className="font-medium text-neutral-900 mb-3">Collection Photos (Optional)</h4>
-              <div className="flex gap-2 mb-3">
-                <input
-                  type="url"
-                  placeholder="Paste image URL (e.g. imgur link)"
-                  value={photoInput}
-                  onChange={(e) => setPhotoInput(e.target.value)}
-                  className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-body-sm"
-                />
-                <Button type="button" onClick={handleAddPhoto} variant="secondary" className="whitespace-nowrap">
-                  Add Photo
-                </Button>
-              </div>
-              
-              {photos.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
-                  {photos.map((url, idx) => (
-                    <div key={idx} className="relative group rounded-lg overflow-hidden border border-neutral-200">
-                      <img src={url} alt={`Upload ${idx+1}`} className="w-full h-24 object-cover" />
-                      <button 
-                        type="button"
-                        onClick={() => setPhotos(photos.filter((_, i) => i !== idx))}
-                        className="absolute top-1 right-1 bg-white/80 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-red-500"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+
 
             <div>
               <h4 className="font-medium text-neutral-900 mb-3">Notes (Optional)</h4>
@@ -316,7 +277,7 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
             
             <div className="pt-2">
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Submit Proof & Request Confirmation"}
+                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Confirm"}
               </Button>
             </div>
           </div>

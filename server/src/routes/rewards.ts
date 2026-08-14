@@ -60,12 +60,43 @@ rewardsRouter.get(
         nextGiftEligibleDate: true,
         giftClaimed: true,
         accountType: true,
+        lastTreePlantationClaimDate: true,
+        nextTreePlantationEligibleDate: true,
+        treePlantationClaimed: true,
+        sustainabilityCertificateUrl: true,
       },
     });
 
     const lifetimePoints = Math.max(user.totalGreenPoints, user.greenPointsBalance);
     const membershipLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
     const membershipBadge = getMembershipBadge(membershipLevel);
+
+    let environmentalImpact = null;
+    if (user.accountType === "BUSINESS") {
+      const [completedPickups, completedBulk] = await Promise.all([
+        prisma.pickupRequestItem.aggregate({
+          where: { pickupRequest: { requesterId: req.user!.id, status: "COMPLETED" } },
+          _sum: { exactWeightKg: true }
+        }),
+        prisma.bulkMarketplaceRequest.aggregate({
+          where: { businessId: req.user!.id, status: "COMPLETED" },
+          _sum: { verifiedTotalWeightKg: true }
+        })
+      ]);
+
+      const totalWasteRecycledKg = 
+        (completedPickups._sum.exactWeightKg || 0) + 
+        (completedBulk._sum.verifiedTotalWeightKg || 0);
+      
+      const totalCo2ReducedKg = Math.round(totalWasteRecycledKg * 2.5); // 2.5kg CO2 per 1kg waste
+      const totalTreesSaved = Math.round(totalWasteRecycledKg / 50); // 1 tree per 50kg waste
+
+      environmentalImpact = {
+        totalWasteRecycledKg: Math.round(totalWasteRecycledKg * 10) / 10,
+        totalCo2ReducedKg,
+        totalTreesSaved
+      };
+    }
 
     sendData(res, 200, {
       greenPointsBalance: user.greenPointsBalance,
@@ -80,7 +111,11 @@ rewardsRouter.get(
       nextGiftEligibleDate: user.nextGiftEligibleDate,
       giftClaimed: user.giftClaimed,
       accountType: user.accountType,
-      environmentalImpact: null,
+      lastTreePlantationClaimDate: user.lastTreePlantationClaimDate,
+      nextTreePlantationEligibleDate: user.nextTreePlantationEligibleDate,
+      treePlantationClaimed: user.treePlantationClaimed,
+      sustainabilityCertificateUrl: user.sustainabilityCertificateUrl,
+      environmentalImpact,
     });
   }),
 );
@@ -338,4 +373,71 @@ rewardsRouter.post(
       discountCouponClaimed: updatedUser.discountCouponClaimed,
     });
   }),
+);
+
+rewardsRouter.post(
+  "/claim-tree-plantation",
+  requireAuth,
+  requireRole("USER"),
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: req.user!.id },
+      select: {
+        totalGreenPoints: true,
+        greenPointsBalance: true,
+        accountType: true,
+        lastTreePlantationClaimDate: true,
+        nextTreePlantationEligibleDate: true,
+      }
+    });
+
+    const lifetimePoints = Math.max(user.totalGreenPoints, user.greenPointsBalance);
+    const membershipLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
+
+    if (membershipLevel !== "PLATINUM" || user.accountType !== "BUSINESS") {
+      sendError(res, 403, "FORBIDDEN", "Only Platinum Business members can claim Tree Plantation rewards.");
+      return;
+    }
+
+    if (user.lastTreePlantationClaimDate) {
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      if (user.lastTreePlantationClaimDate > sixMonthsAgo) {
+        sendError(res, 409, "NOT_ELIGIBLE", "You have already claimed a tree plantation within the last 6 months.");
+        return;
+      }
+    }
+
+    const nextTreePlantationEligibleDate = new Date();
+    nextTreePlantationEligibleDate.setMonth(nextTreePlantationEligibleDate.getMonth() + 6);
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: {
+        lastTreePlantationClaimDate: new Date(),
+        nextTreePlantationEligibleDate,
+        treePlantationClaimed: true,
+      },
+    });
+
+    await prisma.greenPointsTransaction.create({
+      data: {
+        userId: req.user!.id,
+        points: 0,
+        type: "EARNED",
+        category: "BONUS",
+        description: "Tree Plantation Reward Claimed",
+        basePoints: 0,
+        bonusPoints: 0,
+        totalPoints: 0,
+      }
+    });
+
+    sendData(res, 200, {
+      lastTreePlantationClaimDate: updatedUser.lastTreePlantationClaimDate,
+      nextTreePlantationEligibleDate: updatedUser.nextTreePlantationEligibleDate,
+      treePlantationClaimed: updatedUser.treePlantationClaimed,
+    });
+  })
 );
