@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Icon } from "@/components/Icon";
 import { Avatar } from "@/components/Avatar";
@@ -25,8 +25,6 @@ export interface DashboardNavProps {
   roleLabel: string;
   brand?: React.ReactNode;
   className?: string;
-  isCollapsed?: boolean;
-  onToggleCollapse?: () => void;
 }
 
 const sidebarFillClasses: Record<RoleAccent, string> = {
@@ -98,8 +96,6 @@ export function DashboardNav({
   roleLabel,
   brand,
   className,
-  isCollapsed = false,
-  onToggleCollapse,
 }: DashboardNavProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
@@ -115,7 +111,6 @@ export function DashboardNav({
         aria-label="Primary"
         className={cn(
           "fixed top-0 bottom-0 left-0 z-50 hidden w-sidebar shrink-0 flex-col overflow-y-auto overflow-x-hidden overscroll-contain lg:flex",
-          isCollapsed && "lg:hidden",
           sidebarFillClasses[accent],
           className
         )}
@@ -129,20 +124,6 @@ export function DashboardNav({
               Formalizing Waste Management
             </span>
           </div>
-          {onToggleCollapse && (
-            <button
-              onClick={onToggleCollapse}
-              className={cn(
-                "mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white",
-                darkSurfaceFocusRing,
-                ringOffsetClasses[accent]
-              )}
-              aria-label="Collapse sidebar"
-              title="Collapse sidebar"
-            >
-              <Icon icon={ChevronLeft} size="sm" />
-            </button>
-          )}
         </div>
         <div className="flex flex-col gap-1 px-4 pb-4 pt-6">
           <span className="text-overline text-neutral-0/70">{roleLabel}</span>
@@ -214,7 +195,6 @@ export function DashboardNav({
         aria-label="Primary (compact)"
         className={cn(
           "fixed top-0 bottom-0 left-0 z-50 hidden w-rail shrink-0 flex-col items-center overflow-y-auto overflow-x-hidden overscroll-contain lg:hidden md:flex",
-          isCollapsed && "lg:flex",
           sidebarFillClasses[accent]
         )}
       >
@@ -223,22 +203,6 @@ export function DashboardNav({
             W
           </Link>
         </div>
-        {onToggleCollapse && (
-          <div className="hidden w-full shrink-0 items-center justify-center border-b border-white/10 py-2 lg:flex">
-            <button
-              onClick={onToggleCollapse}
-              className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white",
-                darkSurfaceFocusRing,
-                ringOffsetClasses[accent]
-              )}
-              aria-label="Expand sidebar"
-              title="Expand sidebar"
-            >
-              <Icon icon={ChevronRight} size="sm" />
-            </button>
-          </div>
-        )}
         <ul className="flex flex-col items-center gap-1 pt-6">
           {items.map((item, index) => {
             const isActive = activeStates[index];

@@ -31,7 +31,7 @@ export interface BulkMarketplaceRequest {
   verifiedWeights?: Record<string, number>;
   verifiedTotalWeightKg?: number;
   collectionPhotos?: string[];
-  rating?: number | null;
+  rating?: { score: number; comment?: string | null } | null;
   quotations?: MarketplaceQuotation[];
 }
 
@@ -47,6 +47,7 @@ export interface MarketplaceQuotation {
   status: "PENDING" | "ACCEPTED" | "REJECTED";
   createdAt: string;
   updatedAt: string;
+  pricesPerKg?: Record<string, number> | null;
   company?: {
     fullName: string;
     avatarUrl: string | null;
@@ -96,6 +97,7 @@ export async function submitQuotation(
     estimatedPickupDate: string;
     estimatedPickupTime?: string;
     additionalNotes?: string;
+    pricesPerKg?: Record<string, number>;
   }
 ): Promise<MarketplaceQuotation> {
   const res = await authFetch<{quotation: MarketplaceQuotation}>(`/marketplace/requests/${requestId}/quotations`, {
@@ -139,7 +141,8 @@ export async function submitBulkCollectionProof(
   payload: {
     verifiedWeights: Record<string, number>;
     verifiedTotalWeightKg: number;
-    collectionPhotos: string[];
+    collectionPhotos?: string[];
+    notes?: string;
   }
 ): Promise<void> {
   await authFetch<void>(`/marketplace/requests/${requestId}/submit-proof`, {

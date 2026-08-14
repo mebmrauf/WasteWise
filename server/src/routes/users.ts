@@ -33,7 +33,13 @@ export function toPublicCollectorProfile(profile: CollectorProfile) {
     vehicleNumber: profile.vehicleNumber,
     licenseNumber: profile.licenseNumber,
     serviceArea: profile.serviceArea,
+    serviceAreaPlaceId: profile.serviceAreaPlaceId,
+    serviceAreaFormattedAddress: profile.serviceAreaFormattedAddress,
+    serviceAreaLatitude: profile.serviceAreaLatitude,
+    serviceAreaLongitude: profile.serviceAreaLongitude,
+    serviceAreaRadiusKm: profile.serviceAreaRadiusKm,
     verificationStatus: profile.verificationStatus,
+    verificationRejectionReason: profile.verificationRejectionReason,
     averageRating: profile.averageRating,
     totalRatings: profile.totalRatings,
   };
@@ -174,7 +180,7 @@ usersRouter.patch(
       sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    const { vehicleType, vehicleNumber, licenseNumber, serviceArea } = parsed.data;
+    const { vehicleType, vehicleNumber, licenseNumber, serviceArea, serviceAreaPlaceId, serviceAreaFormattedAddress, serviceAreaLatitude, serviceAreaLongitude, serviceAreaRadiusKm } = parsed.data;
 
     const collectorProfile = await prisma.collectorProfile.upsert({
       where: { userId: req.user!.id },
@@ -184,6 +190,11 @@ usersRouter.patch(
         vehicleNumber,
         licenseNumber,
         serviceArea,
+        serviceAreaPlaceId,
+        serviceAreaFormattedAddress,
+        serviceAreaLatitude,
+        serviceAreaLongitude,
+        serviceAreaRadiusKm,
         verificationStatus: "PENDING",
       },
       update: {
@@ -191,10 +202,14 @@ usersRouter.patch(
         vehicleNumber,
         licenseNumber,
         serviceArea,
+        serviceAreaPlaceId,
+        serviceAreaFormattedAddress,
+        serviceAreaLatitude,
+        serviceAreaLongitude,
+        serviceAreaRadiusKm,
         verificationStatus: "PENDING",
       },
     });
-
     sendData(res, 200, { collectorProfile: toPublicCollectorProfile(collectorProfile) });
   }),
 );
