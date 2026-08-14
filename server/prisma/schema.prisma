@@ -164,9 +164,6 @@ model CollectorProfile {
   lastLocationUpdatedAt         DateTime?
   createdAt                     DateTime           @default(now())
   updatedAt                     DateTime           @updatedAt
-  serviceArea                   String             @default("")
-  vehicleNumber                 String             @default("")
-  user                          User               @relation("CollectorProfileUser", fields: [userId], references: [id], onDelete: Cascade)
   verificationReviewedByAdmin   User?              @relation("CollectorVerificationReviewer", fields: [verificationReviewedByAdminId], references: [id])
 }
 

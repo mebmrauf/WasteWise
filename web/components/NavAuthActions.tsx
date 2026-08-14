@@ -46,12 +46,12 @@ export function NavAuthActions() {
     }
 
     return (
-      <div className="flex items-center gap-2 sm:gap-3">
-        <Button variant="ghost" size="sm" href="/login" className="px-2 sm:px-3 text-body-sm sm:text-body">
+      <div className="flex items-center gap-2 sm:gap-4">
+        <Button variant="ghost" size="sm" href="/login" className="px-3 h-10 text-[16px] font-medium text-neutral-600 hover:text-[#114E29] transition-colors">
           Log in
         </Button>
-        <Button size="sm" href="/signup" className="px-2 sm:px-3 text-body-sm sm:text-body">
-          Sign up
+        <Button size="sm" href="/signup" className="px-5 h-10 text-[16px] bg-[#114E29] hover:bg-green-800 text-white rounded-full transition-all duration-300 shadow-sm hover:shadow font-medium border-none">
+          Get Started
         </Button>
       </div>
     );
@@ -103,12 +103,12 @@ export function NavAuthActions() {
   }
 
   return (
-    <div className="flex items-center gap-2 sm:gap-3">
-      <Button variant="ghost" size="sm" href="/login" className="px-2 sm:px-3 text-body-sm sm:text-body">
+    <div className="flex items-center gap-2 sm:gap-4">
+      <Button variant="ghost" size="sm" href="/login" className="px-3 h-10 text-[16px] font-medium text-neutral-600 hover:text-[#114E29] transition-colors">
         Log in
       </Button>
-      <Button size="sm" href="/signup" className="px-2 sm:px-3 text-body-sm sm:text-body">
-        Sign up
+      <Button size="sm" href="/signup" className="px-5 h-10 text-[16px] bg-[#114E29] hover:bg-green-800 text-white rounded-full transition-all duration-300 shadow-sm hover:shadow font-medium border-none">
+        Get Started
       </Button>
     </div>
   );

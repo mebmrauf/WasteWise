@@ -8,7 +8,8 @@ export const metadata: Metadata = {
   title: "Collection Workflow | WasteWise",
 };
 
-export default function CollectionWorkflowPage({ params }: { params: { id: string } }) {
+export default async function CollectionWorkflowPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
   return (
     <PageContainer className="py-8">
       <div className="mb-6">
@@ -22,7 +23,7 @@ export default function CollectionWorkflowPage({ params }: { params: { id: strin
         </p>
       </div>
       
-      <CollectionWorkflowView requestId={params.id} />
+      <CollectionWorkflowView requestId={resolvedParams.id} />
     </PageContainer>
   );
 }

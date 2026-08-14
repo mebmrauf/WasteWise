@@ -33,6 +33,8 @@ export function RecyclingSettingsView() {
   const [notificationPrefs, setNotificationPrefs] = React.useState<NotificationPrefs | null>(null);
   const [notificationError, setNotificationError] = React.useState<string | null>(null);
 
+  const [recyclingProfile, setRecyclingProfile] = React.useState<any>(null);
+
   React.useEffect(() => {
     if (!user) return;
     getMyProfile()
@@ -42,6 +44,14 @@ export function RecyclingSettingsView() {
           smsNotificationsEnabled: profile.smsNotificationsEnabled,
           rewardsEmailNotificationsEnabled: profile.rewardsEmailNotificationsEnabled,
         });
+        if (profile.recyclingCompanyProfile) {
+          setRecyclingProfile(profile.recyclingCompanyProfile);
+          setCompanyName(profile.recyclingCompanyProfile.companyName || "");
+          setTradeLicense(profile.recyclingCompanyProfile.tradeLicenseNumber || "");
+          setDistrict(profile.recyclingCompanyProfile.district || "");
+          setServiceAreasStr((profile.recyclingCompanyProfile.serviceAreas || []).join(", "));
+          setAcceptedMaterialsStr((profile.recyclingCompanyProfile.acceptedWasteMaterials || []).join(", "));
+        }
       })
       .catch(() => setNotificationPrefs(null));
   }, [user]);
@@ -61,18 +71,13 @@ export function RecyclingSettingsView() {
   }
 
   // Form states
-  const profile = user?.recyclingCompanyProfile || {};
-  const [companyName, setCompanyName] = React.useState(profile.companyName || "");
-  const [tradeLicense, setTradeLicense] = React.useState(profile.tradeLicenseNumber || "");
-  const [district, setDistrict] = React.useState(profile.district || "");
+  const [companyName, setCompanyName] = React.useState("");
+  const [tradeLicense, setTradeLicense] = React.useState("");
+  const [district, setDistrict] = React.useState("");
   
   // Array states
-  const [serviceAreasStr, setServiceAreasStr] = React.useState(
-    (profile.serviceAreas || []).join(", ")
-  );
-  const [acceptedMaterialsStr, setAcceptedMaterialsStr] = React.useState(
-    (profile.acceptedWasteMaterials || []).join(", ")
-  );
+  const [serviceAreasStr, setServiceAreasStr] = React.useState("");
+  const [acceptedMaterialsStr, setAcceptedMaterialsStr] = React.useState("");
 
   // User model states
   const [fullName, setFullName] = React.useState(user?.fullName || "");
@@ -125,7 +130,26 @@ export function RecyclingSettingsView() {
     }
   };
 
-  const verificationStatus = profile.verificationStatus || "PENDING";
+  const initialCompanyName = recyclingProfile?.companyName || "";
+  const initialTradeLicense = recyclingProfile?.tradeLicenseNumber || "";
+  const initialDistrict = recyclingProfile?.district || "";
+  const initialServiceAreasStr = (recyclingProfile?.serviceAreas || []).join(", ");
+  const initialAcceptedMaterialsStr = (recyclingProfile?.acceptedWasteMaterials || []).join(", ");
+  const initialFullName = user?.fullName || "";
+  const initialPhone = user?.phone || "";
+  const initialAddress = user?.formattedAddress || "";
+
+  const hasUnsavedChanges = 
+    companyName !== initialCompanyName ||
+    tradeLicense !== initialTradeLicense ||
+    district !== initialDistrict ||
+    serviceAreasStr !== initialServiceAreasStr ||
+    acceptedMaterialsStr !== initialAcceptedMaterialsStr ||
+    fullName !== initialFullName ||
+    phone !== initialPhone ||
+    address !== initialAddress;
+
+  const verificationStatus = recyclingProfile?.verificationStatus || "PENDING";
 
   return (
     <div className="mt-6 max-w-4xl space-y-6">
@@ -218,11 +242,16 @@ export function RecyclingSettingsView() {
         </div>
 
         <div className="flex justify-end pt-4">
-          <Button type="submit" disabled={loading} size="lg" className="min-w-[150px]">
+          <Button type="submit" disabled={loading || !hasUnsavedChanges} size="lg" className="min-w-[150px]">
             {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Save Changes"}
           </Button>
         </div>
       </form>
+
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        <ChangePasswordSection hasPassword={user?.hasPassword ?? false} />
+        <DeleteAccountSection hasPassword={user?.hasPassword ?? false} />
+      </div>
 
       <div className="rounded-2xl border border-neutral-200 bg-neutral-0 shadow-sm overflow-hidden">
         <div className="border-b border-neutral-100 p-6 bg-neutral-50/50">
