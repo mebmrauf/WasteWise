@@ -13,13 +13,11 @@ import { getMyProfile, updateMyProfile, type UpdateProfileInput } from "@/lib/ap
 
 interface NotificationPrefs {
   emailNotificationsEnabled: boolean;
-  smsNotificationsEnabled: boolean;
   rewardsEmailNotificationsEnabled: boolean;
 }
 
 const notificationPreferenceKeys = {
   email: "emailNotificationsEnabled",
-  sms: "smsNotificationsEnabled",
   rewardsEmail: "rewardsEmailNotificationsEnabled",
 } as const;
 
@@ -41,7 +39,6 @@ export function RecyclingSettingsView() {
       .then(({ user: profile }) => {
         setNotificationPrefs({
           emailNotificationsEnabled: profile.emailNotificationsEnabled,
-          smsNotificationsEnabled: profile.smsNotificationsEnabled,
           rewardsEmailNotificationsEnabled: profile.rewardsEmailNotificationsEnabled,
         });
         if (profile.recyclingCompanyProfile) {
@@ -272,16 +269,6 @@ export function RecyclingSettingsView() {
                 onChange={(e) => void handleToggleNotification("email", e.target.checked)}
               />
               Email me about collection updates
-            </label>
-            <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
-              <input
-                type="checkbox"
-                className="h-5 w-5 accent-emerald-600 rounded shrink-0"
-                checked={notificationPrefs?.smsNotificationsEnabled ?? false}
-                disabled={!notificationPrefs}
-                onChange={(e) => void handleToggleNotification("sms", e.target.checked)}
-              />
-              Text me about collection updates
             </label>
             <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
               <input

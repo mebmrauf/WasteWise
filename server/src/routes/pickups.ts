@@ -18,7 +18,7 @@ import { getLoadSizeKgRange } from "../lib/loadSize";
 import { emitToRoom } from "../realtime/emitToRoom";
 import { PICKUP_STATUS_EVENT } from "../realtime/pickupEvents";
 import { computeRecyclingReminder } from "../lib/recyclingPattern";
-import { isWithinRadiusKm } from "../lib/geoDistance";
+import { isWithinRadiusKm, MAX_COLLECTOR_MATCH_DISTANCE_KM } from "../lib/geoDistance";
 import { createPickupRequestSchema, ratePickupSchema } from "./pickups.schemas";
 
 
@@ -208,7 +208,7 @@ pickupsRouter.post(
         const isInRange = isWithinRadiusKm(
           pickupLocation,
           { lat: collector.serviceAreaLatitude as number, lng: collector.serviceAreaLongitude as number },
-          collector.serviceAreaRadiusKm as number,
+          Math.min(collector.serviceAreaRadiusKm as number, MAX_COLLECTOR_MATCH_DISTANCE_KM),
         );
         if (!isInRange) continue;
 
@@ -294,7 +294,7 @@ pickupsRouter.get(
     }
 
     const pickups = await prisma.pickupRequest.findMany({
-      where: { 
+      where: {
         status: PickupStatus.PENDING,
         OR: [
           { isExclusiveToPreferred: { not: true } },
@@ -306,7 +306,25 @@ pickupsRouter.get(
       include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } } },
     });
 
-    sendData(res, 200, { pickups: pickups.map(toPickupSummary) });
+    // A collector 100km away can't realistically make the trip — cap browsing
+    // to the same hard distance limit used for notification matching, even if
+    // the collector configured a larger self-service radius. Collectors who
+    // haven't set a geocoded service point yet fall back to unfiltered.
+    const nearbyPickups =
+      collectorProfile.serviceAreaLatitude !== null &&
+      collectorProfile.serviceAreaLongitude !== null &&
+      collectorProfile.serviceAreaRadiusKm !== null
+        ? pickups.filter((pickup) => {
+            if (pickup.latitude === null || pickup.longitude === null) return false;
+            return isWithinRadiusKm(
+              { lat: pickup.latitude, lng: pickup.longitude },
+              { lat: collectorProfile.serviceAreaLatitude as number, lng: collectorProfile.serviceAreaLongitude as number },
+              Math.min(collectorProfile.serviceAreaRadiusKm as number, MAX_COLLECTOR_MATCH_DISTANCE_KM),
+            );
+          })
+        : pickups;
+
+    sendData(res, 200, { pickups: nearbyPickups.map(toPickupSummary) });
   }),
 );
 
@@ -495,7 +513,10 @@ pickupsRouter.get(
           select: { fullName: true, phone: true, avatarUrl: true },
         }),
       ]);
+      const isCollectorApproved = collectorProfile?.verificationStatus === VerificationStatus.APPROVED;
+
       if (
+        isCollectorApproved &&
         collectorProfile?.lastKnownLatitude != null &&
         collectorProfile?.lastKnownLongitude != null &&
         collectorProfile?.lastLocationUpdatedAt != null
@@ -506,7 +527,7 @@ pickupsRouter.get(
           updatedAt: collectorProfile.lastLocationUpdatedAt,
         };
       }
-      if (collectorUser) {
+      if (isCollectorApproved && collectorUser) {
         collector = {
           fullName: collectorUser.fullName,
           phone: collectorUser.phone,
@@ -546,7 +567,10 @@ pickupsRouter.get(
     }
 
     const offers = await prisma.offer.findMany({
-      where: { pickupRequestId: id },
+      where: {
+        pickupRequestId: id,
+        collector: { collectorProfile: { verificationStatus: VerificationStatus.APPROVED } },
+      },
       orderBy: { createdAt: "desc" },
       take: PICKUP_LIST_LIMIT,
       include: { collector: { include: { collectorProfile: true } } },

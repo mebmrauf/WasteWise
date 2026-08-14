@@ -489,7 +489,6 @@ enum VehicleType {
   MOTORCYCLE_VAN
   PICKUP_TRUCK
   TRUCK
-  OTHER
 }
 
 enum WasteCategory {

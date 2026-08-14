@@ -12,9 +12,8 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { Input } from "@/components/Input";
 import { PageContainer } from "@/components/PageContainer";
 import { PillRadioGroup } from "@/components/PillRadioGroup";
-import { Select, type SelectOption } from "@/components/Select";
+import { Select } from "@/components/Select";
 import { StepProgress } from "@/components/StepProgress";
-import { ALL_SERVICE_AREAS } from "@/lib/areas";
 import { getVerifiedCollectors, type CollectorDirectoryEntry } from "@/lib/api/collectors";
 import { SummaryPanel, SummaryRow } from "@/components/SummaryPanel";
 import { TimeSlotPicker, type TimeSlot } from "@/components/TimeSlotPicker";
@@ -99,7 +98,6 @@ export function NewPickupRequestView() {
   const [date, setDate] = React.useState("");
   const [timeWindowId, setTimeWindowId] = React.useState<string | null>(null);
 
-  const [serviceArea, setServiceArea] = React.useState<string>("");
   const [localCollectors, setLocalCollectors] = React.useState<CollectorDirectoryEntry[]>([]);
   const [selectedCollectorId, setSelectedCollectorId] = React.useState<string>(preferredCollectorId || "");
 
@@ -113,6 +111,7 @@ export function NewPickupRequestView() {
   const [isLoadingAddressSuggestions, setIsLoadingAddressSuggestions] = React.useState(false);
   const [addressSuggestionsError, setAddressSuggestionsError] = React.useState<string | null>(null);
   const [selectedCustomPlace, setSelectedCustomPlace] = React.useState<AddressSuggestion | null>(null);
+  const [selectedCustomPlaceDetails, setSelectedCustomPlaceDetails] = React.useState<PlaceDetails | null>(null);
 
   const [currentLocationPlace, setCurrentLocationPlace] = React.useState<PlaceDetails | null>(null);
   const [isLoadingCurrentLocation, setIsLoadingCurrentLocation] = React.useState(false);
@@ -154,33 +153,35 @@ export function NewPickupRequestView() {
     };
   }, []);
 
-  const activeAddress = React.useMemo(() => {
-    if (addressMode === "saved") return profile?.formattedAddress;
-    if (addressMode === "custom") return selectedCustomPlace?.description;
-    if (addressMode === "current") return currentLocationPlace?.formattedAddress;
-    return null;
-  }, [addressMode, profile, selectedCustomPlace, currentLocationPlace]);
-
-  React.useEffect(() => {
-    if (activeAddress && !serviceArea) {
-      const lowerAddress = activeAddress.toLowerCase();
-      const detected = ALL_SERVICE_AREAS.find(area => lowerAddress.includes(area.toLowerCase()));
-      if (detected) {
-        setServiceArea(detected);
-      }
+  const resolvedLocation = React.useMemo<PlaceDetails | null>(() => {
+    if (
+      addressMode === "saved" &&
+      profile?.placeId &&
+      profile.formattedAddress &&
+      profile.latitude !== null &&
+      profile.longitude !== null
+    ) {
+      return {
+        placeId: profile.placeId,
+        formattedAddress: profile.formattedAddress,
+        latitude: profile.latitude,
+        longitude: profile.longitude,
+      };
     }
-  }, [activeAddress, serviceArea]);
+    if (addressMode === "current" && currentLocationPlace) return currentLocationPlace;
+    if (addressMode === "custom" && selectedCustomPlaceDetails) return selectedCustomPlaceDetails;
+    return null;
+  }, [addressMode, profile, currentLocationPlace, selectedCustomPlaceDetails]);
 
   React.useEffect(() => {
-    if (serviceArea) {
-      getVerifiedCollectors({ serviceArea }).then(cols => {
-        cols.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
-        setLocalCollectors(cols);
-      }).catch(console.error);
+    if (resolvedLocation) {
+      getVerifiedCollectors({ lat: resolvedLocation.latitude, lng: resolvedLocation.longitude })
+        .then(setLocalCollectors)
+        .catch(console.error);
     } else {
       setLocalCollectors([]);
     }
-  }, [serviceArea]);
+  }, [resolvedLocation]);
 
 
 
@@ -254,6 +255,7 @@ export function NewPickupRequestView() {
   function handleCustomAddressQueryChange(nextQuery: string) {
     setCustomAddressQuery(nextQuery);
     setSelectedCustomPlace(null); // any manual edit invalidates a previously-picked suggestion
+    setSelectedCustomPlaceDetails(null);
 
     if (addressDebounceTimerRef.current !== null) window.clearTimeout(addressDebounceTimerRef.current);
 
@@ -280,20 +282,18 @@ export function NewPickupRequestView() {
     setCustomAddressSuggestions([]);
     setIsLoadingAddressSuggestions(false);
     setAddressSuggestionsError(null);
+    setSelectedCustomPlaceDetails(null);
+    fetchPlaceDetails(suggestion.placeId)
+      .then(setSelectedCustomPlaceDetails)
+      .catch(() => setAddressSuggestionsError("Couldn't resolve that address. Try selecting it again."));
   }
 
   const selectedWindow = TIME_WINDOWS.find((window) => window.id === timeWindowId) ?? null;
   const timeSlotStart = date && selectedWindow ? buildTimeSlotIso(date, selectedWindow.startHour) : null;
   const isSlotInPast = timeSlotStart !== null && new Date(timeSlotStart) < new Date();
 
-  const resolvedPlaceId = 
-    addressMode === "saved" ? (profile?.placeId ?? null) 
-    : addressMode === "current" ? (currentLocationPlace?.placeId ?? null) 
-    : (selectedCustomPlace?.placeId ?? null);
-  const resolvedAddressLabel =
-    addressMode === "saved" ? (profile?.formattedAddress ?? null) 
-    : addressMode === "current" ? (currentLocationPlace?.formattedAddress ?? null) 
-    : (selectedCustomPlace?.description ?? null);
+  const resolvedPlaceId = resolvedLocation?.placeId ?? null;
+  const resolvedAddressLabel = resolvedLocation?.formattedAddress ?? null;
 
   const computedTotalWeight = React.useMemo(() => {
     let total = 0;
@@ -311,8 +311,7 @@ export function NewPickupRequestView() {
     date !== "" &&
     selectedWindow !== null &&
     !isSlotInPast &&
-    resolvedPlaceId !== null &&
-    serviceArea !== "";
+    resolvedPlaceId !== null;
 
   function handleCategoriesChange(nextCategories: WasteCategory[]) {
     setCategories(nextCategories);
@@ -344,25 +343,6 @@ export function NewPickupRequestView() {
     setSubmitError(null);
     setIsSubmitting(true);
     try {
-      let formattedAddress: string | undefined;
-      let latitude: number | undefined;
-      let longitude: number | undefined;
-
-      if (addressMode === "saved" && profile && profile.formattedAddress && profile.latitude !== null && profile.longitude !== null) {
-        formattedAddress = profile.formattedAddress;
-        latitude = profile.latitude;
-        longitude = profile.longitude;
-      } else if (addressMode === "current" && currentLocationPlace) {
-        formattedAddress = currentLocationPlace.formattedAddress;
-        latitude = currentLocationPlace.latitude;
-        longitude = currentLocationPlace.longitude;
-      } else if (addressMode === "custom" && selectedCustomPlace) {
-        const details = await fetchPlaceDetails(selectedCustomPlace.placeId);
-        formattedAddress = details.formattedAddress;
-        latitude = details.latitude;
-        longitude = details.longitude;
-      }
-
       const payload = {
         items: categories.map((category) => ({
           category,
@@ -372,13 +352,12 @@ export function NewPickupRequestView() {
         timeSlotStart: buildTimeSlotIso(date, selectedWindow.startHour),
         timeSlotEnd: buildTimeSlotIso(date, selectedWindow.endHour),
         placeId: resolvedPlaceId,
-        formattedAddress,
-        latitude,
-        longitude,
-        serviceArea,
-        ...(selectedCollectorId ? { 
-          preferredCollectorId: selectedCollectorId, 
-          isExclusiveToPreferred 
+        formattedAddress: resolvedLocation?.formattedAddress,
+        latitude: resolvedLocation?.latitude,
+        longitude: resolvedLocation?.longitude,
+        ...(selectedCollectorId ? {
+          preferredCollectorId: selectedCollectorId,
+          isExclusiveToPreferred
         } : {}),
         estimatedTotalWeight: computedTotalWeight
       };
@@ -645,49 +624,56 @@ export function NewPickupRequestView() {
             </div>
             
             <div className="mt-6 pt-6 border-t border-neutral-100 flex flex-col gap-4">
-              <Select
-                label="Service Area (Required)"
-                value={serviceArea}
-                onChange={(e) => {
-                  setServiceArea(e.target.value);
-                  setSelectedCollectorId(""); // Reset collector when area changes
-                }}
-                options={[
-                  { value: "", label: "Select your zone...", disabled: true },
-                  ...ALL_SERVICE_AREAS.map(area => ({ value: area, label: area }))
-                ]}
-              />
-
-              {serviceArea && localCollectors.length > 0 && (
+              {preferredCollectorId ? (
                 <div className="p-4 bg-primary-50 rounded-xl border border-primary-100">
-                  <h3 className="font-semibold text-primary-900 mb-2">Optional: Request a Specific Collector</h3>
+                  <h3 className="font-semibold text-primary-900 mb-1">
+                    Requesting from {preferredCollectorName ?? "this collector"}
+                  </h3>
                   <p className="text-body-sm text-primary-800 mb-4">
-                    Choose a highly-rated collector in your area to send this request directly to them.
+                    Send it only to this collector, or open it up to every nearby verified collector.
                   </p>
-                  <Select
-                    label="Preferred Collector"
-                    value={selectedCollectorId}
-                    onChange={(e) => setSelectedCollectorId(e.target.value)}
+                  <PillRadioGroup
+                    aria-label="Request scope"
                     options={[
-                      { value: "", label: "Broadcast to everyone (Default)" },
-                      ...localCollectors.map(col => ({ 
-                        value: col.id, 
-                        label: `${col.fullName} - ⭐ ${col.averageRating ? col.averageRating.toFixed(1) : "New"}` 
-                      }))
+                      { id: "exclusive", label: `Only ${preferredCollectorName ?? "this collector"}` },
+                      { id: "broadcast", label: "Broadcast to everyone" },
                     ]}
+                    value={isExclusiveToPreferred ? "exclusive" : "broadcast"}
+                    onChange={(id) => setIsExclusiveToPreferred(id === "exclusive")}
                   />
-                  {selectedCollectorId && (
-                    <label className="flex items-center gap-2 mt-4 text-body-sm text-neutral-800 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={isExclusiveToPreferred}
-                        onChange={(e) => setIsExclusiveToPreferred(e.target.checked)}
-                        className="rounded text-primary-600 focus:ring-primary-500 w-4 h-4"
-                      />
-                      Send this request ONLY to the selected collector.
-                    </label>
-                  )}
                 </div>
+              ) : (
+                resolvedLocation && localCollectors.length > 0 && (
+                  <div className="p-4 bg-primary-50 rounded-xl border border-primary-100">
+                    <h3 className="font-semibold text-primary-900 mb-2">Optional: Request a Specific Collector</h3>
+                    <p className="text-body-sm text-primary-800 mb-4">
+                      Choose a highly-rated collector near you to send this request directly to them.
+                    </p>
+                    <Select
+                      label="Preferred Collector"
+                      value={selectedCollectorId}
+                      onChange={(e) => setSelectedCollectorId(e.target.value)}
+                      options={[
+                        { value: "", label: "Broadcast to everyone (Default)" },
+                        ...localCollectors.map(col => ({
+                          value: col.id,
+                          label: `${col.fullName} - ⭐ ${col.averageRating ? col.averageRating.toFixed(1) : "New"}`
+                        }))
+                      ]}
+                    />
+                    {selectedCollectorId && (
+                      <label className="flex items-center gap-2 mt-4 text-body-sm text-neutral-800 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isExclusiveToPreferred}
+                          onChange={(e) => setIsExclusiveToPreferred(e.target.checked)}
+                          className="rounded text-primary-600 focus:ring-primary-500 w-4 h-4"
+                        />
+                        Send this request ONLY to the selected collector.
+                      </label>
+                    )}
+                  </div>
+                )
               )}
             </div>
 

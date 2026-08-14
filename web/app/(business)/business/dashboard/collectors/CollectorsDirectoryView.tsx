@@ -4,52 +4,80 @@ import * as React from "react";
 import { PageContainer } from "@/components/PageContainer";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
-import { Select } from "@/components/Select";
 import { Icon } from "@/components/Icon";
-import { BadgeCheck, Star, Truck, User } from "lucide-react";
-import { ALL_SERVICE_AREAS } from "@/lib/areas";
+import { BadgeCheck, MapPin, Phone, Star, Truck, User } from "lucide-react";
 import { VEHICLE_TYPE_LABELS, type VehicleType } from "@/lib/vehicleType";
-import { getVerifiedCollectors, type CollectorDirectoryEntry } from "@/lib/api/collectors";
-import { resolveAvatarUrl } from "@/lib/api/users";
+import { getVerifiedCollectors, type CollectorDirectoryEntry, type CollectorSort } from "@/lib/api/collectors";
+import { getMyProfile, resolveAvatarUrl } from "@/lib/api/users";
+import { FilterPillSelect } from "@/components/FilterPillSelect";
+import { LocationPickerPill, type ResolvedLocation, type SavedAddress } from "@/components/LocationPickerPill";
 import Image from "next/image";
 import Link from "next/link";
 
+const RATING_OPTIONS = [
+  { value: "", label: "Any" },
+  { value: "3", label: "3+ Stars" },
+  { value: "4", label: "4+ Stars" },
+  { value: "4.5", label: "4.5+ Stars" },
+];
+
+const SORT_OPTIONS: { value: CollectorSort; label: string }[] = [
+  { value: "nearest", label: "Nearest" },
+  { value: "rating", label: "Top rated" },
+];
+
 export function CollectorsDirectoryView() {
-  const [serviceArea, setServiceArea] = React.useState<string>("");
+  const [savedAddress, setSavedAddress] = React.useState<SavedAddress | null>(null);
+  const [location, setLocation] = React.useState<ResolvedLocation | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = React.useState(true);
+
   const [vehicleType, setVehicleType] = React.useState<VehicleType | "ALL">("ALL");
+  const [minRating, setMinRating] = React.useState<string>("");
+  const [sort, setSort] = React.useState<CollectorSort>("nearest");
+
   const [collectors, setCollectors] = React.useState<CollectorDirectoryEntry[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
 
   React.useEffect(() => {
-    const savedArea = localStorage.getItem("wasteWise_preferredServiceArea");
-    if (savedArea && ALL_SERVICE_AREAS.includes(savedArea)) {
-      setServiceArea(savedArea);
-    }
+    let active = true;
+    getMyProfile()
+      .then(({ user }) => {
+        if (!active) return;
+        if (user.formattedAddress && user.latitude !== null && user.longitude !== null) {
+          const address: SavedAddress = {
+            formattedAddress: user.formattedAddress,
+            latitude: user.latitude,
+            longitude: user.longitude,
+          };
+          setSavedAddress(address);
+          setLocation({ label: address.formattedAddress, latitude: address.latitude, longitude: address.longitude });
+        }
+        setIsLoadingProfile(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        if (active) setIsLoadingProfile(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
-  function handleServiceAreaChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const newArea = e.target.value;
-    setServiceArea(newArea);
-    if (newArea) {
-      localStorage.setItem("wasteWise_preferredServiceArea", newArea);
-    } else {
-      localStorage.removeItem("wasteWise_preferredServiceArea");
-    }
-  }
-
   React.useEffect(() => {
-    if (!serviceArea) {
+    if (!location) {
       setCollectors([]);
-      setIsLoading(false);
       return;
     }
 
     let active = true;
     setIsLoading(true);
-    
+
     getVerifiedCollectors({
-      serviceArea: serviceArea || undefined,
+      lat: location.latitude,
+      lng: location.longitude,
       vehicleType: vehicleType !== "ALL" ? vehicleType : undefined,
+      minRating: minRating ? Number(minRating) : undefined,
+      sort,
     })
       .then((data) => {
         if (active) {
@@ -65,7 +93,7 @@ export function CollectorsDirectoryView() {
     return () => {
       active = false;
     };
-  }, [serviceArea, vehicleType]);
+  }, [location, vehicleType, minRating, sort]);
 
   const vehicleOptions = [
     { value: "ALL", label: "All Vehicles" },
@@ -78,43 +106,47 @@ export function CollectorsDirectoryView() {
   return (
     <PageContainer className="py-8 max-w-6xl">
       <div className="mb-8">
-        <h1 className="text-display text-neutral-900 mb-2 font-bold tracking-tight">Verified Collectors</h1>
-        <p className="text-body-lg text-neutral-600 max-w-2xl">
-          Browse our trusted network of verified independent collectors operating in your area.
+        <h1 className="text-display text-neutral-900 mb-2 font-bold tracking-tight">Find a Collector</h1>
+        <p className="text-body-lg text-neutral-600">
+          Browse verified independent collectors operating within 20 km of your location.
         </p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm mb-8 flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <Select
-            label="Service Area"
-            value={serviceArea}
-            onChange={handleServiceAreaChange}
-            options={[
-              { value: "", label: "Select an area..." },
-              ...ALL_SERVICE_AREAS.map((area) => ({ value: area, label: area }))
-            ]}
-          />
-        </div>
-        <div className="flex-1">
-          <Select
-            label="Vehicle Type"
+      <div className="bg-white p-2 rounded-xl border border-neutral-200 shadow-sm mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <LocationPickerPill savedAddress={savedAddress} value={location} onChange={setLocation} className="w-full sm:w-[280px] shrink-0" />
+        <div className="flex flex-wrap gap-2">
+          <FilterPillSelect
+            label="Vehicle"
             value={vehicleType}
-            onChange={(e) => setVehicleType(e.target.value as VehicleType | "ALL")}
+            onChange={(v) => setVehicleType(v as VehicleType | "ALL")}
+            active={vehicleType !== "ALL"}
             options={vehicleOptions}
+          />
+          <FilterPillSelect
+            label="Sort"
+            value={sort}
+            onChange={(v) => setSort(v as CollectorSort)}
+            active
+            options={SORT_OPTIONS}
           />
         </div>
       </div>
 
       {/* Results */}
-      {!serviceArea ? (
+      {isLoadingProfile ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-64 bg-neutral-100 animate-pulse rounded-2xl" />
+          ))}
+        </div>
+      ) : !location ? (
         <div className="text-center py-20 bg-neutral-50 rounded-2xl border border-neutral-100 shadow-sm">
           <div className="flex justify-center mb-4 text-green-600">
             <Icon icon={BadgeCheck} size="xl" />
           </div>
           <h3 className="text-h4 text-neutral-900 font-medium mb-2">Find Local Collectors</h3>
-          <p className="text-neutral-500 max-w-sm mx-auto">Select your service area above to find verified independent collectors operating near you.</p>
+          <p className="text-neutral-500 max-w-sm mx-auto">Set your location above to find verified independent collectors operating near you.</p>
         </div>
       ) : isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -128,7 +160,7 @@ export function CollectorsDirectoryView() {
             <Icon icon={User} size="xl" />
           </div>
           <h3 className="text-h4 text-neutral-900 font-medium mb-2">No collectors found</h3>
-          <p className="text-neutral-500">Try adjusting your filters or checking a different area.</p>
+          <p className="text-neutral-500">No verified collectors within 20 km yet — try adjusting your filters.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -164,17 +196,27 @@ export function CollectorsDirectoryView() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex flex-col gap-2 mb-6">
                 <div className="flex items-center gap-2 text-body-sm text-neutral-700 bg-neutral-50 p-2 rounded-lg">
                   <Icon icon={Truck} size="sm" className="text-neutral-400" />
                   {VEHICLE_TYPE_LABELS[collector.vehicleType]}
                 </div>
+                {collector.phone && (
+                  <a
+                    href={`tel:${collector.phone}`}
+                    className="flex items-center gap-2 text-body-sm text-neutral-700 bg-neutral-50 p-2 rounded-lg hover:bg-neutral-100 transition-colors"
+                  >
+                    <Icon icon={Phone} size="sm" className="text-neutral-400" />
+                    {collector.phone}
+                  </a>
+                )}
               </div>
 
-              <div className="mt-auto pt-4 border-t border-neutral-100 flex items-center justify-between">
-                <span className="text-caption font-medium text-green-700 bg-green-50 px-2 py-1 rounded-md">
-                  {collector.serviceArea || "All areas"}
+              <div className="mt-auto pt-4 border-t border-neutral-100 flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1 text-caption font-medium text-green-700 bg-green-50 px-2 py-1 rounded-md line-clamp-1">
+                  <Icon icon={MapPin} size="sm" className="shrink-0" />
+                  {collector.distanceKm !== null ? `${collector.distanceKm.toFixed(1)} km away` : "Location not set"}
                 </span>
                 <Link href={`/dashboard/pickups/new?preferredCollectorId=${collector.id}&collectorName=${encodeURIComponent(collector.fullName)}`}>
                   <Button variant="secondary" size="sm" className="text-green-800">
