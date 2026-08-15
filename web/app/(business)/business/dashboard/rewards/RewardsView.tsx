@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ClipboardList, Gift, Sparkles, ArrowDownRight, ArrowUpRight, Smartphone, CheckCircle2, Recycle, Users, Award, Target, Tag, ChevronDown, ChevronUp, History, Diamond } from "lucide-react";
+import { ClipboardList, Gift, Sparkles, ArrowDownRight, ArrowUpRight, Smartphone, CheckCircle2, Recycle, Users, Award, Target, Tag, ChevronDown, ChevronUp, History, Diamond, Heart } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -10,6 +10,7 @@ import { Icon } from "@/components/Icon";
 import { MOBILE_OPERATOR_LABELS } from "@/components/OperatorSelector";
 import { PageContainer } from "@/components/PageContainer";
 import { StatusPill } from "@/components/StatusPill";
+import { publicEnv } from "@/lib/env";
 import { AuthApiError } from "@/lib/api/auth";
 import {
   getRewardsBalance,
@@ -35,7 +36,7 @@ function formatDateTime(iso: string): string {
   )}`;
 }
 
-type TransactionCategory = "ALL" | "PICKUP" | "REFERRAL" | "LOYALTY" | "MILESTONE" | "REDEMPTION" | "GIFT" | "DISCOUNT" | "BONUS" | "OTHER";
+type TransactionCategory = "ALL" | "PICKUP" | "REFERRAL" | "LOYALTY" | "MILESTONE" | "REDEMPTION" | "GIFT" | "DISCOUNT" | "BONUS" | "OTHER" | "CSR";
 
 interface UnifiedTransaction {
   id: string;
@@ -50,6 +51,9 @@ interface UnifiedTransaction {
   bonusPoints?: number | null;
   totalPoints?: number | null;
   rechargeStatus?: MobileRechargeTransaction["status"];
+  amountTaka?: number;
+  pickupId?: string;
+  selectedCause?: string;
 }
 
 
@@ -95,6 +99,7 @@ export function RewardsView() {
 
   const [greenPointsTransactions, setGreenPointsTransactions] = React.useState<GreenPointsTransaction[]>([]);
   const [mobileRechargeTransactions, setMobileRechargeTransactions] = React.useState<MobileRechargeTransaction[]>([]);
+  const [csrContributions, setCsrContributions] = React.useState<any[]>([]);
 
   const [filterTab, setFilterTab] = React.useState<TransactionCategory>("ALL");
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
@@ -119,6 +124,7 @@ export function RewardsView() {
 
         setGreenPointsTransactions(historyResult.greenPointsTransactions);
         setMobileRechargeTransactions(historyResult.mobileRechargeTransactions);
+        setCsrContributions(historyResult.csrContributions || []);
         setLoadState("ready");
       })
       .catch((err: unknown) => {
@@ -144,6 +150,7 @@ export function RewardsView() {
       .then((historyResult) => {
         setGreenPointsTransactions(historyResult.greenPointsTransactions);
         setMobileRechargeTransactions(historyResult.mobileRechargeTransactions);
+        setCsrContributions(historyResult.csrContributions || []);
       })
       .catch(() => {});
   }
@@ -268,8 +275,23 @@ export function RewardsView() {
       });
     });
 
+    csrContributions.forEach((tx) => {
+      list.push({
+        id: `csr-${tx.id}`,
+        originalId: tx.id,
+        createdAt: tx.createdAt,
+        points: 0,
+        category: "CSR",
+        title: "CSR Contribution",
+        subtitle: formatDateTime(tx.createdAt),
+        amountTaka: tx.donationAmount,
+        pickupId: tx.pickupId,
+        selectedCause: tx.selectedCause,
+      });
+    });
+
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [greenPointsTransactions, mobileRechargeTransactions]);
+  }, [greenPointsTransactions, mobileRechargeTransactions, csrContributions]);
 
   const getCategoryConfig = (category: TransactionCategory) => {
     switch (category) {
@@ -281,6 +303,7 @@ export function RewardsView() {
       case "GIFT": return { icon: Gift, color: "text-pink-600", bg: "bg-pink-100" };
       case "DISCOUNT": return { icon: Tag, color: "text-yellow-600", bg: "bg-yellow-100" };
       case "BONUS": return { icon: Sparkles, color: "text-indigo-600", bg: "bg-indigo-100" };
+      case "CSR": return { icon: Heart, color: "text-emerald-600", bg: "bg-emerald-100" };
       default: return { icon: History, color: "text-neutral-600", bg: "bg-neutral-100" };
     }
   };
@@ -551,12 +574,12 @@ export function RewardsView() {
             ) : (
               <>
                 <div className="flex flex-wrap gap-2">
-                  {(["ALL", "PICKUP", "REFERRAL", "LOYALTY", "REDEMPTION", "BONUS"] as const)
-                    .filter(tab => !(isBusiness && (tab === "REFERRAL" || tab === "REDEMPTION")))
+                  {(["ALL", "PICKUP", "REFERRAL", "LOYALTY", "REDEMPTION", "BONUS", "CSR"] as const)
+                    .filter(tab => !(isBusiness && (tab === "REFERRAL" || tab === "REDEMPTION")) && !(!isBusiness && tab === "CSR"))
                     .map(tab => (
                     <button
                       key={tab}
-                      onClick={() => setFilterTab(tab)}
+                      onClick={() => setFilterTab(tab as TransactionCategory)}
                       className={cn(
                         "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
                         filterTab === tab
@@ -564,7 +587,7 @@ export function RewardsView() {
                           : "bg-white text-neutral-600 hover:bg-neutral-100 border border-neutral-200"
                       )}
                     >
-                      {tab.charAt(0) + tab.slice(1).toLowerCase()}
+                      {tab === "CSR" ? "CSR" : tab.charAt(0) + tab.slice(1).toLowerCase()}
                     </button>
                   ))}
                 </div>
@@ -612,10 +635,16 @@ export function RewardsView() {
                                   <span
                                     className={cn(
                                       "font-data text-data-lg whitespace-nowrap",
-                                      tx.points > 0 ? "text-success-700" : "text-neutral-900"
+                                      tx.points > 0 ? "text-success-700" : (tx.points < 0 ? "text-neutral-900" : "text-neutral-500")
                                     )}
                                   >
-                                    {tx.points > 0 ? "+" : ""}{tx.points.toLocaleString()} pts
+                                    {tx.category === "CSR" ? (
+                                      <span className="text-emerald-600">৳{tx.amountTaka?.toLocaleString()}</span>
+                                    ) : (
+                                      <>
+                                        {tx.points > 0 ? "+" : ""}{tx.points.toLocaleString()} pts
+                                      </>
+                                    )}
                                   </span>
                                   {isPickup && !isBusiness && (
                                     <div className="text-neutral-400">
@@ -696,6 +725,24 @@ export function RewardsView() {
                                       )}
                                       </>
                                     ) : null}
+                                </div>
+                              )}
+                              {tx.category === "CSR" && (
+                                <div className="mt-4 p-4 bg-emerald-50/50 rounded-xl border border-emerald-100/50 grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in text-sm">
+                                  <div><span className="text-neutral-500 block mb-1 text-xs uppercase tracking-wider font-semibold">Contribution ID</span><span className="font-mono text-neutral-900">{tx.originalId}</span></div>
+                                  {tx.pickupId && <div><span className="text-neutral-500 block mb-1 text-xs uppercase tracking-wider font-semibold">Related Pickup</span><span className="font-mono text-neutral-900">{tx.pickupId}</span></div>}
+                                  <div><span className="text-neutral-500 block mb-1 text-xs uppercase tracking-wider font-semibold">Cause</span><span className="font-medium text-neutral-900">{tx.selectedCause}</span></div>
+                                  <div><span className="text-neutral-500 block mb-1 text-xs uppercase tracking-wider font-semibold">Amount</span><span className="font-medium text-emerald-600">৳{tx.amountTaka?.toLocaleString()}</span></div>
+                                  <div className="sm:col-span-2 pt-2">
+                                    <Button 
+                                      variant="secondary" 
+                                      size="sm" 
+                                      onClick={() => window.open(`${publicEnv.NEXT_PUBLIC_API_URL}/csr/receipt/${tx.originalId}`, '_blank')}
+                                      className="w-full sm:w-auto"
+                                    >
+                                      Download CSR Receipt
+                                    </Button>
+                                  </div>
                                 </div>
                               )}
                             </Card>

@@ -62,6 +62,7 @@ export function toPublicBusinessProfile(profile: any) {
     businessName: profile.businessName,
     tradeLicenseNumber: profile.tradeLicenseNumber,
     verificationStatus: profile.verificationStatus,
+    askForCsrContribution: profile.askForCsrContribution,
   };
 }
 
@@ -268,7 +269,18 @@ usersRouter.patch(
       sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    const { businessName, tradeLicenseNumber } = parsed.data;
+    const { businessName, tradeLicenseNumber, askForCsrContribution } = parsed.data;
+
+    const updateData: any = {
+      businessName,
+      tradeLicenseNumber,
+    };
+    if (businessName || tradeLicenseNumber) {
+      updateData.verificationStatus = "PENDING";
+    }
+    if (askForCsrContribution !== undefined) {
+      updateData.askForCsrContribution = askForCsrContribution;
+    }
 
     const businessProfile = await prisma.businessProfile.upsert({
       where: { userId: req.user!.id },
@@ -277,12 +289,9 @@ usersRouter.patch(
         businessName: businessName || dbUser.fullName,
         tradeLicenseNumber,
         verificationStatus: "PENDING",
+        askForCsrContribution: askForCsrContribution ?? true,
       },
-      update: {
-        businessName,
-        tradeLicenseNumber,
-        verificationStatus: "PENDING",
-      },
+      update: updateData,
     });
 
     sendData(res, 200, { businessProfile: toPublicBusinessProfile(businessProfile) });

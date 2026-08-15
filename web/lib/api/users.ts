@@ -34,6 +34,7 @@ export interface BusinessProfileSummary {
   businessName: string;
   tradeLicenseNumber: string | null;
   verificationStatus: VerificationStatus;
+  askForCsrContribution?: boolean;
 }
 
 export interface UserProfile {
@@ -126,6 +127,7 @@ export function updateCollectorProfile(
 export interface UpdateBusinessProfileInput {
   businessName?: string;
   tradeLicenseNumber?: string | null;
+  askForCsrContribution?: boolean;
 }
 
 export function updateBusinessProfile(

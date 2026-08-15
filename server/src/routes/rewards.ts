@@ -125,7 +125,7 @@ rewardsRouter.get(
   requireAuth,
   requireRole("USER"),
   asyncHandler(async (req, res) => {
-    const [greenPointsTransactions, mobileRechargeTransactions] = await Promise.all([
+    const [greenPointsTransactions, mobileRechargeTransactions, csrContributions] = await Promise.all([
       prisma.greenPointsTransaction.findMany({
         where: { userId: req.user!.id },
         orderBy: { createdAt: "desc" },
@@ -136,6 +136,11 @@ rewardsRouter.get(
         orderBy: { createdAt: "desc" },
         take: REWARDS_HISTORY_LIMIT,
       }),
+      prisma.csrContribution.findMany({
+        where: { businessId: req.user!.id },
+        orderBy: { createdAt: "desc" },
+        take: REWARDS_HISTORY_LIMIT,
+      }),
     ]);
 
     sendData(res, 200, {
@@ -143,6 +148,7 @@ rewardsRouter.get(
       mobileRechargeTransactions: mobileRechargeTransactions.map(
         toMobileRechargeTransactionSummary,
       ),
+      csrContributions,
     });
   }),
 );
