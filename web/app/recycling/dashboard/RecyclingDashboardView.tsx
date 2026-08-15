@@ -3,12 +3,13 @@
 import * as React from "react";
 import { authFetch } from "@/lib/api/auth";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { Loader2, Store, ClipboardList, CheckCircle2, TrendingUp, Star, Truck, Calendar, ChevronRight } from "lucide-react";
+import { Loader2, Truck, Calendar, ChevronRight } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { Button } from "@/components/Button";
 import { format } from "date-fns";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { CompanyRatingsPanel } from "@/components/CompanyRatingsPanel";
+import { CompanyStatsChart } from "@/components/CompanyStatsChart";
 
 export function RecyclingDashboardView() {
   const { user } = useAuth();
@@ -44,63 +45,11 @@ export function RecyclingDashboardView() {
   const { stats, recentRequests, upcomingCollections, performanceChart } = data;
 
   return (
-    <div className="space-y-8">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatCard 
-          icon={Store} 
-          label="Open Marketplace Requests" 
-          value={stats.openRequests} 
-          color="blue" 
-          href="/recycling/marketplace"
-        />
-        <StatCard 
-          icon={ClipboardList} 
-          label="Active Quotations" 
-          value={stats.activeQuotations} 
-          color="amber" 
-          href="/recycling/quotations"
-        />
-        <StatCard 
-          icon={Truck} 
-          label="Active Pickups" 
-          value={stats.scheduledPickups} 
-          color="indigo" 
-          href="/recycling/accepted-collections"
-        />
-        <StatCard 
-          icon={CheckCircle2} 
-          label="Completed Collections" 
-          value={stats.completedPickups} 
-          color="emerald" 
-          href="/recycling/collection-history"
-        />
-        <StatCard 
-          icon={TrendingUp} 
-          label="Monthly Purchase Value" 
-          value={`৳${stats.totalPurchaseValue.toLocaleString()}`} 
-          color="primary" 
-        />
-        
-        {/* Company Rating Card */}
-        <div className="rounded-2xl border border-neutral-200 bg-neutral-0 p-6 shadow-sm flex flex-col justify-between hover:border-emerald-200 transition-colors">
-          <div className="flex items-start justify-between">
-            <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600">
-              <Star className="w-6 h-6 fill-current" />
-            </div>
-            <div className="text-right">
-              <span className="text-caption text-neutral-500 font-medium">Average Rating</span>
-              <div className="flex items-center justify-end gap-1 mt-1">
-                <span className="text-h4 text-neutral-900">{Number(stats.avgRating).toFixed(1)}</span>
-                <span className="text-body-sm text-neutral-400">/ 5.0</span>
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 pt-4 border-t border-neutral-100 flex items-center justify-between text-body-sm">
-            <span className="text-neutral-500">{stats.totalReviews} Reviews</span>
-            <span className="text-emerald-600 font-semibold">{stats.successRate}% Success Rate</span>
-          </div>
-        </div>
+    <div className="flex flex-col gap-8 w-full max-w-6xl">
+      {/* Bento Grid Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-max">
+        <CompanyRatingsPanel stats={stats} />
+        <CompanyStatsChart performanceChart={performanceChart} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -197,66 +146,6 @@ export function RecyclingDashboardView() {
           </div>
         </div>
       </div>
-      
-      {/* Performance Chart */}
-      <div className="rounded-2xl border border-neutral-200 bg-neutral-0 shadow-sm overflow-hidden p-6">
-        <h3 className="text-h5 text-neutral-900 mb-6">Collection Performance (Last 6 Months)</h3>
-        
-        <div className="h-64 flex items-end gap-2 sm:gap-6 justify-between pt-4 border-b border-neutral-100 pb-2">
-          {performanceChart.map((item: any, idx: number) => {
-            // Find max for scaling
-            const maxVal = Math.max(...performanceChart.map((i: any) => i.count), 1);
-            const heightPct = (item.count / maxVal) * 100;
-            
-            return (
-              <div key={idx} className="flex flex-col items-center flex-1 group">
-                <div className="w-full flex justify-center relative h-full items-end">
-                  {/* Tooltip */}
-                  <div className="absolute -top-8 bg-neutral-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
-                    {item.count} pickups
-                  </div>
-                  {/* Bar */}
-                  <div 
-                    className="w-full max-w-[48px] bg-emerald-100 group-hover:bg-emerald-500 rounded-t-sm transition-all duration-500" 
-                    style={{ height: `${Math.max(heightPct, 2)}%` }}
-                  />
-                </div>
-                <span className="text-xs text-neutral-400 mt-3 font-medium uppercase tracking-wider">{item.month}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      
     </div>
   );
-}
-
-function StatCard({ icon: IconCmp, label, value, color, href }: any) {
-  const colorStyles: Record<string, string> = {
-    blue: "bg-blue-50 text-blue-600",
-    amber: "bg-amber-50 text-amber-600",
-    emerald: "bg-emerald-50 text-emerald-600",
-    indigo: "bg-indigo-50 text-indigo-600",
-    primary: "bg-primary-50 text-primary-600",
-  };
-  
-  const content = (
-    <div className={cn("rounded-2xl border border-neutral-200 bg-neutral-0 p-6 shadow-sm flex flex-col justify-between transition-colors", href && "hover:border-emerald-300 cursor-pointer")}>
-      <div className="flex items-start justify-between">
-        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", colorStyles[color])}>
-          <IconCmp className="w-6 h-6" />
-        </div>
-        <div className="text-right">
-          <span className="text-caption text-neutral-500 font-medium">{label}</span>
-          <h3 className="text-h3 text-neutral-900 mt-1">{value}</h3>
-        </div>
-      </div>
-    </div>
-  );
-  
-  if (href) {
-    return <Link href={href} className="block h-full">{content}</Link>;
-  }
-  return content;
 }

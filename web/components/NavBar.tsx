@@ -49,10 +49,23 @@ export function NavBar({ brand, links = [], actions, accent = "user", className 
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const mobileMenuId = React.useId();
   const hasLinks = links.length > 0;
+  const [scrolled, setScrolled] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
-    <header className={cn("sticky top-0 z-50 w-full border-b border-neutral-200 bg-neutral-0/80 backdrop-blur-md", className)}>
-      <div className="flex h-16 w-full items-center justify-between px-4 md:px-8 lg:px-12">
+    <header className={cn(
+      "sticky top-0 z-50 w-full transition-all duration-300",
+      scrolled ? "bg-white/95 backdrop-blur-md shadow-sm py-0" : "bg-white/80 backdrop-blur-md py-2",
+      className
+    )}>
+      <div className="flex h-[72px] w-full items-center justify-between mx-auto max-w-content px-6 md:px-12 lg:px-16">
         <div className="flex items-center">{brand}</div>
 
         {hasLinks && (
@@ -64,12 +77,17 @@ export function NavBar({ brand, links = [], actions, accent = "user", className 
                     href={link.href}
                     aria-current={link.active ? "page" : undefined}
                     className={cn(
-                      "text-body-sm text-neutral-600 transition-colors",
+                      "text-[16px] text-neutral-600 transition-all duration-300 relative group py-1",
                       accentHoverTextClasses[accent],
-                      link.active && ["border-b-2 pb-1", accentActiveTextClasses[accent], accentUnderlineClasses[accent]]
+                      link.active && [accentActiveTextClasses[accent]]
                     )}
                   >
                     {link.label}
+                    <span className={cn(
+                      "absolute bottom-0 left-0 w-full h-0.5 bg-current transform origin-left transition-transform duration-300",
+                      link.active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100",
+                      accentUnderlineClasses[accent]
+                    )} />
                   </a>
                 </li>
               ))}

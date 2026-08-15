@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { getMarketplaceRequest, updateBulkRequestStatus, submitBulkCollectionProof, type BulkMarketplaceRequest } from "@/lib/api/marketplace";
-import { Package, MapPin, Loader2, Truck, UploadCloud, CheckCircle2, Navigation, X } from "lucide-react";
+import { Package, MapPin, Loader2, Truck, UploadCloud, CheckCircle2, Navigation, X, Tag, Calendar, Building2 } from "lucide-react";
+import { format } from "date-fns";
 import { Button } from "@/components/Button";
 import { Icon } from "@/components/Icon";
 import { ErrorBanner } from "@/components/ErrorBanner";
@@ -20,6 +21,7 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
   const [weights, setWeights] = React.useState<Record<string, number>>({});
   const [photos, setPhotos] = React.useState<string[]>([]);
   const [photoInput, setPhotoInput] = React.useState("");
+  const [notes, setNotes] = React.useState("");
 
   const fetchRequest = React.useCallback(async () => {
     try {
@@ -82,10 +84,7 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
 
   const handleSubmitProof = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (photos.length === 0) {
-      setErrorMsg("Please add at least one collection photo.");
-      return;
-    }
+    
     
     const totalWeight = Object.values(weights).reduce((sum, val) => sum + (Number(val) || 0), 0);
     
@@ -96,6 +95,7 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
         verifiedWeights: weights,
         verifiedTotalWeightKg: totalWeight,
         collectionPhotos: photos,
+        notes: notes || undefined,
       });
       await fetchRequest();
     } catch (err: any) {
@@ -109,6 +109,14 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
     return (
       <div className="flex h-64 items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
+
+  if (errorMsg) {
+    return (
+      <div className="mt-6 space-y-6 max-w-3xl">
+        <ErrorBanner>{errorMsg}</ErrorBanner>
       </div>
     );
   }
@@ -133,9 +141,73 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
   }
 
   const totalVerifiedWeight = Object.values(weights).reduce((sum, val) => sum + (Number(val) || 0), 0);
+  
+  const acceptedQuote = request.quotations?.find((q) => q.status === "ACCEPTED");
+  let materials: { category: string; weightKg: number }[] = [];
+  try {
+    if (typeof request.wasteTypes === "string") {
+      materials = JSON.parse(request.wasteTypes);
+    } else if (Array.isArray(request.wasteTypes)) {
+      materials = request.wasteTypes as any;
+    }
+  } catch (e) {}
 
   return (
     <div className="mt-6 space-y-6 max-w-3xl">
+      <div className="rounded-2xl border border-neutral-200 bg-neutral-0 p-6 shadow-sm flex flex-col gap-6">
+        <h2 className="text-h4 text-neutral-900 border-b border-neutral-100 pb-4">Collection Details</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex flex-col gap-4">
+            <div>
+              <p className="text-xs text-neutral-500 uppercase tracking-widest font-semibold mb-1">Business</p>
+              <div className="flex items-center gap-2">
+                <Icon icon={Building2} className="text-blue-500" size="sm" />
+                <span className="font-semibold text-neutral-900">{request.business?.fullName || "N/A"}</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-neutral-500 uppercase tracking-widest font-semibold mb-1">Pickup Address</p>
+              <div className="flex items-start gap-2">
+                <Icon icon={MapPin} className="text-rose-500 shrink-0 mt-0.5" size="sm" />
+                <span className="font-medium text-neutral-900">{request.pickupAddress}</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-neutral-500 uppercase tracking-widest font-semibold mb-1">Pickup Schedule</p>
+              <div className="flex items-start gap-2">
+                <Icon icon={Calendar} className="text-blue-500 shrink-0 mt-0.5" size="sm" />
+                <span className="font-medium text-neutral-900">
+                  {acceptedQuote ? format(new Date(acceptedQuote.estimatedPickupDate), "MMM d, yyyy") : "N/A"}
+                  {acceptedQuote?.estimatedPickupTime ? ` at ${acceptedQuote.estimatedPickupTime}` : ""}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col gap-4">
+            <div>
+              <p className="text-xs text-neutral-500 uppercase tracking-widest font-semibold mb-1">Accepted Quotation Price</p>
+              <div className="flex items-center gap-2">
+                <Icon icon={Tag} className="text-emerald-500" size="sm" />
+                <span className="font-semibold text-neutral-900">
+                  {acceptedQuote ? `৳${acceptedQuote.purchasePrice.toLocaleString()}` : "N/A"}
+                </span>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-neutral-500 uppercase tracking-widest font-semibold mb-1">Materials & Weight</p>
+              <div className="flex flex-wrap gap-2 mt-1 mb-2">
+                {materials.map((m, i) => (
+                  <span key={i} className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs font-medium rounded">
+                    {m.category} ({m.weightKg}kg)
+                  </span>
+                ))}
+              </div>
+              <p className="text-sm text-neutral-600">Total Estimated: <span className="font-semibold text-neutral-900">{request.estimatedWeightKg} kg</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="rounded-2xl border border-neutral-200 bg-neutral-0 p-6 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
@@ -150,21 +222,9 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
         </div>
         
         {status === "RECYCLING_COMPANY_ASSIGNED" && (
-          <Button onClick={() => handleStatusUpdate("EN_ROUTE")} disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Navigation className="w-4 h-4 mr-2" />}
-            Start Collection
-          </Button>
-        )}
-        {status === "EN_ROUTE" && (
-          <Button onClick={() => handleStatusUpdate("ARRIVED")} disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700">
-            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <MapPin className="w-4 h-4 mr-2" />}
-            Mark as Arrived
-          </Button>
-        )}
-        {status === "ARRIVED" && (
-          <Button onClick={() => handleStatusUpdate("IN_PROGRESS")} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={() => handleStatusUpdate("IN_PROGRESS")} disabled={isSubmitting}>
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Package className="w-4 h-4 mr-2" />}
-            Begin Waste Collection
+            Start Collection
           </Button>
         )}
         {status === "VERIFYING_WEIGHTS" && (
@@ -211,7 +271,7 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
             </div>
 
             <div>
-              <h4 className="font-medium text-neutral-900 mb-3">Collection Photos</h4>
+              <h4 className="font-medium text-neutral-900 mb-3">Collection Photos (Optional)</h4>
               <div className="flex gap-2 mb-3">
                 <input
                   type="url"
@@ -242,10 +302,21 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
                 </div>
               )}
             </div>
+
+            <div>
+              <h4 className="font-medium text-neutral-900 mb-3">Notes (Optional)</h4>
+              <textarea
+                rows={3}
+                placeholder="Any additional information about the collection..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-body-sm"
+              />
+            </div>
             
             <div className="pt-2">
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Submit Proof & Complete"}
+                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Submit Proof & Request Confirmation"}
               </Button>
             </div>
           </div>

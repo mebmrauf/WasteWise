@@ -156,7 +156,7 @@ export function RewardsView() {
     nextLevelName = "Gold";
     progressPercentage = (totalPoints / nextLevelPoints) * 100;
   } else if (membershipLevel === "GOLD") {
-    nextLevelPoints = isBusiness ? 4500 : 3000;
+    nextLevelPoints = isBusiness ? 4501 : 3000;
     nextLevelName = "Platinum";
     progressPercentage = (totalPoints / nextLevelPoints) * 100;
   } else {

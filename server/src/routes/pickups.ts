@@ -330,6 +330,25 @@ pickupsRouter.get(
 );
 
 pickupsRouter.get(
+  "/collector-history",
+  requireAuth,
+  requireRole("COLLECTOR"),
+  asyncHandler(async (req, res) => {
+    const pickups = await prisma.pickupRequest.findMany({
+      where: {
+        assignedCollectorId: req.user!.id,
+        status: PickupStatus.COMPLETED,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true },
+    });
+
+    sendData(res, 200, { pickups: pickups.map(toPickupSummary) });
+  }),
+);
+
+pickupsRouter.get(
   "/:id",
   requireAuth,
   asyncHandler(async (req, res) => {
