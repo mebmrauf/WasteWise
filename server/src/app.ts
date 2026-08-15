@@ -18,6 +18,7 @@ import { notificationsRouter } from "./routes/notifications";
 import { adminRouter } from "./routes/admin";
 import { collectorsRouter } from "./routes/collectors";
 import { marketplaceRouter } from "./routes/marketplace";
+import { complaintsRouter } from "./routes/complaints";
 import { csrRouter } from "./routes/csr";
 
 export function createApp() {
@@ -59,6 +60,7 @@ export function createApp() {
   app.use("/api/v1/admin", adminRouter);
   app.use("/api/v1/collectors", collectorsRouter);
   app.use("/api/v1/marketplace", marketplaceRouter);
+  app.use("/api/v1/complaints", complaintsRouter);
   app.use("/api/v1/csr", csrRouter);
 
   // Serves uploaded waste-recognition photos back out. Deliberately

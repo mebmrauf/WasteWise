@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Search, User, LayoutDashboard, Briefcase, History } from "lucide-react";
+import { Search, User, LayoutDashboard, Briefcase, History, Megaphone } from "lucide-react";
 import { DashboardNav, type DashboardNavItem } from "@/components/DashboardNav";
 import { PageContainer } from "@/components/PageContainer";
 import { useRequireRole } from "@/lib/auth/AuthContext";
@@ -12,6 +12,7 @@ const ALL_NAV_ITEMS: DashboardNavItem[] = [
   { label: "Active Pickups", href: "/collector/active", icon: Briefcase },
   { label: "Find Jobs", href: "/collector/jobs", icon: Search },
   { label: "History", href: "/collector/collection-history", icon: History },
+  { label: "Complaints", href: "/collector/complaints", icon: Megaphone },
   { label: "Profile", href: "/collector/profile", icon: User },
 ];
 
