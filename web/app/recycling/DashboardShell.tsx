@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Store, ClipboardList, Settings, Truck } from "lucide-react";
+import { LayoutDashboard, Store, ClipboardList, Settings, Truck, Megaphone } from "lucide-react";
 import { DashboardNav, type DashboardNavItem } from "@/components/DashboardNav";
 import { PageContainer } from "@/components/PageContainer";
 import { useRequireRole } from "@/lib/auth/AuthContext";
@@ -18,6 +18,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       { label: "My Quotations", href: "/recycling/quotations", icon: ClipboardList },
       { label: "Accepted Collections", href: "/recycling/accepted-collections", icon: Truck },
       { label: "Collection History", href: "/recycling/collection-history", icon: ClipboardList },
+      { label: "Complaints", href: "/recycling/complaints", icon: Megaphone },
       { label: "Settings", href: "/recycling/settings", icon: Settings },
     ],
     []

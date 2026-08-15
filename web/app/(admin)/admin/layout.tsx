@@ -4,6 +4,8 @@ import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/Button";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -28,6 +30,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="font-bold text-lg text-primary-600">WasteWise</span>
           <span className="text-body font-medium text-neutral-500">Admin Portal</span>
         </div>
+        {user && user.role === "ADMIN" && (
+          <nav className="hidden md:flex items-center gap-6">
+            <Link
+              href="/admin"
+              className={cn(
+                "text-body-sm font-medium transition-colors",
+                pathname === "/admin" ? "text-primary-600" : "text-neutral-500 hover:text-neutral-900"
+              )}
+            >
+              Verifications
+            </Link>
+            <Link
+              href="/admin/complaints"
+              className={cn(
+                "text-body-sm font-medium transition-colors",
+                pathname.startsWith("/admin/complaints") ? "text-primary-600" : "text-neutral-500 hover:text-neutral-900"
+              )}
+            >
+              Complaints
+            </Link>
+          </nav>
+        )}
         {user && user.role === "ADMIN" && (
           <div className="flex items-center gap-4 text-body-sm text-neutral-500">
             <span>Logged in as <span className="font-medium text-neutral-900">{user.email}</span></span>

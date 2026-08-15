@@ -5,9 +5,10 @@ import { asyncHandler } from "../lib/asyncHandler";
 import { requireAuth, requireRole } from "../lib/rbac";
 import { requireCsrf } from "../lib/csrf";
 import { sendData, sendError } from "../lib/apiResponse";
-import { VerificationStatus } from "@prisma/client";
+import { VerificationStatus, ComplaintStatus } from "@prisma/client";
 import { createNotification } from "../lib/notifications";
 import { toPublicCollectorProfile, toPublicRecyclingProfile, toPublicBusinessProfile } from "./users";
+import { updateComplaintStatusSchema } from "./complaints.schemas";
 
 export const adminRouter = Router();
 
@@ -264,5 +265,78 @@ adminRouter.patch(
     };
 
     sendData(res, 200, { business: publicBusiness });
+  }),
+);
+
+adminRouter.get(
+  "/complaints",
+  requireAuth,
+  requireRole("ADMIN"),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const complaints = await prisma.complaint.findMany({
+      include: {
+        complainant: { select: { id: true, fullName: true, email: true, role: true } },
+        againstUser: { select: { id: true, fullName: true, email: true, role: true } },
+        pickupRequest: { select: { id: true, status: true } },
+        resolvedByAdmin: { select: { id: true, fullName: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    sendData(res, 200, { complaints });
+  }),
+);
+
+adminRouter.patch(
+  "/complaints/:id/status",
+  requireAuth,
+  requireRole("ADMIN"),
+  requireCsrf,
+  asyncHandler(async (req: Request, res: Response) => {
+    const parsed = updateComplaintStatusSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
+      return;
+    }
+
+    const { status, resolutionNotes } = parsed.data;
+    const { id } = req.params;
+
+    const complaint = await prisma.complaint.findUnique({
+      where: { id },
+      include: { complainant: true },
+    });
+
+    if (!complaint) {
+      sendError(res, 404, "NOT_FOUND", "Complaint not found.");
+      return;
+    }
+
+    const updated = await prisma.complaint.update({
+      where: { id },
+      data: {
+        status,
+        resolutionNotes,
+        resolvedAt: status === "RESOLVED" || status === "DISMISSED" ? new Date() : null,
+        resolvedByAdminId: req.user!.id,
+      },
+      include: {
+        complainant: { select: { id: true, fullName: true, email: true, role: true } },
+        againstUser: { select: { id: true, fullName: true, email: true, role: true } },
+        pickupRequest: { select: { id: true, status: true } },
+        resolvedByAdmin: { select: { id: true, fullName: true } },
+      },
+    });
+
+    if (complaint.status !== status) {
+      void createNotification({
+        userId: complaint.complainant.id,
+        type: "COMPLAINT_UPDATE",
+        title: "Complaint Status Updated",
+        message: `Your complaint (ID: ${complaint.id.slice(-6)}) status has been updated to ${status}.${resolutionNotes ? ` Admin Notes: ${resolutionNotes}` : ""}`,
+      });
+    }
+
+    sendData(res, 200, { complaint: updated });
   }),
 );
