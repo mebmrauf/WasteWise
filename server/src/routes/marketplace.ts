@@ -119,6 +119,9 @@ marketplaceRouter.get(
           },
           rating: {
             select: { score: true }
+          },
+          csrContributions: {
+            select: { id: true }
           }
         } : {}),
         ...(isRecyclingCompany ? {

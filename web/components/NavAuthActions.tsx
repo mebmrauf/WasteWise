@@ -32,7 +32,7 @@ export function NavAuthActions() {
   }, [user, isLoading, pathname, router]);
 
   if (isLoading) {
-    const isDashboardRoute = pathname?.startsWith("/dashboard") || pathname?.startsWith("/collector") || pathname?.startsWith("/admin");
+    const isDashboardRoute = pathname?.startsWith("/dashboard") || pathname?.startsWith("/collector") || pathname?.startsWith("/admin") || pathname?.startsWith("/recycling") || pathname?.startsWith("/business");
 
     if (isDashboardRoute) {
       return (
@@ -63,7 +63,11 @@ export function NavAuthActions() {
     if (user.role === "USER" && user.accountType === "BUSINESS") {
       dashboardHomeHref = "/business/dashboard";
     }
-    const isInDashboardShell = pathname?.startsWith(dashboardHomeHref) || pathname?.startsWith("/profile") || pathname?.startsWith("/waste-recognition") || false;
+    
+    // Determine if the user is currently inside their dashboard shell.
+    // For recycling companies, any /recycling route is within the shell.
+    const isRecyclingShell = user.role === "RECYCLING_COMPANY" && pathname?.startsWith("/recycling");
+    const isInDashboardShell = isRecyclingShell || pathname?.startsWith(dashboardHomeHref) || pathname?.startsWith("/profile") || pathname?.startsWith("/waste-recognition") || false;
 
     return (
       <div className="flex items-center gap-1 sm:gap-3">

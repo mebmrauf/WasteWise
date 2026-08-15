@@ -32,6 +32,7 @@ export interface BulkMarketplaceRequest {
   verifiedTotalWeightKg?: number;
   collectionPhotos?: string[];
   rating?: { score: number; comment?: string | null } | null;
+  csrContributions?: { id: string }[];
   quotations?: MarketplaceQuotation[];
 }
 
