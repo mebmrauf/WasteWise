@@ -314,7 +314,7 @@ export default function UserDashboardPage() {
               />
               <DashboardFeatureTile
                 icon={BadgeCheck}
-                label="Verified Collectors"
+                label="Find a Collector"
                 description="Find trusted collectors near you."
                 href="/dashboard/collectors"
                 className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"

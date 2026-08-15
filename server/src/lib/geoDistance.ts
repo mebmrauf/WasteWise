@@ -1,12 +1,6 @@
-// ---------------------------------------------------------------------------
-// Straight-line ("as the crow flies") distance between two lat/lng points,
-// used to match a collector's service radius against a pickup's location.
-// Good enough for "is this pickup roughly within my coverage area?" — not
-// meant for turn-by-turn routing (the app already uses Google's Directions
-// API for that, in components/Map.tsx).
-// ---------------------------------------------------------------------------
-
 const EARTH_RADIUS_KM = 6371;
+
+export const MAX_COLLECTOR_MATCH_DISTANCE_KM = 20;
 
 export interface LatLng {
   lat: number;

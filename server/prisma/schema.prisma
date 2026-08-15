@@ -77,6 +77,7 @@ model User {
   referredUsers                         User[]                      @relation("Referrals")
   wasteRecognitionLogs                  WasteRecognitionLog[]
   weightRecordsLogged                   WeightRecord[]              @relation("WeightLogger")
+  csrContributions                      CsrContribution[]           @relation("BusinessCsrContributions")
 }
 
 model OAuthAccount {
@@ -164,9 +165,6 @@ model CollectorProfile {
   lastLocationUpdatedAt         DateTime?
   createdAt                     DateTime           @default(now())
   updatedAt                     DateTime           @updatedAt
-  serviceArea                   String             @default("")
-  vehicleNumber                 String             @default("")
-  user                          User               @relation("CollectorProfileUser", fields: [userId], references: [id], onDelete: Cascade)
   verificationReviewedByAdmin   User?              @relation("CollectorVerificationReviewer", fields: [verificationReviewedByAdminId], references: [id])
 }
 
@@ -200,6 +198,7 @@ model BusinessProfile {
   verificationReviewedAt        DateTime?
   verificationReviewedByAdminId String?
   verificationRejectionReason   String?
+  askForCsrContribution         Boolean            @default(true)
   createdAt                     DateTime           @default(now())
   updatedAt                     DateTime           @updatedAt
   user                          User               @relation("BusinessProfileUser", fields: [userId], references: [id], onDelete: Cascade)
@@ -425,6 +424,7 @@ model BulkMarketplaceRequest {
   business              User                   @relation("BusinessRequests", fields: [businessId], references: [id])
   quotations            MarketplaceQuotation[]
   rating                Rating?
+  csrContributions      CsrContribution[]
 
   @@index([businessId])
   @@index([status])
@@ -492,7 +492,6 @@ enum VehicleType {
   MOTORCYCLE_VAN
   PICKUP_TRUCK
   TRUCK
-  OTHER
 }
 
 enum WasteCategory {
@@ -573,6 +572,7 @@ enum TransactionCategory {
   REFERRAL
   LOYALTY
   REDEMPTION
+  CSR_CONTRIBUTION
   OTHER
 }
 
@@ -592,4 +592,22 @@ enum SimType {
 enum MobileRechargeStatus {
   SUCCESS
   FAILED
+}
+
+model CsrContribution {
+  id                 String                 @id @default(cuid())
+  businessId         String
+  pickupId           String
+  donationAmount     Float
+  donationPercentage Float?
+  selectedCause      String
+  paymentAmount      Float
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  business           User                   @relation("BusinessCsrContributions", fields: [businessId], references: [id], onDelete: Cascade)
+  pickup             BulkMarketplaceRequest @relation(fields: [pickupId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([pickupId])
 }

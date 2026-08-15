@@ -58,13 +58,11 @@ interface ProfileExtras {
   avatarUrl: string | null;
   collectorProfile: CollectorProfileSummary | null;
   emailNotificationsEnabled: boolean;
-  smsNotificationsEnabled: boolean;
   rewardsEmailNotificationsEnabled: boolean;
 }
 
 const notificationPreferenceKeys = {
   email: "emailNotificationsEnabled",
-  sms: "smsNotificationsEnabled",
   rewardsEmail: "rewardsEmailNotificationsEnabled",
 } as const;
 
@@ -153,7 +151,6 @@ export function CollectorProfileView() {
           avatarUrl: resolveAvatarUrl(profile.avatarUrl),
           collectorProfile: profile.collectorProfile,
           emailNotificationsEnabled: profile.emailNotificationsEnabled,
-          smsNotificationsEnabled: profile.smsNotificationsEnabled,
           rewardsEmailNotificationsEnabled: profile.rewardsEmailNotificationsEnabled,
         });
         setDetails(draftFromProfile(profile.collectorProfile));
@@ -610,16 +607,6 @@ export function CollectorProfileView() {
               onChange={(event) => void handleToggleNotification("email", event.target.checked)}
             />
             Email me about job offers &amp; pickup updates
-          </label>
-          <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
-            <input
-              type="checkbox"
-              className="h-5 w-5 accent-primary-600 rounded shrink-0"
-              checked={extras?.smsNotificationsEnabled ?? false}
-              disabled={!extras}
-              onChange={(event) => void handleToggleNotification("sms", event.target.checked)}
-            />
-            Text me about job offers &amp; pickup updates
           </label>
           <label className="flex items-center gap-3 text-body text-neutral-900 cursor-pointer p-3 rounded-xl hover:bg-neutral-50 transition-colors">
             <input

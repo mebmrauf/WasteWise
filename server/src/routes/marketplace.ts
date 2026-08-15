@@ -6,6 +6,7 @@ import { asyncHandler } from "../lib/asyncHandler";
 import { sendData, sendError } from "../lib/apiResponse";
 import { WasteCategory, VehicleType, Prisma, Role } from "@prisma/client";
 import { createNotification } from "../lib/notifications";
+import { calculateMembershipLevel, getMembershipBonusPercentage, getMembershipBadge } from "../lib/rewards";
 
 export const marketplaceRouter = Router();
 
@@ -118,6 +119,9 @@ marketplaceRouter.get(
           },
           rating: {
             select: { score: true }
+          },
+          csrContributions: {
+            select: { id: true }
           }
         } : {}),
         ...(isRecyclingCompany ? {
@@ -400,7 +404,7 @@ marketplaceRouter.post(
   asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
-    
+
     if (!["EN_ROUTE", "ARRIVED", "IN_PROGRESS"].includes(status)) {
       sendError(res, 400, "BAD_REQUEST", "Invalid status update.");
       return;
@@ -471,7 +475,7 @@ marketplaceRouter.post(
   requireRole(Role.USER),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
-    
+
     const request = await prisma.bulkMarketplaceRequest.findUnique({ where: { id } });
     if (!request || request.businessId !== req.user!.id) {
       sendError(res, 404, "NOT_FOUND", "Request not found.");
@@ -487,35 +491,130 @@ marketplaceRouter.post(
       where: { id },
       data: { status: "COMPLETED" }
     });
-    
+
     void createNotification({
       userId: request.assignedCompanyId!,
       type: "PICKUP_STATUS_UPDATE",
       title: "Collection Confirmed",
-      message: `The business has confirmed the collection for request ${id.slice(0,8)}.`,
+      message: `The business has confirmed the collection for request ${id.slice(0, 8)}.`,
       emailPreference: "emailNotificationsEnabled",
     });
-    
-    // Also award points to business (simplified here)
+
+    // Also award points to business and update membership
     if (request.verifiedTotalWeightKg) {
-      const points = Math.floor(request.verifiedTotalWeightKg * 2);
-      await prisma.user.update({
+      const basePoints = Math.floor(request.verifiedTotalWeightKg * 2);
+      
+      const user = await prisma.user.findUnique({
         where: { id: req.user!.id },
-        data: {
-          greenPointsBalance: { increment: points },
-          totalGreenPoints: { increment: points }
+        select: {
+          greenPointsBalance: true,
+          totalGreenPoints: true,
+          accountType: true,
+          membershipLevel: true,
+          sustainabilityCertificateUrl: true
         }
       });
-      await prisma.greenPointsTransaction.create({
-        data: {
-          userId: req.user!.id,
-          points,
-          type: "EARNED",
-          category: "PICKUP",
-          description: "Earned from Bulk Marketplace Collection",
-          totalPoints: points,
+
+      if (user) {
+        const lifetimePoints = Math.max(user.totalGreenPoints, user.greenPointsBalance);
+        const currentLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
+        const bonusPercentage = getMembershipBonusPercentage(currentLevel);
+        const bonusPoints = Math.round(basePoints * (bonusPercentage / 100));
+        const totalPoints = basePoints + bonusPoints;
+
+        const newLifetimePoints = lifetimePoints + totalPoints;
+        const newLevel = calculateMembershipLevel(newLifetimePoints, user.accountType);
+        const newBadge = getMembershipBadge(newLevel);
+
+        const bonusesBreakdown = [];
+        bonusesBreakdown.push({
+          name: `${currentLevel.charAt(0).toUpperCase() + currentLevel.slice(1).toLowerCase()} Bonus${bonusPercentage > 0 ? ` (${bonusPercentage}%)` : ''}`,
+          points: bonusPoints
+        });
+
+        const rewardReason = {
+          basePoints,
+          bonusPoints,
+          totalPoints,
+          bonuses: bonusesBreakdown
+        };
+
+        const updateData: any = {
+          greenPointsBalance: { increment: totalPoints },
+          totalGreenPoints: { increment: totalPoints },
+          membershipLevel: newLevel,
+          membershipBadge: newBadge
+        };
+
+        // If newly reached GOLD and no certificate yet, unlock it
+        let unlockedCertificate = false;
+        if ((newLevel === "GOLD" || newLevel === "PLATINUM") && !user.sustainabilityCertificateUrl) {
+          updateData.sustainabilityCertificateUrl = "UNLOCKED";
+          unlockedCertificate = true;
         }
-      });
+
+        await prisma.user.update({
+          where: { id: req.user!.id },
+          data: updateData
+        });
+
+        await prisma.greenPointsTransaction.create({
+          data: {
+            userId: req.user!.id,
+            points: basePoints,
+            type: "EARNED",
+            category: "PICKUP",
+            description: `Earned from Bulk Marketplace Collection (Req: ${id.slice(0, 8)})`,
+            basePoints,
+            bonusPoints,
+            totalPoints,
+            rewardReason: rewardReason as any
+          }
+        });
+
+        await prisma.greenPointsTransaction.create({
+          data: {
+            userId: req.user!.id,
+            points: bonusPoints,
+            type: "EARNED",
+            category: "LOYALTY",
+            description: `${currentLevel.charAt(0).toUpperCase() + currentLevel.slice(1).toLowerCase()} Membership Bonus${bonusPercentage > 0 ? ` (${bonusPercentage}%)` : ''}`,
+            basePoints: 0,
+            bonusPoints: bonusPoints,
+            totalPoints: bonusPoints,
+          }
+        });
+
+        if (currentLevel !== newLevel) {
+          await prisma.greenPointsTransaction.create({
+            data: {
+              userId: req.user!.id,
+              points: 0,
+              type: "EARNED",
+              category: "BONUS",
+              description: `${newLevel.charAt(0).toUpperCase() + newLevel.slice(1).toLowerCase()} Membership Unlocked`,
+              basePoints: 0,
+              bonusPoints: 0,
+              totalPoints: 0,
+            }
+          });
+        }
+
+        if (unlockedCertificate) {
+          await prisma.greenPointsTransaction.create({
+            data: {
+              userId: req.user!.id,
+              points: 0,
+              type: "EARNED",
+              category: "BONUS",
+              description: "Sustainability Certificate Awarded",
+              basePoints: 0,
+              bonusPoints: 0,
+              totalPoints: 0,
+            }
+          });
+        }
+      }
     }
 
     sendData(res, 200, { success: true });
@@ -530,7 +629,7 @@ marketplaceRouter.post(
   asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { rating, review } = req.body;
-    
+
     const request = await prisma.bulkMarketplaceRequest.findUnique({ where: { id } });
     if (!request || request.businessId !== req.user!.id) {
       sendError(res, 404, "NOT_FOUND", "Request not found.");
@@ -541,7 +640,7 @@ marketplaceRouter.post(
       sendError(res, 400, "BAD_REQUEST", "Can only rate completed requests.");
       return;
     }
-    
+
     if (!request.assignedCompanyId) {
       sendError(res, 400, "BAD_REQUEST", "No assigned company to rate.");
       return;
