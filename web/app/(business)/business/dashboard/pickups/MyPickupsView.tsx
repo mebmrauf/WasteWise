@@ -10,8 +10,11 @@ import { Icon } from "@/components/Icon";
 import { InlineConfirm } from "@/components/InlineConfirm";
 import { PageContainer } from "@/components/PageContainer";
 import { CollectorRatingModal } from "@/components/CollectorRatingModal";
+import { StatusTimeline } from "@/components/StatusTimeline";
 import { ReceiptModal } from "@/components/ReceiptModal";
 import { CompanyRatingModal } from "@/components/CompanyRatingModal";
+import { CsrContributionModal } from "@/components/CsrContributionModal";
+import { createCsrContribution } from "@/lib/api/csr";
 import { StatusPill } from "@/components/StatusPill";
 import { PickupOffersPanel } from "@/components/PickupOffersPanel";
 import { TrackPickupPanel } from "@/components/TrackPickupPanel";
@@ -64,6 +67,7 @@ export function MyPickupsView() {
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [pickups, setPickups] = React.useState<(PickupRequestSummary | BulkMarketplaceRequest)[]>([]);
   const [bulkDetailsPickup, setBulkDetailsPickup] = React.useState<BulkMarketplaceRequest | null>(null);
+  const [csrModalPickup, setCsrModalPickup] = React.useState<BulkMarketplaceRequest | null>(null);
 
   // Filtering states
   const [typeFilter, setTypeFilter] = React.useState<"ALL" | "SMART" | "BULK">("ALL");
@@ -755,6 +759,27 @@ export function MyPickupsView() {
             fetchPickups(true).then(() => {
                // Update bulkDetailsPickup with fresh data if possible
                // We rely on the fetchPickups completion to update the parent state
+            });
+          }}
+          onCsrTrigger={(req) => setCsrModalPickup(req)}
+        />
+      )}
+
+      {csrModalPickup && (
+        <CsrContributionModal
+          isOpen={!!csrModalPickup}
+          onClose={() => {
+            setCsrModalPickup(null);
+            void fetchPickups(true);
+          }}
+          paymentAmount={csrModalPickup.quotations?.find(q => q.status === "ACCEPTED")?.purchasePrice || 0}
+          onConfirm={async (amount, percentage, cause) => {
+            await createCsrContribution({
+              pickupId: csrModalPickup.id,
+              donationAmount: amount,
+              donationPercentage: percentage,
+              selectedCause: cause,
+              paymentAmount: csrModalPickup.quotations?.find(q => q.status === "ACCEPTED")?.purchasePrice || 0,
             });
           }}
         />

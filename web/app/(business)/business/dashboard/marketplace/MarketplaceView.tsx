@@ -795,7 +795,6 @@ export function MarketplaceView() {
           request={reviewingRequest} 
           onClose={() => setReviewingRequest(null)}
           onAccept={() => {
-            setReviewingRequest(null);
             void loadRequests();
           }}
         />
@@ -830,6 +829,10 @@ function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketpl
       setErrorMsg(null);
       await acceptQuotation(request.id, quoteId);
       onAccept();
+      
+      // Reload quotations from the backend to get true ACCEPTED/REJECTED states
+      const data = await getQuotations(request.id);
+      setQuotations(data);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to accept quotation");
     } finally {
@@ -902,6 +905,20 @@ function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketpl
                       >
                         {acceptingId === quote.id ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                         Accept Quotation
+                      </Button>
+                    </div>
+                  )}
+                  {quote.status === "ACCEPTED" && (
+                    <div className="mt-4 flex justify-end">
+                      <Button disabled className="bg-emerald-100 text-emerald-800 border-emerald-200 opacity-100">
+                        Accepted
+                      </Button>
+                    </div>
+                  )}
+                  {quote.status === "REJECTED" && (
+                    <div className="mt-4 flex justify-end">
+                      <Button disabled className="bg-neutral-100 text-neutral-500 border-neutral-200 opacity-100">
+                        Rejected
                       </Button>
                     </div>
                   )}

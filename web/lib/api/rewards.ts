@@ -65,10 +65,28 @@ export interface MobileRechargeTransaction {
 export function getRewardsHistory(): Promise<{
   greenPointsTransactions: GreenPointsTransaction[];
   mobileRechargeTransactions: MobileRechargeTransaction[];
+  csrContributions?: {
+    id: string;
+    pickupId: string;
+    donationAmount: number;
+    donationPercentage: number | null;
+    selectedCause: string;
+    paymentAmount: number;
+    createdAt: string;
+  }[];
 }> {
   return authFetch<{
     greenPointsTransactions: GreenPointsTransaction[];
     mobileRechargeTransactions: MobileRechargeTransaction[];
+    csrContributions?: {
+      id: string;
+      pickupId: string;
+      donationAmount: number;
+      donationPercentage: number | null;
+      selectedCause: string;
+      paymentAmount: number;
+      createdAt: string;
+    }[];
   }>("/rewards/history", { method: "GET" });
 }
 

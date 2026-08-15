@@ -76,6 +76,7 @@ export const updateBusinessProfileSchema = z
   .object({
     businessName: z.string().trim().min(1, "Business name is required").optional(),
     tradeLicenseNumber: z.string().trim().optional().nullable(),
+    askForCsrContribution: z.boolean().optional(),
   })
   .strict();
 
