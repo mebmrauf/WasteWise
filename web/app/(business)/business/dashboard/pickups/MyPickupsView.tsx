@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils";
 
 type LoadState = "loading" | "ready" | "error";
 
-type LoadState = "loading" | "ready" | "error";
 
 export function MyPickupsView() {
   const [loadState, setLoadState] = React.useState<LoadState>("loading");

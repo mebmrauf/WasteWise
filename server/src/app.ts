@@ -18,7 +18,7 @@ import { notificationsRouter } from "./routes/notifications";
 import { adminRouter } from "./routes/admin";
 import { collectorsRouter } from "./routes/collectors";
 import { marketplaceRouter } from "./routes/marketplace";
-import { complaintsRouter } from "./routes/complaints";
+import { complaintsRouter, COMPLAINT_PHOTO_UPLOAD_DIR } from "./routes/complaints";
 import { csrRouter } from "./routes/csr";
 
 export function createApp() {
@@ -75,6 +75,17 @@ export function createApp() {
       next();
     },
     express.static(WASTE_PHOTO_UPLOAD_DIR),
+  );
+
+  app.use(
+    "/uploads/complaints",
+    helmet.crossOriginResourcePolicy({ policy: "cross-origin" }),
+    (req, res, next) => {
+      res.setHeader("Content-Disposition", "attachment");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      next();
+    },
+    express.static(COMPLAINT_PHOTO_UPLOAD_DIR),
   );
 
   // 404 fallback — kept last so it never shadows a real route.

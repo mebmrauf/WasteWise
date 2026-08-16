@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, AlertTriangle, XCircle, Info } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, Info, Circle } from "lucide-react";
 
 type StatusTone = "success" | "warning" | "error" | "info" | "neutral";
 
