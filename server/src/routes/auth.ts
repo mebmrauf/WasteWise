@@ -445,6 +445,7 @@ authRouter.get(
 async function findOrCreateOAuthUser(
   provider: "GOOGLE" | "FACEBOOK",
   profile: OAuthProfile,
+  roleChoice?: string
 ): Promise<{ user: User } | { error: string }> {
   const existingAccount = await prisma.oAuthAccount.findUnique({
     where: {
@@ -472,17 +473,54 @@ async function findOrCreateOAuthUser(
     return { user: existingUserByEmail };
   }
 
+  if (!roleChoice) {
+    return { error: "oauth_account_not_found" };
+  }
+
+  let role: "USER" | "COLLECTOR" | "RECYCLING_COMPANY" = "USER";
+  let accountType: "HOUSEHOLD" | "BUSINESS" | null = "HOUSEHOLD";
+
+  if (roleChoice === "BUSINESS") {
+    accountType = "BUSINESS";
+  } else if (roleChoice === "COLLECTOR") {
+    role = "COLLECTOR";
+    accountType = null;
+  } else if (roleChoice === "RECYCLING_COMPANY") {
+    role = "RECYCLING_COMPANY";
+    accountType = null;
+  }
+
   const user = await prisma.user.create({
     data: {
       email: profile.email,
       fullName: profile.fullName,
       passwordHash: null,
-      role: "USER",
-      accountType: "HOUSEHOLD",
+      role,
+      accountType,
       isEmailVerified: true, // provider already verified this email address
       oauthAccounts: {
         create: { provider, providerAccountId: profile.providerAccountId },
       },
+      collectorProfile: role === "COLLECTOR" ? {
+        create: {
+          vehicleType: "HANDCART",
+          serviceArea: "Dhaka",
+          verificationStatus: "PENDING",
+        }
+      } : undefined,
+      recyclingCompanyProfile: role === "RECYCLING_COMPANY" ? {
+        create: {
+          companyName: profile.fullName,
+          district: "Dhaka",
+          verificationStatus: "PENDING",
+        }
+      } : undefined,
+      businessProfile: role === "USER" && accountType === "BUSINESS" ? {
+        create: {
+          businessName: profile.fullName,
+          verificationStatus: "PENDING",
+        }
+      } : undefined
     },
   });
   return { user };
@@ -491,9 +529,10 @@ async function findOrCreateOAuthUser(
 async function completeOAuthLogin(
   provider: "GOOGLE" | "FACEBOOK",
   profile: OAuthProfile,
+  roleChoice?: string
 ): Promise<{ redirectUrl: string; tokens?: Awaited<ReturnType<typeof issueTokenPair>> }> {
   try {
-    const result = await findOrCreateOAuthUser(provider, profile);
+    const result = await findOrCreateOAuthUser(provider, profile, roleChoice);
     if ("error" in result) {
       return { redirectUrl: loginErrorRedirect(result.error) };
     }
@@ -506,6 +545,7 @@ async function completeOAuthLogin(
 }
 
 authRouter.get("/google", authRateLimiter, (req, res) => {
+  const { roleChoice } = req.query;
   if (!isGoogleOAuthConfigured()) {
     sendError(res, 503, "OAUTH_NOT_CONFIGURED", "Google sign-in is not available right now.");
     return;
@@ -515,6 +555,12 @@ authRouter.get("/google", authRateLimiter, (req, res) => {
     ...secureCookieOptions,
     maxAge: OAUTH_STATE_COOKIE_MAX_AGE_MS,
   });
+  if (roleChoice && typeof roleChoice === "string") {
+    res.cookie("oauth_role_choice", roleChoice, {
+      ...secureCookieOptions,
+      maxAge: 10 * 60 * 1000,
+    });
+  }
   res.redirect(buildGoogleAuthorizationUrl(state));
 });
 
@@ -535,6 +581,9 @@ authRouter.get(
       return;
     }
 
+    const roleChoice = req.cookies?.["oauth_role_choice"];
+    res.clearCookie("oauth_role_choice", secureCookieOptions);
+
     let profile: OAuthProfile;
     try {
       profile = await exchangeGoogleCode(code);
@@ -543,13 +592,14 @@ authRouter.get(
       return;
     }
 
-    const { redirectUrl, tokens } = await completeOAuthLogin("GOOGLE", profile);
+    const { redirectUrl, tokens } = await completeOAuthLogin("GOOGLE", profile, roleChoice);
     if (tokens) setAuthCookies(res, tokens);
     res.redirect(redirectUrl);
   }),
 );
 
 authRouter.get("/facebook", authRateLimiter, (req, res) => {
+  const { roleChoice } = req.query;
   if (!isFacebookOAuthConfigured()) {
     sendError(res, 503, "OAUTH_NOT_CONFIGURED", "Facebook sign-in is not available right now.");
     return;
@@ -559,6 +609,12 @@ authRouter.get("/facebook", authRateLimiter, (req, res) => {
     ...secureCookieOptions,
     maxAge: OAUTH_STATE_COOKIE_MAX_AGE_MS,
   });
+  if (roleChoice && typeof roleChoice === "string") {
+    res.cookie("oauth_role_choice", roleChoice, {
+      ...secureCookieOptions,
+      maxAge: 10 * 60 * 1000,
+    });
+  }
   res.redirect(buildFacebookAuthorizationUrl(state));
 });
 
@@ -579,6 +635,9 @@ authRouter.get(
       return;
     }
 
+    const roleChoice = req.cookies?.["oauth_role_choice"];
+    res.clearCookie("oauth_role_choice", secureCookieOptions);
+
     let profile: OAuthProfile;
     try {
       profile = await exchangeFacebookCode(code);
@@ -587,7 +646,7 @@ authRouter.get(
       return;
     }
 
-    const { redirectUrl, tokens } = await completeOAuthLogin("FACEBOOK", profile);
+    const { redirectUrl, tokens } = await completeOAuthLogin("FACEBOOK", profile, roleChoice);
     if (tokens) setAuthCookies(res, tokens);
     res.redirect(redirectUrl);
   }),
