@@ -1,5 +1,7 @@
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { AuthPageShell } from "../_components/AuthPageShell";
+import { OAuthButtons } from "../_components/OAuthButtons";
+import { OrDivider } from "../_components/OrDivider";
 import { LoginForm } from "./LoginForm";
 
 
@@ -9,6 +11,7 @@ const oauthErrorMessages: Record<string, string> = {
   oauth_email_required:
     "That account doesn't have a verified email address on file, so we can't create a WasteWise account from it. Please sign up with email instead.",
   oauth_failed: "Something went wrong signing you in. Please try again.",
+  oauth_account_not_found: "No account found with this email. Please sign up instead.",
 };
 
 function resolveOAuthErrorMessage(errorParam: string | string[] | undefined): string | null {
@@ -48,6 +51,10 @@ export default async function LoginPage({
         </>
       }
     >
+      <div className="mb-6">
+        <OAuthButtons />
+      </div>
+      <OrDivider />
       <LoginForm />
     </AuthPageShell>
   );
