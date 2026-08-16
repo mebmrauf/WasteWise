@@ -78,7 +78,7 @@ async function processExpiredRequest(request: any) {
     if (highestBid) {
       // Send Email
       if (request.business.email) {
-        const dashboardLink = `${env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/business/dashboard/marketplace`;
+        const dashboardLink = `${env.CLIENT_ORIGIN[0] || "http://localhost:3000"}/business/dashboard/marketplace`;
         
         await sendEmail({
           to: request.business.email,
