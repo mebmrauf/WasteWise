@@ -362,7 +362,7 @@ export default function UserDashboardPage() {
                           </div>
                           <div className="text-sm font-medium text-neutral-500 truncate">
                             {('items' in rp) 
-                              ? rp.items.map(i => i.category).join(', ') 
+                              ? (rp as any).items.map((i: any) => i.category).join(', ') 
                               : (() => {
                                   try {
                                     const types = typeof rp.wasteTypes === 'string' ? JSON.parse(rp.wasteTypes) : rp.wasteTypes;

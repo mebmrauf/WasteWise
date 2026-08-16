@@ -11,6 +11,7 @@ export interface BulkMarketplaceRequest {
   longitude: number | null;
   placeId: string | null;
   preferredPickupDate: string;
+  bidEndsAt: string | null;
   images: string[];
   additionalNotes: string | null;
   status: "OPEN_FOR_BIDDING" | "BIDDING_CLOSED" | "RECYCLING_COMPANY_ASSIGNED" | "EN_ROUTE" | "ARRIVED" | "IN_PROGRESS" | "VERIFYING_WEIGHTS" | "COMPLETED" | "CANCELLED";
