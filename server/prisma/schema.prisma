@@ -562,6 +562,7 @@ enum NotificationType {
   VERIFICATION_UPDATE
   COMPLAINT_UPDATE
   GENERIC
+  ROUTE_UPDATE
 }
 
 enum GreenPointsTransactionType {
