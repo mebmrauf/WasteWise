@@ -2,13 +2,14 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, AlertTriangle, XCircle, Info } from "lucide-react";
 
-type StatusTone = "success" | "warning" | "error" | "info";
+type StatusTone = "success" | "warning" | "error" | "info" | "neutral";
 
 const toneClasses: Record<StatusTone, string> = {
   success: "border-success-500 bg-success-50 text-success-700",
   warning: "border-warning-500 bg-warning-50 text-warning-700",
   error: "border-error-500 bg-error-50 text-error-700",
   info: "border-info-500 bg-info-50 text-info-700",
+  neutral: "border-neutral-200 bg-neutral-50 text-neutral-700",
 };
 
 const ToneIcons = {
@@ -16,6 +17,7 @@ const ToneIcons = {
   warning: AlertTriangle,
   error: XCircle,
   info: Info,
+  neutral: Info,
 };
 
 export interface StatusPillProps {

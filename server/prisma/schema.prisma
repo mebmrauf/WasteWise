@@ -415,6 +415,7 @@ model BulkMarketplaceRequest {
   images                String[]
   additionalNotes       String?
   status                BulkRequestStatus      @default(OPEN_FOR_BIDDING)
+  bidEndsAt             DateTime?
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   collectionPhotos      String[]
@@ -440,6 +441,7 @@ model MarketplaceQuotation {
   estimatedPickupTime String?
   additionalNotes     String?
   status              QuotationStatus        @default(PENDING)
+  isHighestBid        Boolean                @default(false)
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
   pricesPerKg         Json?
@@ -530,6 +532,7 @@ enum OfferStatus {
 
 enum BulkRequestStatus {
   OPEN_FOR_BIDDING
+  BIDDING_CLOSED
   RECYCLING_COMPANY_ASSIGNED
   EN_ROUTE
   ARRIVED

@@ -13,7 +13,7 @@ export interface BulkMarketplaceRequest {
   preferredPickupDate: string;
   images: string[];
   additionalNotes: string | null;
-  status: "OPEN_FOR_BIDDING" | "RECYCLING_COMPANY_ASSIGNED" | "EN_ROUTE" | "ARRIVED" | "IN_PROGRESS" | "VERIFYING_WEIGHTS" | "COMPLETED" | "CANCELLED";
+  status: "OPEN_FOR_BIDDING" | "BIDDING_CLOSED" | "RECYCLING_COMPANY_ASSIGNED" | "EN_ROUTE" | "ARRIVED" | "IN_PROGRESS" | "VERIFYING_WEIGHTS" | "COMPLETED" | "CANCELLED";
   createdAt: string;
   updatedAt: string;
   business?: {
@@ -46,6 +46,7 @@ export interface MarketplaceQuotation {
   estimatedPickupTime: string | null;
   additionalNotes: string | null;
   status: "PENDING" | "ACCEPTED" | "REJECTED";
+  isHighestBid?: boolean;
   createdAt: string;
   updatedAt: string;
   pricesPerKg?: Record<string, number> | null;
@@ -118,6 +119,12 @@ export async function getQuotations(requestId: string): Promise<MarketplaceQuota
 
 export async function acceptQuotation(requestId: string, quoteId: string): Promise<void> {
   await authFetch<void>(`/marketplace/requests/${requestId}/quotations/${quoteId}/accept`, {
+    method: "POST",
+  });
+}
+
+export async function rejectHighestQuotation(requestId: string, quoteId: string): Promise<void> {
+  await authFetch<void>(`/marketplace/requests/${requestId}/quotations/${quoteId}/reject`, {
     method: "POST",
   });
 }
