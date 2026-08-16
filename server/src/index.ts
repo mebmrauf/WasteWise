@@ -9,6 +9,7 @@ import { prisma } from "./lib/prisma";
 import { hashPassword } from "./lib/passwords";
 import { startRecyclingReminderScheduler } from "./lib/reminderScheduler";
 import { startEmailVerificationReminderScheduler } from "./lib/emailVerificationReminders";
+import { startBiddingScheduler } from "./lib/biddingScheduler";
 
 const httpServer = http.createServer(app);
 
@@ -38,6 +39,7 @@ ensureAdminUser().then(() => {
     startRecyclingReminderScheduler();
     logger.info("Smart Pickup Reminder scheduler started");
     startEmailVerificationReminderScheduler();
+    startBiddingScheduler();
   });
 }).catch((err) => {
   logger.fatal({ err }, "Failed to seed admin user. Exiting...");

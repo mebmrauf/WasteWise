@@ -279,12 +279,12 @@ export default function UserDashboardPage() {
 
           <div className="mb-10">
             <h2 className="text-xl font-semibold text-neutral-900 mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <DashboardFeatureTile
-                icon={Truck}
-                label="Request Pickup"
-                description="Schedule a smart pickup easily."
-                href="/business/dashboard/pickups/new"
+                icon={Package}
+                label="Bulk Marketplace"
+                description="List your bulk waste and get bids."
+                href="/business/dashboard/marketplace"
                 className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"
                 iconContainerClassName="bg-emerald-100 text-emerald-600"
               />
@@ -350,7 +350,7 @@ export default function UserDashboardPage() {
                   </Link>
                 </div>
                 <div className="flex flex-col gap-4">
-                  {recentPickupsList.map(rp => (
+                  {recentPickupsList.filter(rp => 'wasteTypes' in rp).map(rp => (
                     <Card key={rp.id} className="flex items-center justify-between p-6 rounded-2xl shadow-sm border border-neutral-100 bg-white hover:shadow-md transition-shadow">
                       <div className="flex items-center gap-5 min-w-0">
                         <div className={`flex h-12 w-12 items-center justify-center rounded-full shrink-0 ${('wasteTypes' in rp) ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
@@ -358,7 +358,7 @@ export default function UserDashboardPage() {
                         </div>
                         <div className="min-w-0">
                           <div className="font-bold text-neutral-900 mb-1 truncate">
-                            {('wasteTypes' in rp) ? "Bulk Pickup" : "Smart Pickup"} &bull; {new Date(rp.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                            Bulk Pickup &bull; {new Date(rp.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                           </div>
                           <div className="text-sm font-medium text-neutral-500 truncate">
                             {('items' in rp) 
