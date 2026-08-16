@@ -4,7 +4,8 @@ export type ComplaintStatus = "OPEN" | "IN_REVIEW" | "RESOLVED" | "DISMISSED";
 
 export interface Complaint {
   id: string;
-  pickupRequestId: string;
+  pickupRequestId: string | null;
+  bulkRequestId: string | null;
   complainantId: string;
   againstUserId: string | null;
   description: string;
@@ -12,6 +13,7 @@ export interface Complaint {
   resolutionNotes: string | null;
   resolvedAt: string | null;
   resolvedByAdminId: string | null;
+  photos: string[];
   createdAt: string;
   updatedAt: string;
   againstUser?: {
@@ -32,22 +34,21 @@ export interface Complaint {
     timeSlotEnd?: string;
     pickupFormattedAddress?: string;
   } | null;
+  bulkRequest?: {
+    id: string;
+    status: string;
+    pickupAddress?: string;
+  } | null;
   resolvedByAdmin?: {
     id: string;
     fullName: string;
   } | null;
 }
 
-export interface CreateComplaintInput {
-  pickupRequestId: string;
-  description: string;
-  againstUserId?: string;
-}
-
-export async function createComplaint(data: CreateComplaintInput): Promise<{ complaint: Complaint }> {
+export async function createComplaint(data: FormData): Promise<{ complaint: Complaint }> {
   return authFetch<{ complaint: Complaint }>("/complaints", {
     method: "POST",
-    body: JSON.stringify(data),
+    body: data,
     headers: {
       "x-csrf-token": readCsrfToken(),
     },

@@ -278,6 +278,7 @@ adminRouter.get(
         complainant: { select: { id: true, fullName: true, email: true, role: true } },
         againstUser: { select: { id: true, fullName: true, email: true, role: true } },
         pickupRequest: { select: { id: true, status: true } },
+        bulkRequest: { select: { id: true, status: true } },
         resolvedByAdmin: { select: { id: true, fullName: true } },
       },
       orderBy: { createdAt: "desc" },

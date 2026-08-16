@@ -14,16 +14,17 @@ interface NewComplaintModalProps {
 }
 
 export function NewComplaintModal({ isOpen, onClose, onSuccess, limitedOptions }: NewComplaintModalProps) {
-  const [pickupRequestId, setPickupRequestId] = React.useState("");
+  const [requestId, setRequestId] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [againstUserId, setAgainstUserId] = React.useState("");
+  const [photos, setPhotos] = React.useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pickupRequestId.trim()) {
-      setError("Please provide a Pickup Request ID.");
+    if (!requestId.trim()) {
+      setError("Please provide a Request ID.");
       return;
     }
     if (description.trim().length < 10) {
@@ -35,17 +36,24 @@ export function NewComplaintModal({ isOpen, onClose, onSuccess, limitedOptions }
     setError(null);
 
     try {
-      await createComplaint({
-        pickupRequestId: pickupRequestId.trim(),
-        description: description.trim(),
-        ...(againstUserId.trim() && !limitedOptions ? { againstUserId: againstUserId.trim() } : {}),
+      const formData = new FormData();
+      formData.append("requestId", requestId.trim());
+      formData.append("description", description.trim());
+      if (againstUserId.trim() && !limitedOptions) {
+        formData.append("againstUserId", againstUserId.trim());
+      }
+      photos.forEach(photo => {
+        formData.append("photos", photo);
       });
+
+      await createComplaint(formData);
       onSuccess();
       onClose();
       // Reset form
-      setPickupRequestId("");
+      setRequestId("");
       setDescription("");
       setAgainstUserId("");
+      setPhotos([]);
     } catch (err: any) {
       setError(err.message || "Failed to submit complaint.");
     } finally {
@@ -59,21 +67,21 @@ export function NewComplaintModal({ isOpen, onClose, onSuccess, limitedOptions }
         {error && <ErrorBanner title="Error">{error}</ErrorBanner>}
 
         <div>
-          <label htmlFor="pickupRequestId" className="block text-body-sm font-medium text-neutral-700 mb-1">
-            Pickup Request ID <span className="text-red-500">*</span>
+          <label htmlFor="requestId" className="block text-body-sm font-medium text-neutral-700 mb-1">
+            Request ID <span className="text-red-500">*</span>
           </label>
           <input
-            id="pickupRequestId"
+            id="requestId"
             type="text"
             className="w-full rounded-xl border-neutral-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-body"
-            value={pickupRequestId}
-            onChange={(e) => setPickupRequestId(e.target.value)}
-            placeholder="e.g. clabc123..."
+            value={requestId}
+            onChange={(e) => setRequestId(e.target.value)}
+            placeholder="e.g. A1B2C3"
             disabled={isSubmitting}
             required
           />
           <p className="text-xs text-neutral-500 mt-1">
-            You must link this complaint to a specific pickup request.
+            You must link this complaint to a specific pickup or bulk request.
           </p>
         </div>
 
@@ -112,11 +120,44 @@ export function NewComplaintModal({ isOpen, onClose, onSuccess, limitedOptions }
           />
         </div>
 
+        <div>
+          <label htmlFor="photos" className="block text-body-sm font-medium text-neutral-700 mb-1">
+            Attachments (Optional)
+          </label>
+          <input
+            id="photos"
+            type="file"
+            accept="image/jpeg, image/png, image/webp"
+            multiple
+            className="w-full text-body-sm"
+            disabled={isSubmitting}
+            onChange={(e) => {
+              const files = Array.from(e.target.files || []);
+              if (files.length > 2) {
+                setError("You can only attach a maximum of 2 photos.");
+                e.target.value = "";
+                return;
+              }
+              const oversized = files.find(f => f.size > 2 * 1024 * 1024);
+              if (oversized) {
+                setError("Each photo must be 2MB or smaller.");
+                e.target.value = "";
+                return;
+              }
+              setError(null);
+              setPhotos(files);
+            }}
+          />
+          <p className="text-xs text-neutral-500 mt-1">
+            Max 2 photos, up to 2MB each (JPEG, PNG, or WebP).
+          </p>
+        </div>
+
         <div className="flex justify-end gap-3 mt-4">
           <Button variant="secondary" type="button" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button variant="primary" type="submit" disabled={isSubmitting || !pickupRequestId.trim() || description.trim().length < 10}>
+          <Button variant="primary" type="submit" disabled={isSubmitting || !requestId.trim() || description.trim().length < 10}>
             {isSubmitting ? "Submitting..." : "Submit Complaint"}
           </Button>
         </div>

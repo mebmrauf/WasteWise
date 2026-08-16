@@ -313,6 +313,7 @@ model Rating {
 model Complaint {
   id                String          @id @default(cuid())
   pickupRequestId   String?
+  bulkRequestId     String?
   complainantId     String
   againstUserId     String?
   description       String
@@ -320,11 +321,13 @@ model Complaint {
   resolutionNotes   String?
   resolvedAt        DateTime?
   resolvedByAdminId String?
+  photos            String[]        @default([])
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   againstUser       User?           @relation("ComplaintTarget", fields: [againstUserId], references: [id])
   complainant       User            @relation("ComplaintFiler", fields: [complainantId], references: [id])
   pickupRequest     PickupRequest?  @relation(fields: [pickupRequestId], references: [id])
+  bulkRequest       BulkMarketplaceRequest? @relation(fields: [bulkRequestId], references: [id])
   resolvedByAdmin   User?           @relation("ComplaintResolver", fields: [resolvedByAdminId], references: [id])
 
   @@index([status])
@@ -425,6 +428,7 @@ model BulkMarketplaceRequest {
   quotations            MarketplaceQuotation[]
   rating                Rating?
   csrContributions      CsrContribution[]
+  complaints            Complaint[]
 
   @@index([businessId])
   @@index([status])
@@ -530,6 +534,7 @@ enum OfferStatus {
 
 enum BulkRequestStatus {
   OPEN_FOR_BIDDING
+  BIDDING_CLOSED
   RECYCLING_COMPANY_ASSIGNED
   EN_ROUTE
   ARRIVED
@@ -558,6 +563,7 @@ enum NotificationType {
   REMINDER
   VERIFICATION_UPDATE
   COMPLAINT_UPDATE
+  ROUTE_UPDATE
   GENERIC
 }
 

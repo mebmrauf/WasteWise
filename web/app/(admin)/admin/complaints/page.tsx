@@ -3,6 +3,7 @@
 import * as React from "react";
 import { getAllComplaints, updateComplaintStatus } from "@/lib/api/admin";
 import type { Complaint } from "@/lib/api/complaints";
+import { publicEnv } from "@/lib/env";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { ErrorBanner } from "@/components/ErrorBanner";
@@ -128,7 +129,9 @@ export default function AdminComplaintsPage() {
                     <div className="bg-neutral-50 p-3 rounded-lg border border-neutral-100">
                       <span className="text-xs font-semibold text-neutral-500 uppercase block mb-1">Pickup Request / Against</span>
                       <div className="text-body-sm font-medium text-neutral-900">
-                        {c.pickupRequest ? `Pickup: ${c.pickupRequestId.slice(-6).toUpperCase()}` : "General Complaint"}
+                        {c.pickupRequest && c.pickupRequestId && `Pickup: ${c.pickupRequestId.slice(-6).toUpperCase()}`}
+                        {c.bulkRequest && c.bulkRequestId && `Bulk Request: ${c.bulkRequestId.slice(0, 8).toUpperCase()}`}
+                        {!c.pickupRequest && !c.bulkRequest && "General Complaint"}
                       </div>
                       {c.againstUser && (
                         <div className="text-xs text-neutral-600 mt-1">
@@ -140,9 +143,27 @@ export default function AdminComplaintsPage() {
 
                   <div className="mb-4">
                     <span className="text-xs font-semibold text-neutral-500 uppercase block mb-1">Description</span>
-                    <p className="text-body-sm text-neutral-700 bg-neutral-50 p-4 rounded-xl border border-neutral-100">
+                    <div className="text-body-sm text-neutral-700 bg-neutral-50 p-4 rounded-xl border border-neutral-100">
                       {c.description}
-                    </p>
+                      {c.photos && c.photos.length > 0 && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {c.photos.map((photoUrl, idx) => (
+                            <a 
+                              key={idx} 
+                              href={`${publicEnv.NEXT_PUBLIC_API_URL.replace("/api/v1", "")}${photoUrl}`} 
+                              target="_blank" 
+                              rel="noreferrer"
+                            >
+                              <img 
+                                src={`${publicEnv.NEXT_PUBLIC_API_URL.replace("/api/v1", "")}${photoUrl}`} 
+                                alt={`Attachment ${idx + 1}`} 
+                                className="h-24 w-24 object-cover rounded-md border border-neutral-200" 
+                              />
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {c.resolutionNotes && (
