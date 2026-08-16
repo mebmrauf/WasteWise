@@ -7,6 +7,8 @@ import { Button } from "@/components/Button";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { AuthApiError, type AccountType, type SelectableRole } from "@/lib/api/auth";
+import { OAuthButtons } from "../_components/OAuthButtons";
+import { OrDivider } from "../_components/OrDivider";
 import { cn } from "@/lib/utils";
 
 export type SignupRoleChoice = "HOUSEHOLD" | "BUSINESS" | "COLLECTOR" | "RECYCLING_COMPANY";
@@ -166,6 +168,12 @@ export function SignupForm({ defaultRoleChoice, defaultReferralCode }: SignupFor
           })}
         </div>
       </div>
+
+      <div className="mt-2 mb-2">
+        <OAuthButtons roleChoice={roleChoice} />
+      </div>
+      
+      <OrDivider />
 
       <Input label="Full name" name="fullName" autoComplete="name" required disabled={isSubmitting} />
       <Input

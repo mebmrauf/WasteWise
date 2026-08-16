@@ -10,6 +10,10 @@ import { calculateMembershipLevel, getMembershipBonusPercentage, getMembershipBa
 
 export const marketplaceRouter = Router();
 
+// Configurable bidding duration (in minutes) - Set to 3 for testing, change to 1440 (24h) for production
+const BIDDING_DURATION_MINUTES = 1440;
+const BIDDING_DURATION_MS = BIDDING_DURATION_MINUTES * 60 * 1000;
+
 // Zod schemas
 const createRequestSchema = z.object({
   wasteTypes: z.array(z.object({
@@ -66,6 +70,7 @@ marketplaceRouter.post(
         businessId: req.user!.id,
         ...parsed.data,
         status: "OPEN_FOR_BIDDING",
+        bidEndsAt: new Date(Date.now() + BIDDING_DURATION_MS),
       },
     });
 
@@ -171,7 +176,8 @@ marketplaceRouter.get(
       }
     } else if (isRecyclingCompany) {
       const hasAcceptedQuote = request.quotations.some((q: any) => q.status === "ACCEPTED");
-      if (request.status !== "OPEN_FOR_BIDDING" && request.assignedCompanyId !== req.user!.id && !hasAcceptedQuote) {
+      const hasQuotation = request.quotations.length > 0;
+      if (request.status !== "OPEN_FOR_BIDDING" && request.assignedCompanyId !== req.user!.id && !hasQuotation) {
         sendError(res, 403, "FORBIDDEN", "You do not have permission to view this request.");
         return;
       }
@@ -206,7 +212,9 @@ marketplaceRouter.post(
       return;
     }
 
-    if (request.status !== "OPEN_FOR_BIDDING") {
+    const expirationTime = request.bidEndsAt ? request.bidEndsAt.getTime() : new Date(request.createdAt).getTime() + 24 * 60 * 60 * 1000;
+
+    if (request.status !== "OPEN_FOR_BIDDING" || Date.now() >= expirationTime) {
       sendError(res, 400, "BAD_REQUEST", "Request is no longer open for bidding.");
       return;
     }
@@ -299,14 +307,19 @@ marketplaceRouter.post(
       return;
     }
 
-    if (request.status !== "OPEN_FOR_BIDDING") {
-      sendError(res, 400, "BAD_REQUEST", "Request is not open for bidding.");
+    if (request.status !== "BIDDING_CLOSED") {
+      sendError(res, 400, "BAD_REQUEST", "Bidding has not closed yet.");
       return;
     }
 
     const quotation = await prisma.marketplaceQuotation.findUnique({ where: { id: quoteId } });
     if (!quotation || quotation.requestId !== requestId) {
       sendError(res, 404, "NOT_FOUND", "Quotation not found.");
+      return;
+    }
+
+    if (!quotation.isHighestBid) {
+      sendError(res, 400, "BAD_REQUEST", "You can only accept the highest bid.");
       return;
     }
 
@@ -318,8 +331,8 @@ marketplaceRouter.post(
     try {
       await prisma.$transaction(async (tx) => {
         const currentRequest = await tx.bulkMarketplaceRequest.findUnique({ where: { id: requestId } });
-        if (currentRequest?.status !== "OPEN_FOR_BIDDING") {
-          throw new Error("NOT_OPEN");
+        if (currentRequest?.status !== "BIDDING_CLOSED") {
+          throw new Error("NOT_CLOSED");
         }
 
         // 1. Mark accepted quotation
@@ -344,8 +357,8 @@ marketplaceRouter.post(
         });
       });
     } catch (err: any) {
-      if (err.message === "NOT_OPEN") {
-        sendError(res, 400, "BAD_REQUEST", "Request is no longer open for bidding. Another quotation may have already been accepted.");
+      if (err.message === "NOT_CLOSED") {
+        sendError(res, 400, "BAD_REQUEST", "Bidding is not closed or already decided.");
         return;
       }
       throw err;
@@ -370,6 +383,77 @@ marketplaceRouter.post(
         emailPreference: "emailNotificationsEnabled",
       });
     }
+
+    sendData(res, 200, { success: true });
+  })
+);
+
+// Reject Quotation (Business only)
+marketplaceRouter.post(
+  "/requests/:id/quotations/:quoteId/reject",
+  requireAuth,
+  requireRole(Role.USER),
+  asyncHandler(async (req, res) => {
+    const dbUser = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!dbUser || dbUser.accountType !== "BUSINESS") {
+      sendError(res, 403, "FORBIDDEN", "Only Business accounts can reject quotations.");
+      return;
+    }
+
+    const { id: requestId, quoteId } = req.params;
+
+    const request = await prisma.bulkMarketplaceRequest.findUnique({ where: { id: requestId } });
+    if (!request || request.businessId !== req.user!.id) {
+      sendError(res, 404, "NOT_FOUND", "Request not found.");
+      return;
+    }
+
+    if (request.status !== "BIDDING_CLOSED") {
+      sendError(res, 400, "BAD_REQUEST", "Bidding has not closed yet.");
+      return;
+    }
+
+    const quotation = await prisma.marketplaceQuotation.findUnique({ where: { id: quoteId } });
+    if (!quotation || quotation.requestId !== requestId) {
+      sendError(res, 404, "NOT_FOUND", "Quotation not found.");
+      return;
+    }
+
+    if (!quotation.isHighestBid) {
+      sendError(res, 400, "BAD_REQUEST", "You can only reject the highest bid.");
+      return;
+    }
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        const currentRequest = await tx.bulkMarketplaceRequest.findUnique({ where: { id: requestId } });
+        if (currentRequest?.status !== "BIDDING_CLOSED") {
+          throw new Error("NOT_CLOSED");
+        }
+
+        // Mark highest quotation as rejected
+        await tx.marketplaceQuotation.update({
+          where: { id: quoteId },
+          data: { status: "REJECTED" }
+        });
+
+        // Request stays in BIDDING_CLOSED (unassigned state)
+      });
+    } catch (err: any) {
+      if (err.message === "NOT_CLOSED") {
+        sendError(res, 400, "BAD_REQUEST", "Bidding is not closed or already decided.");
+        return;
+      }
+      throw err;
+    }
+
+    void createNotification({
+      userId: quotation.companyId,
+      type: "PICKUP_STATUS_UPDATE",
+      title: "Quotation Not Selected",
+      message: "Your highest quotation was rejected by the Business.",
+      emailPreference: "emailNotificationsEnabled",
+    });
 
     sendData(res, 200, { success: true });
   })

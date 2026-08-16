@@ -49,10 +49,22 @@ export function RecyclingQuotationsView() {
         const req = quote.request!;
         
         let statusConfig = { icon: Clock4, color: "text-blue-600 bg-blue-50 border-blue-200", label: "Pending" };
+        
         if (quote.status === "ACCEPTED") {
           statusConfig = { icon: CheckCircle2, color: "text-emerald-600 bg-emerald-50 border-emerald-200", label: "Accepted" };
         } else if (quote.status === "REJECTED") {
           statusConfig = { icon: XCircle, color: "text-red-600 bg-red-50 border-red-200", label: "Rejected" };
+        } else if (quote.status === "PENDING") {
+          if (req.status === "BIDDING_CLOSED") {
+            if (quote.isHighestBid) {
+              statusConfig = { icon: Clock4, color: "text-amber-600 bg-amber-50 border-amber-200", label: "Waiting for Decision" };
+            } else {
+              statusConfig = { icon: XCircle, color: "text-neutral-500 bg-neutral-100 border-neutral-200", label: "Not Selected" };
+            }
+          } else if (req.status !== "OPEN_FOR_BIDDING") {
+             // Request closed without this quote being selected
+             statusConfig = { icon: XCircle, color: "text-neutral-500 bg-neutral-100 border-neutral-200", label: "Not Selected" };
+          }
         }
 
         return (

@@ -24,7 +24,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       return [
         { label: "Dashboard", href: "/business/dashboard", icon: LayoutDashboard },
         { label: "Profile", href: "/business/profile", icon: User },
-        { label: "Smart Pickup", href: "/business/dashboard/pickups/new", icon: Truck },
         { label: "Bulk Marketplace", href: "/business/dashboard/marketplace", icon: Package },
         {
           label: "Pickup History",

@@ -1,8 +1,6 @@
 import * as React from "react";
 import { Card } from "@/components/Card";
 import { PageContainer } from "@/components/PageContainer";
-import { OAuthButtons } from "./OAuthButtons";
-import { OrDivider } from "./OrDivider";
 
 export interface AuthPageShellProps {
   title: string;
@@ -29,12 +27,8 @@ export function AuthPageShell({ title, subtitle, banner, children, footerNote }:
           {banner}
 
           <div className="mt-6">
-            <OAuthButtons />
+            {children}
           </div>
-
-          <OrDivider />
-
-          {children}
 
           <p className="mt-6 text-center text-body-sm text-neutral-500">{footerNote}</p>
         </Card>

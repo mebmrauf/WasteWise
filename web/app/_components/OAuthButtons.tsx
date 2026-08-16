@@ -39,11 +39,11 @@ function FacebookIcon() {
   );
 }
 
-export function OAuthButtons() {
+export function OAuthButtons({ roleChoice }: { roleChoice?: string }) {
   return (
     <div className="flex flex-col gap-3">
       <Button
-        href={getGoogleOAuthUrl()}
+        href={getGoogleOAuthUrl(roleChoice)}
         variant="secondary"
         fullWidth
         className="gap-2"
@@ -52,7 +52,7 @@ export function OAuthButtons() {
         Continue with Google
       </Button>
       <Button
-        href={getFacebookOAuthUrl()}
+        href={getFacebookOAuthUrl(roleChoice)}
         variant="secondary"
         fullWidth
         className="gap-2"

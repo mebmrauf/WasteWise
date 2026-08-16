@@ -236,10 +236,18 @@ export function resetPassword(input: ResetPasswordInput): Promise<{ success: boo
   });
 }
 
-export function getGoogleOAuthUrl(): string {
-  return `${API_BASE_URL}/auth/google`;
+export function getGoogleOAuthUrl(roleChoice?: string): string {
+  const url = new URL(`${API_BASE_URL}/auth/google`);
+  if (roleChoice) {
+    url.searchParams.set("roleChoice", roleChoice);
+  }
+  return url.toString();
 }
 
-export function getFacebookOAuthUrl(): string {
-  return `${API_BASE_URL}/auth/facebook`;
+export function getFacebookOAuthUrl(roleChoice?: string): string {
+  const url = new URL(`${API_BASE_URL}/auth/facebook`);
+  if (roleChoice) {
+    url.searchParams.set("roleChoice", roleChoice);
+  }
+  return url.toString();
 }

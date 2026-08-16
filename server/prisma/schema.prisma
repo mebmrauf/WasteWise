@@ -418,6 +418,7 @@ model BulkMarketplaceRequest {
   images                String[]
   additionalNotes       String?
   status                BulkRequestStatus      @default(OPEN_FOR_BIDDING)
+  bidEndsAt             DateTime?
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   collectionPhotos      String[]
@@ -444,6 +445,7 @@ model MarketplaceQuotation {
   estimatedPickupTime String?
   additionalNotes     String?
   status              QuotationStatus        @default(PENDING)
+  isHighestBid        Boolean                @default(false)
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
   pricesPerKg         Json?
@@ -565,6 +567,7 @@ enum NotificationType {
   COMPLAINT_UPDATE
   ROUTE_UPDATE
   GENERIC
+  ROUTE_UPDATE
 }
 
 enum GreenPointsTransactionType {
