@@ -99,7 +99,7 @@ export function createApp() {
   app.use(
     (err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
       logger.error({ err, path: req.path }, "Unhandled error");
-      sendError(res, 500, "INTERNAL_ERROR", err?.message || "Something went wrong. Please try again.");
+      sendError(res, 500, "INTERNAL_ERROR", err?.message || `Something went wrong on backend path ${req.path}. Please try again.`);
     },
   );
 
