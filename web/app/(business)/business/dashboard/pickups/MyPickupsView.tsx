@@ -84,8 +84,7 @@ export function MyPickupsView() {
     }
     return getMarketplaceRequests()
       .then((bulkData) => {
-        const bulkPickups = bulkData.filter(b => b.assignedCompanyId !== null);
-        setPickups(bulkPickups);
+        setPickups(bulkData);
         if (!silent) {
           setLoadState("ready");
         }
