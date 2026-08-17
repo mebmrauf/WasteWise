@@ -13,12 +13,8 @@ export default function UserLayout({ children }: { children: ReactNode }) {
           </a>
         }
         accent="business"
-<<<<<<< Updated upstream
-        actions={<NavAuthActions />}
-=======
         actions={<NotificationsPanel />}
         edgeToEdge
->>>>>>> Stashed changes
       />
       <main>
         <DashboardShell>{children}</DashboardShell>
