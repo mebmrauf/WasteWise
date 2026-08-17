@@ -78,6 +78,8 @@ model User {
   wasteRecognitionLogs                  WasteRecognitionLog[]
   weightRecordsLogged                   WeightRecord[]              @relation("WeightLogger")
   csrContributions                      CsrContribution[]           @relation("BusinessCsrContributions")
+  paymentsReceived                  Payment[]                   @relation("PaymentsReceived")
+  paymentsMade                      Payment[]                   @relation("PaymentsMade")
 }
 
 model OAuthAccount {
@@ -209,8 +211,8 @@ model PickupRequest {
   id                      String                   @id @default(cuid())
   requesterId             String
   assignedCollectorId     String?
-  timeSlotStart           DateTime
-  timeSlotEnd             DateTime
+  timeSlotStart           DateTime?
+  timeSlotEnd             DateTime?
   status                  PickupStatus             @default(PENDING)
   latitude                Float?
   longitude               Float?
@@ -232,6 +234,7 @@ model PickupRequest {
   trackingEvents          PickupTrackingEvent[]
   rating                  Rating?
   weightRecord            WeightRecord?
+  payments                Payment[]
 
   @@index([status])
   @@index([assignedCollectorId])
@@ -430,6 +433,7 @@ model BulkMarketplaceRequest {
   rating                Rating?
   csrContributions      CsrContribution[]
   complaints            Complaint[]
+  payments              Payment[]
 
   @@index([businessId])
   @@index([status])
@@ -619,3 +623,39 @@ model CsrContribution {
   @@index([businessId])
   @@index([pickupId])
 }
+
+model Payment {
+  id                String        @id @default(cuid())
+  pickupId          String?       // For smart pickups
+  bulkRequestId     String?       // For bulk pickups
+  customerId        String        // The user/business receiving payment
+  payerId           String        // The collector/recycling company making payment
+  amount            Float
+  paymentMethod     PaymentMethod
+  status            PaymentStatus @default(PENDING)
+  transactionId     String?       // For SSLCommerz
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  customer          User          @relation("PaymentsReceived", fields: [customerId], references: [id])
+  payer             User          @relation("PaymentsMade", fields: [payerId], references: [id])
+  pickup            PickupRequest? @relation(fields: [pickupId], references: [id])
+  bulkRequest       BulkMarketplaceRequest? @relation(fields: [bulkRequestId], references: [id])
+
+  @@index([customerId])
+  @@index([payerId])
+}
+
+enum PaymentMethod {
+  SSLCOMMERZ
+  COD
+  NOT_SELECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
