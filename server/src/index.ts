@@ -5,6 +5,7 @@ import { env } from "./lib/env";
 import { logger } from "./lib/logger";
 import { createSocketServer } from "./realtime/socket";
 import { registerPickupTrackingHandlers } from "./realtime/pickupEvents";
+import { registerChatHandlers } from "./realtime/chat";
 import { prisma } from "./lib/prisma";
 import { hashPassword } from "./lib/passwords";
 import { startRecyclingReminderScheduler } from "./lib/reminderScheduler";
@@ -32,6 +33,7 @@ async function ensureAdminUser() {
 }
 const io = createSocketServer(httpServer);
 registerPickupTrackingHandlers(io);
+registerChatHandlers(io);
 
 ensureAdminUser().then(() => {
   httpServer.listen(env.PORT, () => {

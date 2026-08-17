@@ -58,6 +58,8 @@ model User {
   complaintsAgainst                     Complaint[]                 @relation("ComplaintTarget")
   complaintsFiled                       Complaint[]                 @relation("ComplaintFiler")
   complaintsResolved                    Complaint[]                 @relation("ComplaintResolver")
+  sentMessages                          Message[]                   @relation("SentMessages")
+  receivedMessages                      Message[]                   @relation("ReceivedMessages")
   emailVerificationCodes                EmailVerificationCode[]
   greenPointsTransactions               GreenPointsTransaction[]    @relation("GreenPointsTransactions")
   marketplaceQuotations                 MarketplaceQuotation[]      @relation("CompanyQuotations")
@@ -618,4 +620,18 @@ model CsrContribution {
 
   @@index([businessId])
   @@index([pickupId])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  content    String
+  createdAt  DateTime @default(now())
+
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+
+  @@index([senderId, receiverId])
+  @@index([createdAt])
 }

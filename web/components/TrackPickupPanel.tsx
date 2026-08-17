@@ -5,6 +5,7 @@ import { Ban, Clock, Navigation } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { ChatWidget } from "@/components/ChatWidget";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
 import { Map } from "@/components/Map";
@@ -261,34 +262,45 @@ export function TrackPickupPanel({
           )}
         </div>
 
-        {status !== "COMPLETED" && (
-          <div className="relative overflow-hidden min-h-[300px] w-full lg:w-[400px] rounded-xl shadow-sm border border-neutral-200 bg-neutral-50 flex-shrink-0">
-            <Map
-              center={collectorLocation ?? DHAKA_FALLBACK_CENTER}
-              marker={collectorLocation ? { ...collectorLocation, label: "Collector" } : undefined}
-              routeOrigin={collectorLocation ?? undefined}
-              routeDestination={pickupLocation ?? undefined}
-              onRouteCalculated={setRouteInfo}
-              className="h-full w-full border-0 rounded-none shadow-none"
-            />
-            {routeInfo && (
-              <div className="absolute top-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-64 rounded-xl bg-white/95 p-4 shadow-lg backdrop-blur-md border border-neutral-200/50">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-600">
-                    <Icon icon={Clock} size="sm" />
+          <div className="flex flex-col gap-4 w-full lg:w-[400px] shrink-0">
+            {status !== "COMPLETED" && (
+              <div className="relative overflow-hidden min-h-[300px] rounded-xl shadow-sm border border-neutral-200 bg-neutral-50">
+                <Map
+                  center={collectorLocation ?? DHAKA_FALLBACK_CENTER}
+                  marker={collectorLocation ? { ...collectorLocation, label: "Collector" } : undefined}
+                  routeOrigin={collectorLocation ?? undefined}
+                  routeDestination={pickupLocation ?? undefined}
+                  onRouteCalculated={setRouteInfo}
+                  className="h-full w-full border-0 rounded-none shadow-none"
+                />
+                {routeInfo && (
+                  <div className="absolute top-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-64 rounded-xl bg-white/95 p-4 shadow-lg backdrop-blur-md border border-neutral-200/50">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-600">
+                        <Icon icon={Clock} size="sm" />
+                      </div>
+                      <div>
+                        <p className="text-body font-bold text-neutral-900">{routeInfo.duration}</p>
+                        <p className="text-caption text-neutral-500">
+                          <Icon icon={Navigation} size="sm" className="inline mr-1 align-text-bottom" />
+                          {routeInfo.distance} away
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-body font-bold text-neutral-900">{routeInfo.duration}</p>
-                    <p className="text-caption text-neutral-500">
-                      <Icon icon={Navigation} size="sm" className="inline mr-1 align-text-bottom" />
-                      {routeInfo.distance} away
-                    </p>
-                  </div>
-                </div>
+                )}
               </div>
             )}
+            
+            {collector && (
+              <ChatWidget
+                targetUserId={collector.id}
+                targetUserName={collector.fullName}
+                isActive={status !== "COMPLETED" && status !== "CANCELLED"}
+                className="mt-2 flex-1"
+              />
+            )}
           </div>
-        )}
       </div>
     </div>
   );

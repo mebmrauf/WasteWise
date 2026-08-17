@@ -9,6 +9,7 @@ import { Icon } from "@/components/Icon";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { ChatWidget } from "@/components/ChatWidget";
 
 export function CollectionWorkflowView({ requestId }: { requestId: string }) {
   const router = useRouter();
@@ -302,6 +303,14 @@ export function CollectionWorkflowView({ requestId }: { requestId: string }) {
           </div>
         </div>
       </div>
+      
+      {request.businessId && (
+        <ChatWidget
+          targetUserId={request.businessId}
+          targetUserName={request.business?.fullName || "Business"}
+          isActive={status !== "CANCELLED"}
+        />
+      )}
     </div>
   );
 }

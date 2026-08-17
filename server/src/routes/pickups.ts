@@ -498,6 +498,7 @@ pickupsRouter.get(
 
     let collectorLocation: { lat: number; lng: number; updatedAt: Date } | null = null;
     let collector: {
+      id: string;
       fullName: string;
       phone: string | null;
       vehicleType: string | null;
@@ -510,7 +511,7 @@ pickupsRouter.get(
         }),
         prisma.user.findUnique({
           where: { id: access.pickup.assignedCollectorId },
-          select: { fullName: true, phone: true, avatarUrl: true },
+          select: { id: true, fullName: true, phone: true, avatarUrl: true },
         }),
       ]);
       const isCollectorApproved = collectorProfile?.verificationStatus === VerificationStatus.APPROVED;
@@ -529,6 +530,7 @@ pickupsRouter.get(
       }
       if (isCollectorApproved && collectorUser) {
         collector = {
+          id: collectorUser.id,
           fullName: collectorUser.fullName,
           phone: collectorUser.phone,
           vehicleType: collectorProfile?.vehicleType ?? null,
