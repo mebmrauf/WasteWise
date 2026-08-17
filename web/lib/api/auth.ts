@@ -106,7 +106,7 @@ export async function authFetch<T>(
 
     throw new AuthApiError(
       res.status,
-      body?.error ?? { code: "UNKNOWN_ERROR", message: "Something went wrong. Please try again." },
+      body?.error ?? { code: "UNKNOWN_ERROR", message: `Something went wrong on path ${path} with status ${res.status}. Please try again.` },
     );
   }
 
