@@ -26,7 +26,7 @@ export const pickupsRouter = Router();
 
 const PICKUP_LIST_LIMIT = 50;
 
-function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[], rating?: any }) {
+function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[], rating?: any, payments?: any[] }) {
   const acceptedOffer = pickup.offers?.find(o => o.status === "ACCEPTED");
   return {
     id: pickup.id,
@@ -51,13 +51,14 @@ function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], o
     isBulk: pickup.isBulk,
     bidAmountsPerKg: acceptedOffer?.bidAmountsPerKg ?? null,
     hasRating: !!pickup.rating,
+    hasPayment: pickup.payments ? pickup.payments.length > 0 : false,
     createdAt: pickup.createdAt,
     updatedAt: pickup.updatedAt,
   };
 }
 
 function toPickupDetail(
-  pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[] },
+  pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[], payments?: any[] },
   weightRecord: WeightRecord | null,
   rating?: { score: number; comment: string | null; createdAt: Date } | null,
   pointsEarned?: number | null,
@@ -234,7 +235,7 @@ pickupsRouter.get(
       where: { requesterId: req.user!.id },
       orderBy: { createdAt: "desc" },
       take: PICKUP_LIST_LIMIT,
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true },
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, payments: { where: { status: "COMPLETED" }, select: { id: true } } },
     });
 
     sendData(res, 200, { pickups: pickups.map(toPickupSummary) });
@@ -296,8 +297,9 @@ pickupsRouter.get(
     const pickups = await prisma.pickupRequest.findMany({
       where: {
         status: PickupStatus.PENDING,
+        isBulk: false,
         OR: [
-          { isExclusiveToPreferred: { not: true } },
+          { isExclusiveToPreferred: false },
           { preferredCollectorId: req.user!.id }
         ]
       },
@@ -305,6 +307,8 @@ pickupsRouter.get(
       take: PICKUP_LIST_LIMIT,
       include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } } },
     });
+    
+    console.log(`[GET /open] Found ${pickups.length} PENDING pickups for collector ${req.user!.id}`);
 
     // A collector 100km away can't realistically make the trip — cap browsing
     // to the same hard distance limit used for notification matching, even if
@@ -324,6 +328,8 @@ pickupsRouter.get(
           })
         : pickups;
 
+    console.log(`[GET /open] Filtered to ${nearbyPickups.length} nearby pickups`);
+    
     sendData(res, 200, { pickups: nearbyPickups.map(toPickupSummary) });
   }),
 );
@@ -336,6 +342,7 @@ pickupsRouter.get(
     const pickups = await prisma.pickupRequest.findMany({
       where: {
         assignedCollectorId: req.user!.id,
+        isBulk: false,
         status: { in: [PickupStatus.ASSIGNED, PickupStatus.EN_ROUTE, PickupStatus.ARRIVED, PickupStatus.VERIFYING_WEIGHTS] },
       },
       orderBy: { createdAt: "desc" },
@@ -355,11 +362,12 @@ pickupsRouter.get(
     const pickups = await prisma.pickupRequest.findMany({
       where: {
         assignedCollectorId: req.user!.id,
+        isBulk: false,
         status: PickupStatus.COMPLETED,
       },
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true },
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, payments: { where: { status: "COMPLETED" }, select: { id: true } } },
     });
 
     sendData(res, 200, { pickups: pickups.map(toPickupSummary) });

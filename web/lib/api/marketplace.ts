@@ -35,6 +35,7 @@ export interface BulkMarketplaceRequest {
   rating?: { score: number; comment?: string | null } | null;
   csrContributions?: { id: string }[];
   quotations?: MarketplaceQuotation[];
+  hasPayment?: boolean;
 }
 
 export interface MarketplaceQuotation {
