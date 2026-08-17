@@ -19,6 +19,9 @@ export const PICKUP_REJECT_WEIGHTS_EVENT = "pickup:reject-weights";
 
 export const NOTIFICATION_RECEIVED_EVENT = "notification:received";
 
+export const CHAT_SEND_MESSAGE_EVENT = "send_message";
+export const CHAT_RECEIVE_MESSAGE_EVENT = "receive_message";
+
 interface PickupJoinPayload {
   pickupRequestId: string;
 }

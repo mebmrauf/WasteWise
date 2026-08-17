@@ -21,6 +21,7 @@ import { collectorsRouter } from "./routes/collectors";
 import { marketplaceRouter } from "./routes/marketplace";
 import { complaintsRouter, COMPLAINT_PHOTO_UPLOAD_DIR } from "./routes/complaints";
 import { csrRouter } from "./routes/csr";
+import { messagesRouter } from "./routes/messages";
 import paymentsRouter from "./routes/payments";
 
 export function createApp() {
@@ -66,6 +67,7 @@ export function createApp() {
   app.use("/api/v1/marketplace", marketplaceRouter);
   app.use("/api/v1/complaints", complaintsRouter);
   app.use("/api/v1/csr", csrRouter);
+  app.use("/api/v1/messages", messagesRouter);
   app.use("/api/v1/payments", paymentsRouter);
 
   // Serves uploaded waste-recognition photos back out. Deliberately

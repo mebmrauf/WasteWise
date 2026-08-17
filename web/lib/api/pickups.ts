@@ -43,6 +43,7 @@ export interface CollectorLocation {
 }
 
 export interface TrackedCollector {
+  id: string;
   fullName: string;
   phone: string | null;
   vehicleType: VehicleType | null;
