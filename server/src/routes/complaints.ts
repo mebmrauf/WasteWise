@@ -151,7 +151,7 @@ complaintsRouter.get(
       where: { complainantId: req.user!.id },
       include: {
         againstUser: { select: { id: true, fullName: true, email: true } },
-        pickupRequest: { select: { id: true, status: true, timeSlotStart: true, timeSlotEnd: true, pickupFormattedAddress: true } },
+        pickupRequest: { select: { id: true, status: true, pickupDate: true, pickupFormattedAddress: true } },
         bulkRequest: { select: { id: true, status: true, pickupAddress: true } },
         resolvedByAdmin: { select: { id: true, fullName: true } },
       },
