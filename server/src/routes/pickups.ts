@@ -41,8 +41,7 @@ export const pickupsRouter = Router();
 
 const PICKUP_LIST_LIMIT = 50;
 
-export function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[], rating?: any, weightRecord?: { estimatedMinKg: number; estimatedMaxKg: number } | null, requester?: { fullName: string; phone: string | null; avatarUrl: string | null } | null }) {
-function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[], rating?: any, payments?: any[] }) {
+export function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[], rating?: any, weightRecord?: { estimatedMinKg: number; estimatedMaxKg: number } | null, requester?: { fullName: string; phone: string | null; avatarUrl: string | null } | null, payments?: any[] }) {
   const acceptedOffer = pickup.offers?.find(o => o.status === "ACCEPTED");
   return {
     id: pickup.id,
@@ -260,8 +259,7 @@ pickupsRouter.get(
       where: { requesterId: req.user!.id },
       orderBy: { createdAt: "desc" },
       take: PICKUP_LIST_LIMIT,
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, weightRecord: true, requester: { select: { fullName: true, phone: true, avatarUrl: true } } },
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, payments: { where: { status: "COMPLETED" }, select: { id: true } } },
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, weightRecord: true, requester: { select: { fullName: true, phone: true, avatarUrl: true } }, payments: { where: { status: "COMPLETED" }, select: { id: true } } },
     });
 
     sendData(res, 200, { pickups: pickups.map(toPickupSummary) });
@@ -372,8 +370,6 @@ pickupsRouter.get(
 
     sendData(res, 200, { pickups: nearbyPickups.map(p => toPickupSummary(p.pickup)).slice(0, PICKUP_LIST_LIMIT) });
     console.log(`[GET /open] Filtered to ${nearbyPickups.length} nearby pickups`);
-    
-    sendData(res, 200, { pickups: nearbyPickups.map(toPickupSummary) });
   }),
 );
 
@@ -410,8 +406,7 @@ pickupsRouter.get(
       },
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, weightRecord: true, requester: { select: { fullName: true, phone: true, avatarUrl: true } } },
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, payments: { where: { status: "COMPLETED" }, select: { id: true } } },
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, weightRecord: true, requester: { select: { fullName: true, phone: true, avatarUrl: true } }, payments: { where: { status: "COMPLETED" }, select: { id: true } } },
     });
 
     sendData(res, 200, { pickups: pickups.map(toPickupSummary) });

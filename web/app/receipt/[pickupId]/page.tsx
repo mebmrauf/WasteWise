@@ -25,10 +25,8 @@ export default function ReceiptPage() {
   useEffect(() => {
     async function fetchReceipt() {
       try {
-        const res = await authFetch(`/payments/receipt/${pickupId}${isBulk ? '?type=bulk' : ''}`);
-        if (!res.ok) throw new Error("Could not load receipt details.");
-        const data = await res.json();
-        setReceipt(data.data);
+        const receiptData = await authFetch<any>(`/payments/receipt/${pickupId}${isBulk ? '?type=bulk' : ''}`);
+        setReceipt(receiptData);
       } catch (err: any) {
         setError(err.message);
       } finally {

@@ -78,8 +78,6 @@ model User {
   routePlans                            RoutePlan[]                 @relation("CollectorRoutePlans")
   wasteRecognitionLogs                  WasteRecognitionLog[]
   weightRecordsLogged                   WeightRecord[]              @relation("WeightLogger")
-  paymentsAsCustomer                    Payment[]                   @relation("PaymentCustomer")
-  paymentsAsPayer                       Payment[]                   @relation("PaymentPayer")
   ignoredPickups                        PickupRequest[]             @relation("IgnoredPickups")
   csrContributions                      CsrContribution[]           @relation("BusinessCsrContributions")
   paymentsReceived                      Payment[]                   @relation("PaymentsReceived")
@@ -204,10 +202,9 @@ model BusinessProfile {
   verificationReviewedAt        DateTime?
   verificationReviewedByAdminId String?
   verificationRejectionReason   String?
-  askForCsrContribution         Boolean            @default(true)
+  askForCsrContribution         Boolean            @default(false)
   createdAt                     DateTime           @default(now())
   updatedAt                     DateTime           @updatedAt
-  askForCsrContribution         Boolean            @default(false)
   user                          User               @relation("BusinessProfileUser", fields: [userId], references: [id], onDelete: Cascade)
   verificationReviewedByAdmin   User?              @relation("BusinessVerificationReviewer", fields: [verificationReviewedByAdminId], references: [id])
 }
@@ -331,13 +328,6 @@ model Complaint {
   resolutionNotes   String?
   resolvedAt        DateTime?
   resolvedByAdminId String?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  photos            String[]        @default([])
-  againstUser       User?           @relation("ComplaintTarget", fields: [againstUserId], references: [id])
-  complainant       User            @relation("ComplaintFiler", fields: [complainantId], references: [id])
-  pickupRequest     PickupRequest?  @relation(fields: [pickupRequestId], references: [id])
-  resolvedByAdmin   User?           @relation("ComplaintResolver", fields: [resolvedByAdminId], references: [id])
   photos            String[]                @default([])
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
@@ -466,7 +456,6 @@ model MarketplaceQuotation {
   isHighestBid        Boolean                @default(false)
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
-  isHighestBid        Boolean                @default(false)
   pricesPerKg         Json?
   company             User                   @relation("CompanyQuotations", fields: [companyId], references: [id])
   request             BulkMarketplaceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
@@ -610,7 +599,6 @@ enum BulkRequestStatus {
   VERIFYING_WEIGHTS
   COMPLETED
   CANCELLED
-  BIDDING_CLOSED
 }
 
 enum QuotationStatus {
@@ -634,7 +622,6 @@ enum NotificationType {
   COMPLAINT_UPDATE
   ROUTE_UPDATE
   GENERIC
-  ROUTE_UPDATE
 }
 
 enum GreenPointsTransactionType {
@@ -650,7 +637,6 @@ enum TransactionCategory {
   REDEMPTION
   CSR_CONTRIBUTION
   OTHER
-  CSR_CONTRIBUTION
 }
 
 enum MobileOperator {
@@ -671,22 +657,6 @@ enum MobileRechargeStatus {
   FAILED
 }
 
-model Payment {
-  id                            String                  @id @default(cuid())
-  pickupId                      String?
-  bulkRequestId                 String?
-  customerId                    String
-  payerId                       String
-  amount                        Float
-  paymentMethod                 PaymentMethod
-  status                        PaymentStatus           @default(PENDING)
-  transactionId                 String?
-  createdAt                     DateTime                @default(now())
-  updatedAt                     DateTime                @updatedAt
-  bulkMarketplaceRequest        BulkMarketplaceRequest? @relation(fields: [bulkRequestId], references: [id])
-  customer                      User                    @relation("PaymentCustomer", fields: [customerId], references: [id])
-  payer                         User                    @relation("PaymentPayer", fields: [payerId], references: [id])
-  pickupRequest                 PickupRequest?          @relation(fields: [pickupId], references: [id])
 model CsrContribution {
   id                 String   @id @default(cuid())
   businessId         String
