@@ -200,7 +200,7 @@ export function ActiveJobTracker() {
   );
 }
 
-const STATUS_SEQUENCE: PickupStatus[] = ["ASSIGNED", "EN_ROUTE"];
+const STATUS_SEQUENCE: PickupStatus[] = ["ASSIGNED", "EN_ROUTE", "ARRIVED"];
 
 function nextStatusInSequence(current: PickupStatus): PickupStatus | null {
   const index = STATUS_SEQUENCE.indexOf(current);
@@ -491,29 +491,41 @@ function ActiveJobCard({
       {/* Hero Body */}
       <div className="flex flex-col">
         {status === "EN_ROUTE" && job.latitude != null && job.longitude != null && (
-          <div className="relative h-[300px] w-full bg-neutral-100">
-            <MapView
-              center={myLocation ?? { lat: job.latitude, lng: job.longitude }}
-              marker={myLocation ? { ...myLocation, label: "You" } : undefined}
-              routeOrigin={myLocation ?? undefined}
-              routeDestination={{ lat: job.latitude, lng: job.longitude }}
-              onRouteCalculated={setRouteInfo}
-              className="absolute inset-0 w-full h-full border-0"
-            />
-            
-            {/* Live Navigation Overlay */}
-            {routeInfo && (
-              <div className="absolute top-4 left-4 right-4 md:right-auto bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-lg border border-neutral-200 flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#16A34A]/10 text-[#16A34A]">
-                  <Navigation className="w-6 h-6" />
+          <div className="flex flex-col gap-4">
+            <div className="relative h-[300px] w-full bg-neutral-100 rounded-b-xl overflow-hidden">
+              <MapView
+                center={myLocation ?? { lat: job.latitude, lng: job.longitude }}
+                marker={myLocation ? { ...myLocation, label: "You" } : undefined}
+                routeOrigin={myLocation ?? undefined}
+                routeDestination={{ lat: job.latitude, lng: job.longitude }}
+                onRouteCalculated={setRouteInfo}
+                className="absolute inset-0 w-full h-full border-0"
+              />
+              
+              {/* Live Navigation Overlay */}
+              {routeInfo && (
+                <div className="absolute top-4 left-4 right-4 md:right-auto bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-lg border border-neutral-200 flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#16A34A]/10 text-[#16A34A]">
+                    <Navigation className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-[#1A1A1A] leading-none">{routeInfo.duration}</p>
+                    <p className="text-sm font-medium text-neutral-500 mt-1">{routeInfo.distance} away</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-[#1A1A1A] leading-none">{routeInfo.duration}</p>
-                  <p className="text-sm font-medium text-neutral-500 mt-1">{routeInfo.distance} away</p>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
             
+            <div className="flex justify-center p-6 bg-[#FAFAFA] border-t border-neutral-100">
+              <Button 
+                size="lg" 
+                disabled={advancing} 
+                onClick={handleAdvanceStatus}
+                className="bg-[#16A34A] hover:bg-[#15803d] text-white font-bold px-12 border-0 shadow-md w-full sm:w-auto"
+              >
+                {advancing ? "Updating..." : "Arrived"}
+              </Button>
+            </div>
           </div>
         )}
 
