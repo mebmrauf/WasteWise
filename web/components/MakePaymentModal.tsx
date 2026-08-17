@@ -1,0 +1,103 @@
+import * as React from "react";
+import { X, CreditCard, Banknote } from "lucide-react";
+import { Button } from "./Button";
+import { authFetch } from "@/lib/api/auth";
+
+interface MakePaymentModalProps {
+  pickupId?: string;
+  bulkRequestId?: string;
+  amount: number;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export function MakePaymentModal({ pickupId, bulkRequestId, amount, onClose, onSuccess }: MakePaymentModalProps) {
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const handleSSLCommerz = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await authFetch<{ gatewayUrl?: string }>("/payments/initiate", {
+        method: "POST",
+        body: JSON.stringify({ pickupId, bulkRequestId }),
+      });
+      
+      console.log("SSLCommerz Initiate Response:", res);
+      
+      if (!res?.gatewayUrl) {
+        throw new Error("Failed to initialize SSLCommerz payment: Invalid gateway URL");
+      }
+      
+      window.location.href = res.gatewayUrl;
+    } catch (err: any) {
+      setError(err.message || "Failed to initiate payment");
+      setIsLoading(false);
+    }
+  };
+
+  const handleCOD = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await authFetch("/payments/cod", {
+        method: "POST",
+        body: JSON.stringify({ pickupId, bulkRequestId }),
+      });
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message || "Failed to complete COD payment");
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-neutral-900/50 p-4 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between p-6 border-b border-neutral-100 bg-neutral-50/50">
+          <h2 className="text-xl font-bold text-neutral-900">Make Payment</h2>
+          <button
+            onClick={onClose}
+            className="h-8 w-8 flex items-center justify-center rounded-full bg-white border border-neutral-200 text-neutral-500 hover:bg-neutral-100 transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        
+        <div className="p-6 flex flex-col gap-6">
+          <div className="text-center">
+            <p className="text-sm text-neutral-500 font-medium">Amount to Pay</p>
+            <p className="text-4xl font-bold text-emerald-600 mt-2">৳{amount.toLocaleString()}</p>
+          </div>
+          
+          {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">{error}</p>}
+          
+          <div className="flex flex-col gap-3 mt-4">
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full flex justify-center items-center gap-2 py-4"
+              onClick={handleSSLCommerz}
+              disabled={isLoading}
+            >
+              <CreditCard size={20} />
+              Pay Online (SSLCommerz)
+            </Button>
+            
+            <Button
+              variant="secondary"
+              size="lg"
+              className="w-full flex justify-center items-center gap-2 py-4 border-2"
+              onClick={handleCOD}
+              disabled={isLoading}
+            >
+              <Banknote size={20} />
+              Cash on Delivery (COD)
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

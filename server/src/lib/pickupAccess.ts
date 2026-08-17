@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import type { PickupRequest } from "@prisma/client";
 
-type PickupAccessRole = "requester" | "collector";
+type PickupAccessRole = "requester" | "collector" | "both";
 
 export type PickupAccessResult =
   | { ok: true; pickup: PickupRequest; role: PickupAccessRole }
@@ -16,11 +16,19 @@ export async function authorizePickupAccess(
   if (!pickup) {
     return { ok: false, reason: "not_found" };
   }
-  if (pickup.requesterId === userId) {
+
+  const isRequester = pickup.requesterId === userId;
+  const isCollector = pickup.assignedCollectorId === userId;
+
+  if (isRequester && isCollector) {
+    return { ok: true, pickup, role: "both" };
+  }
+  if (isRequester) {
     return { ok: true, pickup, role: "requester" };
   }
-  if (pickup.assignedCollectorId === userId) {
+  if (isCollector) {
     return { ok: true, pickup, role: "collector" };
   }
+
   return { ok: false, reason: "forbidden" };
 }

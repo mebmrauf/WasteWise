@@ -18,41 +18,12 @@ import { AddressAutocomplete, type AddressSuggestion } from "@/components/Addres
 import { fetchAddressSuggestions, fetchPlaceDetails, PlacesConfigError, fetchReverseGeocode, type PlaceDetails } from "@/lib/api/places";
 import { getMyProfile, type UserProfile } from "@/lib/api/users";
 import { AuthApiError } from "@/lib/api/auth";
-import { TimeSlotPicker, type TimeSlot } from "@/components/TimeSlotPicker";
+import { DatePicker } from "@/components/DatePicker";
 
 const ADDRESS_DEBOUNCE_MS = 300;
 const ADDRESS_MIN_QUERY_LENGTH = 3;
 
-interface TimeWindow extends TimeSlot {
-  startHour: number;
-  endHour: number;
-}
 
-const TIME_WINDOWS: TimeWindow[] = [
-  { id: "08:00-10:00", label: "08:00 AM - 10:00 AM", startHour: 8, endHour: 10 },
-  { id: "10:00-12:00", label: "10:00 AM - 12:00 PM", startHour: 10, endHour: 12 },
-  { id: "14:00-16:00", label: "02:00 PM - 04:00 PM", startHour: 14, endHour: 16 },
-  { id: "16:00-18:00", label: "04:00 PM - 06:00 PM", startHour: 16, endHour: 18 },
-];
-
-function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function buildTimeSlotIso(dateStr: string, hour: number): string {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  return new Date(year, month - 1, day, hour, 0, 0, 0).toISOString();
-}
-
-function formatWindowSummary(dateStr: string, window: TimeWindow): string {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const dateLabel = new Date(year, month - 1, day).toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-  return `${dateLabel} · ${window.label}`;
-}
 
 function useBiddingStatus(request: BulkMarketplaceRequest) {
   const [isTimeUp, setIsTimeUp] = React.useState(false);
@@ -123,7 +94,7 @@ export function MarketplaceView() {
   const [categories, setCategories] = React.useState<WasteCategory[]>([]);
   const [categoryWeights, setCategoryWeights] = React.useState<Record<string, string>>({});
   const [date, setDate] = React.useState("");
-  const [timeWindowId, setTimeWindowId] = React.useState<string | null>(null);
+
   const [additionalNotes, setAdditionalNotes] = React.useState("");
   
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
@@ -293,9 +264,8 @@ export function MarketplaceView() {
     setAddressSuggestionsError(null);
   }
 
-  const selectedWindow = TIME_WINDOWS.find((window) => window.id === timeWindowId) ?? null;
-  const timeSlotStart = date && selectedWindow ? buildTimeSlotIso(date, selectedWindow.startHour) : null;
-  const isSlotInPast = timeSlotStart !== null && new Date(timeSlotStart) < new Date();
+  const pickupDateIso = date ? new Date(`${date}T12:00:00.000Z`).toISOString() : null;
+  const isSlotInPast = pickupDateIso !== null && new Date(pickupDateIso) < new Date(new Date().setHours(0,0,0,0));
 
   const resolvedPlaceId = 
     addressMode === "saved" ? (profile?.placeId ?? null) 
@@ -335,7 +305,6 @@ export function MarketplaceView() {
     categories.length > 0 && 
     computedTotalWeight >= 50 && 
     date !== "" &&
-    selectedWindow !== null &&
     !isSlotInPast && 
     resolvedPlaceId !== null && 
     !isSubmitting;
@@ -361,8 +330,8 @@ export function MarketplaceView() {
       return;
     }
 
-    if (!date || !selectedWindow) {
-      setErrorMsg("Please select a pickup date and time slot.");
+    if (!date) {
+      setErrorMsg("Please select a pickup date.");
       return;
     }
     
@@ -402,7 +371,7 @@ export function MarketplaceView() {
         latitude: finalLatitude ?? undefined,
         longitude: finalLongitude ?? undefined,
         placeId: resolvedPlaceId || undefined,
-        preferredPickupDate: buildTimeSlotIso(date, selectedWindow.startHour),
+        preferredPickupDate: new Date(`${date}T12:00:00.000Z`).toISOString(),
         additionalNotes: additionalNotes || undefined,
         images: [],
       });
@@ -410,7 +379,7 @@ export function MarketplaceView() {
       setCategories([]);
       setCategoryWeights({});
       setDate("");
-      setTimeWindowId(null);
+
       setCustomAddressQuery("");
       setSelectedCustomPlace(null);
       setAdditionalNotes("");
@@ -600,26 +569,13 @@ export function MarketplaceView() {
 
                     <div className="flex flex-col gap-3">
                       <p className="text-body font-semibold text-neutral-900">When should we come?</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-neutral-50/50 border border-neutral-100 rounded-xl p-5">
-                        <Input
+                        <DatePicker
                           label="Pickup date"
-                          type="date"
-                          min={todayIsoDate()}
+                          min={new Date().toISOString().slice(0, 10)}
                           value={date}
                           onChange={(event) => setDate(event.target.value)}
-                          className="bg-white"
                           disabled={isSubmitting}
                         />
-                        <div>
-                          <p className="text-label text-neutral-800 mb-2">Time slot</p>
-                          <TimeSlotPicker
-                            slots={TIME_WINDOWS}
-                            value={timeWindowId}
-                            onChange={setTimeWindowId}
-                            aria-label="Time slot"
-                          />
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </Card>
@@ -838,7 +794,7 @@ export function MarketplaceView() {
                   </div>
                   <SummaryRow
                     label="Window"
-                    value={date && selectedWindow ? formatWindowSummary(date, selectedWindow) : "Not selected yet"}
+                    value={date ? new Date(date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : "Not selected yet"}
                   />
                   <SummaryRow 
                     label="Address" 

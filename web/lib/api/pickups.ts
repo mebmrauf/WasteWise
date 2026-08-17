@@ -77,8 +77,7 @@ export interface PickupRequestSummary {
   requesterId: string;
   assignedCollectorId: string | null;
   items: PickupRequestItem[];
-  timeSlotStart: string;
-  timeSlotEnd: string;
+  pickupDate: string;
   status: PickupStatus;
   placeId: string;
   pickupFormattedAddress: string;
@@ -90,8 +89,22 @@ export interface PickupRequestSummary {
   isBulk: boolean;
   bidAmountsPerKg: Record<string, number> | null;
   hasRating: boolean;
+  /** The household's own entered weight estimate for the whole pickup — not broken down per item. */
+  estimatedMinKg: number | null;
+  estimatedMaxKg: number | null;
+  hasPayment?: boolean;
   createdAt: string;
   updatedAt: string;
+  requester?: {
+    fullName: string;
+    phone: string | null;
+    avatarUrl: string | null;
+  } | null;
+}
+
+export function formatEstimatedWeightRange(minKg: number | null, maxKg: number | null): string | null {
+  if (minKg == null || maxKg == null) return null;
+  return minKg === maxKg ? `${minKg} kg` : `${minKg}-${maxKg} kg`;
 }
 
 export function listPickups(): Promise<{ pickups: PickupRequestSummary[] }> {
@@ -127,8 +140,7 @@ export function ratePickup(pickupRequestId: string, score: number, comment?: str
 
 export interface CreatePickupRequestInput {
   items: { category: WasteCategory; loadSize: LoadSize }[];
-  timeSlotStart: string;
-  timeSlotEnd: string;
+  pickupDate: string;
   placeId: string;
   formattedAddress?: string;
   latitude?: number;
@@ -203,5 +215,11 @@ export interface PickupOffer {
 export function getPickupOffers(pickupRequestId: string): Promise<{ offers: PickupOffer[] }> {
   return authFetch<{ offers: PickupOffer[] }>(`/pickups/${encodeURIComponent(pickupRequestId)}/offers`, {
     method: "GET",
+  });
+}
+
+export function ignorePickupRequest(pickupRequestId: string): Promise<{ success: boolean }> {
+  return authFetch<{ success: boolean }>(`/pickups/${encodeURIComponent(pickupRequestId)}/ignore`, {
+    method: "POST",
   });
 }

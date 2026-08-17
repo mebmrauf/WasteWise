@@ -13,36 +13,10 @@ import { AuthApiError } from "@/lib/api/auth";
 import { submitOffer } from "@/lib/api/offers";
 import {
   listOpenPickups,
-  LOAD_SIZE_KG_RANGES,
-  LOAD_SIZE_LABELS,
-  formatKgRange,
-  type LoadSize,
+  formatEstimatedWeightRange,
+  ignorePickupRequest,
   type PickupRequestSummary,
 } from "@/lib/api/pickups";
-
-function estimateJobWeightRangeLabel(items: { loadSize: LoadSize; exactWeightKg?: number | null }[]): string {
-  let isAllExact = true;
-  let totalExact = 0;
-  
-  const totals = items.reduce(
-    (sum, item) => {
-      if (typeof item.exactWeightKg === "number") {
-        totalExact += item.exactWeightKg;
-        return { minKg: sum.minKg + item.exactWeightKg, maxKg: sum.maxKg + item.exactWeightKg };
-      } else {
-        isAllExact = false;
-        const range = LOAD_SIZE_KG_RANGES[item.loadSize];
-        return { minKg: sum.minKg + range.minKg, maxKg: sum.maxKg + range.maxKg };
-      }
-    },
-    { minKg: 0, maxKg: 0 },
-  );
-
-  if (isAllExact && items.length > 0) {
-    return `${totalExact} Kg`;
-  }
-  return `${totals.minKg}-${totals.maxKg} Kg`;
-}
 
 const bidErrorMessages: Record<string, string> = {
   COLLECTOR_NOT_VERIFIED: "Your collector account must be verified before you can submit an offer.",
@@ -100,6 +74,16 @@ export function AvailableJobsBoard() {
     void fetchJobs();
   }, [fetchJobs]);
 
+  async function handleIgnoreJob(pickupId: string) {
+    setJobs((prev) => prev.filter((j) => j.id !== pickupId));
+    if (expandedJobId === pickupId) setExpandedJobId(null);
+    try {
+      await ignorePickupRequest(pickupId);
+    } catch (err) {
+      console.error("Failed to ignore pickup:", err);
+    }
+  }
+
   async function handleSubmitBid(pickupId: string) {
     const job = jobs.find((j) => j.id === pickupId);
     if (!job) return;
@@ -107,6 +91,10 @@ export function AvailableJobsBoard() {
     const bids = bidAmountsByJob[pickupId] || {};
     const bidAmountsPerKg: Record<string, number> = {};
     let totalEstimatedBid = 0;
+    const itemsWithoutExactWeight = job.items.filter((item) => typeof item.exactWeightKg !== "number").length;
+    // The household only enters one total weight estimate now, not a per-category
+    // breakdown — split it evenly across categories still awaiting an exact weigh-in.
+    const perItemEstimateKg = itemsWithoutExactWeight > 0 ? (job.estimatedMaxKg ?? 0) / itemsWithoutExactWeight : 0;
 
     for (const item of job.items) {
       const raw = bids[item.category] ?? "";
@@ -116,12 +104,7 @@ export function AvailableJobsBoard() {
         return;
       }
       bidAmountsPerKg[item.category] = num;
-      if (typeof item.exactWeightKg === "number") {
-        totalEstimatedBid += num * item.exactWeightKg;
-      } else {
-        const range = LOAD_SIZE_KG_RANGES[item.loadSize];
-        totalEstimatedBid += num * range.maxKg;
-      }
+      totalEstimatedBid += num * (typeof item.exactWeightKg === "number" ? item.exactWeightKg : perItemEstimateKg);
     }
 
     setBidErrors((prev) => {
@@ -208,16 +191,17 @@ export function AvailableJobsBoard() {
                   pickup={{
                     id: job.id,
                     pickupFormattedAddress: job.pickupFormattedAddress,
-                    timeSlotStart: job.timeSlotStart,
-                    timeSlotEnd: job.timeSlotEnd,
+                    pickupDate: job.pickupDate,
                     items: job.items.map((item) => ({
                       id: item.id,
                       category: item.category,
-                      quantityLabel: typeof item.exactWeightKg === "number" ? `${item.exactWeightKg} kg` : `${LOAD_SIZE_LABELS[item.loadSize]} (${formatKgRange(item.loadSize)})`,
+                      quantityLabel: typeof item.exactWeightKg === "number" ? `${item.exactWeightKg} kg` : "To be weighed at pickup",
                     })),
+                    requester: job.requester,
                   }}
-                  estimatedWeightRangeLabel={estimateJobWeightRangeLabel(job.items)}
+                  estimatedWeightRangeLabel={formatEstimatedWeightRange(job.estimatedMinKg, job.estimatedMaxKg) ?? "Not specified"}
                   onSelect={(id) => setExpandedJobId(isExpanded ? null : id)}
+                  onIgnore={handleIgnoreJob}
                 />
 
                 {isExpanded && (

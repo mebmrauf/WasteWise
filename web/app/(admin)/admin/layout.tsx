@@ -50,6 +50,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               Complaints
             </Link>
+            <Link
+              href="/admin/payments"
+              className={cn(
+                "text-body-sm font-medium transition-colors",
+                pathname.startsWith("/admin/payments") ? "text-primary-600" : "text-neutral-500 hover:text-neutral-900"
+              )}
+            >
+              Payments
+            </Link>
           </nav>
         )}
         {user && user.role === "ADMIN" && (

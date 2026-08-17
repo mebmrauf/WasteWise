@@ -49,6 +49,12 @@ export interface PickupStatusPayload {
   pickupRequestId: string;
   status: PickupStatus;
   createdAt: string;
+  /** Present when this pickup is a stop on the collector's active route. */
+  routePlanId?: string;
+  /** 1-indexed position among the route's not-yet-visited stops, including this one. */
+  queuePosition?: number;
+  /** Total not-yet-visited stops on the route. */
+  stopsRemaining?: number;
 }
 export interface PickupErrorPayload {
   event: string;
