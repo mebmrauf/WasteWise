@@ -78,8 +78,8 @@ model User {
   wasteRecognitionLogs                  WasteRecognitionLog[]
   weightRecordsLogged                   WeightRecord[]              @relation("WeightLogger")
   csrContributions                      CsrContribution[]           @relation("BusinessCsrContributions")
-  paymentsReceived                  Payment[]                   @relation("PaymentsReceived")
-  paymentsMade                      Payment[]                   @relation("PaymentsMade")
+  paymentsReceived                      Payment[]                   @relation("PaymentsReceived")
+  paymentsMade                          Payment[]                   @relation("PaymentsMade")
 }
 
 model OAuthAccount {
@@ -142,8 +142,8 @@ model CollectorProfile {
   user   User   @relation("CollectorProfileUser", fields: [userId], references: [id], onDelete: Cascade)
 
   vehicleType   VehicleType
-  vehicleNumber String @default("")
-  licenseNumber String @default("")
+  vehicleNumber String      @default("")
+  licenseNumber String      @default("")
 
   serviceArea String @default("")
 
@@ -314,24 +314,24 @@ model Rating {
 }
 
 model Complaint {
-  id                String          @id @default(cuid())
+  id                String                  @id @default(cuid())
   pickupRequestId   String?
   bulkRequestId     String?
   complainantId     String
   againstUserId     String?
   description       String
-  status            ComplaintStatus @default(OPEN)
+  status            ComplaintStatus         @default(OPEN)
   resolutionNotes   String?
   resolvedAt        DateTime?
   resolvedByAdminId String?
-  photos            String[]        @default([])
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  againstUser       User?           @relation("ComplaintTarget", fields: [againstUserId], references: [id])
-  complainant       User            @relation("ComplaintFiler", fields: [complainantId], references: [id])
-  pickupRequest     PickupRequest?  @relation(fields: [pickupRequestId], references: [id])
+  photos            String[]                @default([])
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  againstUser       User?                   @relation("ComplaintTarget", fields: [againstUserId], references: [id])
+  complainant       User                    @relation("ComplaintFiler", fields: [complainantId], references: [id])
+  pickupRequest     PickupRequest?          @relation(fields: [pickupRequestId], references: [id])
   bulkRequest       BulkMarketplaceRequest? @relation(fields: [bulkRequestId], references: [id])
-  resolvedByAdmin   User?           @relation("ComplaintResolver", fields: [resolvedByAdminId], references: [id])
+  resolvedByAdmin   User?                   @relation("ComplaintResolver", fields: [resolvedByAdminId], references: [id])
 
   @@index([status])
 }
@@ -607,40 +607,40 @@ enum MobileRechargeStatus {
 }
 
 model CsrContribution {
-  id                 String                 @id @default(cuid())
+  id                 String   @id @default(cuid())
   businessId         String
   pickupId           String
   donationAmount     Float
   donationPercentage Float?
   selectedCause      String
   paymentAmount      Float
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  business           User                   @relation("BusinessCsrContributions", fields: [businessId], references: [id], onDelete: Cascade)
-  pickup             BulkMarketplaceRequest @relation(fields: [pickupId], references: [id], onDelete: Cascade)
+  business User                   @relation("BusinessCsrContributions", fields: [businessId], references: [id], onDelete: Cascade)
+  pickup   BulkMarketplaceRequest @relation(fields: [pickupId], references: [id], onDelete: Cascade)
 
   @@index([businessId])
   @@index([pickupId])
 }
 
 model Payment {
-  id                String        @id @default(cuid())
-  pickupId          String?       // For smart pickups
-  bulkRequestId     String?       // For bulk pickups
-  customerId        String        // The user/business receiving payment
-  payerId           String        // The collector/recycling company making payment
-  amount            Float
-  paymentMethod     PaymentMethod
-  status            PaymentStatus @default(PENDING)
-  transactionId     String?       // For SSLCommerz
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  id            String        @id @default(cuid())
+  pickupId      String? // For smart pickups
+  bulkRequestId String? // For bulk pickups
+  customerId    String // The user/business receiving payment
+  payerId       String // The collector/recycling company making payment
+  amount        Float
+  paymentMethod PaymentMethod
+  status        PaymentStatus @default(PENDING)
+  transactionId String? // For SSLCommerz
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  customer          User          @relation("PaymentsReceived", fields: [customerId], references: [id])
-  payer             User          @relation("PaymentsMade", fields: [payerId], references: [id])
-  pickup            PickupRequest? @relation(fields: [pickupId], references: [id])
-  bulkRequest       BulkMarketplaceRequest? @relation(fields: [bulkRequestId], references: [id])
+  customer    User                    @relation("PaymentsReceived", fields: [customerId], references: [id])
+  payer       User                    @relation("PaymentsMade", fields: [payerId], references: [id])
+  pickup      PickupRequest?          @relation(fields: [pickupId], references: [id])
+  bulkRequest BulkMarketplaceRequest? @relation(fields: [bulkRequestId], references: [id])
 
   @@index([customerId])
   @@index([payerId])
@@ -658,4 +658,3 @@ enum PaymentStatus {
   FAILED
   CANCELLED
 }
-
