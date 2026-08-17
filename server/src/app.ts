@@ -12,6 +12,7 @@ import { usersRouter } from "./routes/users";
 import { wasteRecognitionRouter, WASTE_PHOTO_UPLOAD_DIR } from "./routes/wasteRecognition";
 import { pickupsRouter } from "./routes/pickups";
 import { offersRouter } from "./routes/offers";
+import { routesRouter } from "./routes/routes";
 import { rewardsRouter } from "./routes/rewards";
 import { referralsRouter } from "./routes/referrals";
 import { notificationsRouter } from "./routes/notifications";
@@ -56,6 +57,7 @@ export function createApp() {
   app.use("/api/v1/waste-recognition", wasteRecognitionRouter);
   app.use("/api/v1/pickups", pickupsRouter);
   app.use("/api/v1/offers", offersRouter);
+  app.use("/api/v1/routes", routesRouter);
   app.use("/api/v1/rewards", rewardsRouter);
   app.use("/api/v1/referrals", referralsRouter);
   app.use("/api/v1/notifications", notificationsRouter);

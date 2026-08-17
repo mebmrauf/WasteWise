@@ -75,8 +75,12 @@ model User {
   refreshTokens                         RefreshToken[]
   referredBy                            User?                       @relation("Referrals", fields: [referredById], references: [id])
   referredUsers                         User[]                      @relation("Referrals")
+  routePlans                            RoutePlan[]                 @relation("CollectorRoutePlans")
   wasteRecognitionLogs                  WasteRecognitionLog[]
   weightRecordsLogged                   WeightRecord[]              @relation("WeightLogger")
+  paymentsAsCustomer                    Payment[]                   @relation("PaymentCustomer")
+  paymentsAsPayer                       Payment[]                   @relation("PaymentPayer")
+  ignoredPickups                        PickupRequest[]             @relation("IgnoredPickups")
   csrContributions                      CsrContribution[]           @relation("BusinessCsrContributions")
   paymentsReceived                      Payment[]                   @relation("PaymentsReceived")
   paymentsMade                          Payment[]                   @relation("PaymentsMade")
@@ -203,6 +207,7 @@ model BusinessProfile {
   askForCsrContribution         Boolean            @default(true)
   createdAt                     DateTime           @default(now())
   updatedAt                     DateTime           @updatedAt
+  askForCsrContribution         Boolean            @default(false)
   user                          User               @relation("BusinessProfileUser", fields: [userId], references: [id], onDelete: Cascade)
   verificationReviewedByAdmin   User?              @relation("BusinessVerificationReviewer", fields: [verificationReviewedByAdminId], references: [id])
 }
@@ -211,8 +216,8 @@ model PickupRequest {
   id                      String                   @id @default(cuid())
   requesterId             String
   assignedCollectorId     String?
-  timeSlotStart           DateTime?
-  timeSlotEnd             DateTime?
+  pickupDate              DateTime                 @map("timeSlotStart")
+  timeSlotEnd             DateTime?                @ignore
   status                  PickupStatus             @default(PENDING)
   latitude                Float?
   longitude               Float?
@@ -228,6 +233,7 @@ model PickupRequest {
   greenPointsTransactions GreenPointsTransaction[]
   notifications           Notification[]
   offers                  Offer[]
+  routeStops              RouteStop[]
   assignedCollector       User?                    @relation("AssignedCollector", fields: [assignedCollectorId], references: [id])
   requester               User                     @relation("PickupRequester", fields: [requesterId], references: [id])
   items                   PickupRequestItem[]
@@ -235,6 +241,7 @@ model PickupRequest {
   rating                  Rating?
   weightRecord            WeightRecord?
   payments                Payment[]
+  ignoredByCollectors     User[]                   @relation("IgnoredPickups")
 
   @@index([status])
   @@index([assignedCollectorId])
@@ -324,6 +331,13 @@ model Complaint {
   resolutionNotes   String?
   resolvedAt        DateTime?
   resolvedByAdminId String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  photos            String[]        @default([])
+  againstUser       User?           @relation("ComplaintTarget", fields: [againstUserId], references: [id])
+  complainant       User            @relation("ComplaintFiler", fields: [complainantId], references: [id])
+  pickupRequest     PickupRequest?  @relation(fields: [pickupRequestId], references: [id])
+  resolvedByAdmin   User?           @relation("ComplaintResolver", fields: [resolvedByAdminId], references: [id])
   photos            String[]                @default([])
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
@@ -452,6 +466,7 @@ model MarketplaceQuotation {
   isHighestBid        Boolean                @default(false)
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
+  isHighestBid        Boolean                @default(false)
   pricesPerKg         Json?
   company             User                   @relation("CompanyQuotations", fields: [companyId], references: [id])
   request             BulkMarketplaceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
@@ -504,6 +519,53 @@ enum VehicleType {
   TRUCK
 }
 
+enum RoutePlanStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum RouteStopStatus {
+  QUEUED
+  VISITED
+  SKIPPED
+}
+
+model RoutePlan {
+  id              String          @id @default(cuid())
+  collectorId     String
+  status          RoutePlanStatus @default(ACTIVE)
+  originLatitude  Float
+  originLongitude Float
+  startedAt       DateTime        @default(now())
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  collector       User            @relation("CollectorRoutePlans", fields: [collectorId], references: [id], onDelete: Cascade)
+  stops           RouteStop[]
+
+  @@index([collectorId, status])
+}
+
+model RouteStop {
+  id              String          @id @default(cuid())
+  routePlanId     String
+  pickupRequestId String
+  sequence        Int
+  status          RouteStopStatus @default(QUEUED)
+  visitedAt       DateTime?
+  skippedAt       DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  routePlan       RoutePlan       @relation(fields: [routePlanId], references: [id], onDelete: Cascade)
+  pickupRequest   PickupRequest   @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([routePlanId, pickupRequestId])
+  @@index([routePlanId, sequence])
+  @@index([pickupRequestId])
+}
+
 enum WasteCategory {
   PLASTIC
   PAPER
@@ -548,6 +610,7 @@ enum BulkRequestStatus {
   VERIFYING_WEIGHTS
   COMPLETED
   CANCELLED
+  BIDDING_CLOSED
 }
 
 enum QuotationStatus {
@@ -571,6 +634,7 @@ enum NotificationType {
   COMPLAINT_UPDATE
   ROUTE_UPDATE
   GENERIC
+  ROUTE_UPDATE
 }
 
 enum GreenPointsTransactionType {
@@ -586,6 +650,7 @@ enum TransactionCategory {
   REDEMPTION
   CSR_CONTRIBUTION
   OTHER
+  CSR_CONTRIBUTION
 }
 
 enum MobileOperator {
@@ -606,6 +671,22 @@ enum MobileRechargeStatus {
   FAILED
 }
 
+model Payment {
+  id                            String                  @id @default(cuid())
+  pickupId                      String?
+  bulkRequestId                 String?
+  customerId                    String
+  payerId                       String
+  amount                        Float
+  paymentMethod                 PaymentMethod
+  status                        PaymentStatus           @default(PENDING)
+  transactionId                 String?
+  createdAt                     DateTime                @default(now())
+  updatedAt                     DateTime                @updatedAt
+  bulkMarketplaceRequest        BulkMarketplaceRequest? @relation(fields: [bulkRequestId], references: [id])
+  customer                      User                    @relation("PaymentCustomer", fields: [customerId], references: [id])
+  payer                         User                    @relation("PaymentPayer", fields: [payerId], references: [id])
+  pickupRequest                 PickupRequest?          @relation(fields: [pickupId], references: [id])
 model CsrContribution {
   id                 String   @id @default(cuid())
   businessId         String
@@ -647,6 +728,9 @@ model Payment {
 }
 
 enum PaymentMethod {
+  CASH
+  CARD
+  MOBILE_BANKING
   SSLCOMMERZ
   COD
   NOT_SELECTED
@@ -656,5 +740,6 @@ enum PaymentStatus {
   PENDING
   COMPLETED
   FAILED
+  REFUNDED
   CANCELLED
 }

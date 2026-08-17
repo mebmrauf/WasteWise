@@ -16,7 +16,7 @@ import { Select } from "@/components/Select";
 import { StepProgress } from "@/components/StepProgress";
 import { getVerifiedCollectors, type CollectorDirectoryEntry } from "@/lib/api/collectors";
 import { SummaryPanel, SummaryRow } from "@/components/SummaryPanel";
-import { TimeSlotPicker, type TimeSlot } from "@/components/TimeSlotPicker";
+import { DatePicker } from "@/components/DatePicker";
 
 import { WasteCategorySelector, type WasteCategory } from "@/components/WasteCategorySelector";
 import { AuthApiError } from "@/lib/api/auth";
@@ -45,18 +45,6 @@ function resolveSubmitPickupErrorMessage(err: unknown): string {
   return "Something went wrong posting your request. Please try again.";
 }
 
-interface TimeWindow extends TimeSlot {
-  startHour: number;
-  endHour: number;
-}
-
-const TIME_WINDOWS: TimeWindow[] = [
-  { id: "08:00-10:00", label: "08:00 AM - 10:00 AM", startHour: 8, endHour: 10 },
-  { id: "10:00-12:00", label: "10:00 AM - 12:00 PM", startHour: 10, endHour: 12 },
-  { id: "14:00-16:00", label: "02:00 PM - 04:00 PM", startHour: 14, endHour: 16 },
-  { id: "16:00-18:00", label: "04:00 PM - 06:00 PM", startHour: 16, endHour: 18 },
-];
-
 
 
 const ADDRESS_DEBOUNCE_MS = 300;
@@ -66,19 +54,18 @@ function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function buildTimeSlotIso(dateStr: string, hour: number): string {
+function buildTimeSlotIso(dateStr: string): string {
   const [year, month, day] = dateStr.split("-").map(Number);
-  return new Date(year, month - 1, day, hour, 0, 0, 0).toISOString();
+  return new Date(year, month - 1, day, 12, 0, 0, 0).toISOString();
 }
 
-function formatWindowSummary(dateStr: string, window: TimeWindow): string {
+function formatWindowSummary(dateStr: string): string {
   const [year, month, day] = dateStr.split("-").map(Number);
-  const dateLabel = new Date(year, month - 1, day).toLocaleDateString(undefined, {
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
     weekday: "short",
     month: "short",
     day: "numeric",
   });
-  return `${dateLabel} · ${window.label}`;
 }
 
 export function NewPickupRequestView() {
@@ -96,7 +83,7 @@ export function NewPickupRequestView() {
   const [estimatedTotalWeight, setEstimatedTotalWeight] = React.useState<number | "">("");
   const [categoryWeights, setCategoryWeights] = React.useState<Record<string, string>>({});
   const [date, setDate] = React.useState("");
-  const [timeWindowId, setTimeWindowId] = React.useState<string | null>(null);
+
 
   const [localCollectors, setLocalCollectors] = React.useState<CollectorDirectoryEntry[]>([]);
   const [selectedCollectorId, setSelectedCollectorId] = React.useState<string>(preferredCollectorId || "");
@@ -288,9 +275,8 @@ export function NewPickupRequestView() {
       .catch(() => setAddressSuggestionsError("Couldn't resolve that address. Try selecting it again."));
   }
 
-  const selectedWindow = TIME_WINDOWS.find((window) => window.id === timeWindowId) ?? null;
-  const timeSlotStart = date && selectedWindow ? buildTimeSlotIso(date, selectedWindow.startHour) : null;
-  const isSlotInPast = timeSlotStart !== null && new Date(timeSlotStart) < new Date();
+  const pickupDateIso = date ? buildTimeSlotIso(date) : null;
+  const isSlotInPast = pickupDateIso !== null && new Date(pickupDateIso) < new Date(new Date().setHours(0,0,0,0));
 
   const resolvedPlaceId = resolvedLocation?.placeId ?? null;
   const resolvedAddressLabel = resolvedLocation?.formattedAddress ?? null;
@@ -313,7 +299,6 @@ export function NewPickupRequestView() {
     categories.length > 0 &&
     (isBusiness ? computedTotalWeight > 0 : estimatedTotalWeight !== "") &&
     date !== "" &&
-    selectedWindow !== null &&
     !isSlotInPast &&
     resolvedPlaceId !== null;
 
@@ -333,7 +318,7 @@ export function NewPickupRequestView() {
 
 
   async function handleSubmitPickupRequest() {
-    if (!date || !selectedWindow || !resolvedPlaceId || categories.length === 0 || (!isBusiness && estimatedTotalWeight === "")) return;
+    if (!date || !resolvedPlaceId || categories.length === 0 || (!isBusiness && estimatedTotalWeight === "")) return;
 
     if (computedTotalWeight >= 50) {
       setSubmitError("This request qualifies as a Bulk Waste Pickup. Please use the Bulk Waste Pickup feature instead.");
@@ -353,8 +338,7 @@ export function NewPickupRequestView() {
           loadSize: "SMALL" as LoadSize,
           exactWeightKg: isBusiness && categoryWeights[category] ? parseFloat(categoryWeights[category]) : undefined,
         })),
-        timeSlotStart: buildTimeSlotIso(date, selectedWindow.startHour),
-        timeSlotEnd: buildTimeSlotIso(date, selectedWindow.endHour),
+        pickupDate: buildTimeSlotIso(date),
         placeId: resolvedPlaceId,
         formattedAddress: resolvedLocation?.formattedAddress,
         latitude: resolvedLocation?.latitude,
@@ -473,25 +457,13 @@ export function NewPickupRequestView() {
               <div className="h-px w-full bg-neutral-100" />
 
               <div className="flex flex-col gap-3">
-                <p className="text-body font-semibold text-neutral-900">When should we come?</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-neutral-50/50 border border-neutral-100 rounded-xl p-5">
-                  <Input
+                  <DatePicker
                     label="Pickup date"
-                    type="date"
                     min={todayIsoDate()}
                     value={date}
                     onChange={(event) => setDate(event.target.value)}
-                    className="bg-white"
                   />
-                  <div>
-                    <p className="text-label text-neutral-800 mb-2">Time slot</p>
-                    <TimeSlotPicker
-                      slots={TIME_WINDOWS}
-                      value={timeWindowId}
-                      onChange={setTimeWindowId}
-                      aria-label="Time slot"
-                    />
-                  </div>
                 </div>
               </div>
             </div>
@@ -734,7 +706,7 @@ export function NewPickupRequestView() {
           </div>
           <SummaryRow
             label="Window"
-            value={date && selectedWindow ? formatWindowSummary(date, selectedWindow) : "Not selected yet"}
+            value={date ? formatWindowSummary(date) : "Not selected yet"}
           />
           <SummaryRow label="Address" value={resolvedAddressLabel ?? "Not selected yet"} />
         </SummaryPanel>

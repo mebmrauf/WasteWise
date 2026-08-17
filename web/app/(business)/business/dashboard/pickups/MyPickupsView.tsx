@@ -9,14 +9,57 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
 import { InlineConfirm } from "@/components/InlineConfirm";
 import { PageContainer } from "@/components/PageContainer";
+import { CollectorRatingModal } from "@/components/CollectorRatingModal";
+import { formatDate } from "@/components/AvailableJobListItem";
 import { StatusTimeline } from "@/components/StatusTimeline";
+import { ReceiptModal } from "@/components/ReceiptModal";
 import { CompanyRatingModal } from "@/components/CompanyRatingModal";
 import { CsrContributionModal } from "@/components/CsrContributionModal";
 import { createCsrContribution } from "@/lib/api/csr";
 import { StatusPill } from "@/components/StatusPill";
+import { PickupOffersPanel } from "@/components/PickupOffersPanel";
+import { TrackPickupPanel } from "@/components/TrackPickupPanel";
+import {
+  getTrackingSocket,
+  PICKUP_JOIN_EVENT,
+  PICKUP_STATUS_EVENT,
+  type PickupStatusPayload,
+} from "@/lib/socket";
+import { AuthApiError } from "@/lib/api/auth";
+import {
+  cancelPickupRequest,
+  listPickups,
+  formatEstimatedWeightRange,
+  type PickupRequestSummary,
+} from "@/lib/api/pickups";
+import { PICKUP_STATUS_TONE, PICKUP_STATUS_LABEL } from "@/lib/pickupStatus";
 import { getMarketplaceRequests, type BulkMarketplaceRequest } from "@/lib/api/marketplace";
 import { BulkPickupDetailsModal } from "@/components/BulkPickupDetailsModal";
 import { cn } from "@/lib/utils";
+
+const cancelPickupErrorMessages: Record<string, string> = {
+  INVALID_STATUS_TRANSITION:
+    "This pickup can no longer be cancelled — its status changed (e.g. a collector may have already accepted it). The list below has been refreshed.",
+  FORBIDDEN: "You're not able to cancel this pickup.",
+  NOT_FOUND: "This pickup no longer exists. The list below has been refreshed.",
+};
+
+function resolveCancelPickupErrorMessage(err: unknown): string {
+  if (err instanceof AuthApiError) {
+    return cancelPickupErrorMessages[err.code] ?? "Couldn't cancel this pickup. Try again.";
+  }
+  return "Couldn't cancel this pickup. Try again.";
+}
+
+function formatPickupWindow(pickupDate: string): string {
+  const start = new Date(pickupDate);
+  const dateStr = start.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  return `${dateStr}`;
+}
 
 type LoadState = "loading" | "ready" | "error";
 
@@ -194,6 +237,200 @@ export function MyPickupsView() {
           </div>
         </Card>
       );
+    }
+    
+    const pReq = pickup as PickupRequestSummary;
+    const isExpanded = expandedPickupId === pReq.id;
+    const isOffersView = isExpanded && expandedView === "offers";
+    const isTrackView = isExpanded && expandedView === "track";
+
+    return (
+      <Card key={pReq.id} className="relative flex flex-col border border-neutral-100 shadow-sm transition-shadow hover:shadow-md overflow-hidden rounded-2xl p-0 bg-white">
+        <div className="p-5 sm:p-6 flex flex-col gap-5">
+          {/* Header */}
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl shrink-0 bg-emerald-50 text-emerald-600">
+                <Icon icon={Truck} size="md" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-neutral-900 leading-tight truncate">
+                    Smart Pickup
+                  </h3>
+                  <span className="text-xs font-data text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">#{pReq.id.slice(-6).toUpperCase()}</span>
+                </div>
+                <p className="text-sm font-medium text-neutral-500 mt-0.5">
+                  {new Date(pReq.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <StatusPill tone={PICKUP_STATUS_TONE[pReq.status]} className="text-sm px-4 py-1.5 shadow-sm">
+                {PICKUP_STATUS_LABEL[pReq.status]}
+              </StatusPill>
+              <button 
+                onClick={() => {
+                  if (isExpanded) {
+                    setExpandedPickupId(null);
+                    setExpandedView(null);
+                  } else {
+                    setExpandedPickupId(pReq.id);
+                  }
+                }}
+                className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-neutral-100 text-neutral-500 transition-colors"
+              >
+                <Icon icon={isExpanded ? ChevronUp : ChevronDown} size="sm" />
+              </button>
+            </div>
+          </div>
+
+          {/* Expanded Details */}
+          {isExpanded && (
+            <div className="flex flex-col gap-6 animate-fade-in-up">
+              {renderProgressTimeline(pReq)}
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Items */}
+                <div className="flex flex-col gap-3 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-caption text-neutral-500 uppercase tracking-wider">Materials & Weight</p>
+                    {formatEstimatedWeightRange(pReq.estimatedMinKg, pReq.estimatedMaxKg) && (
+                      <p className="text-caption text-neutral-500">
+                        Est. {formatEstimatedWeightRange(pReq.estimatedMinKg, pReq.estimatedMaxKg)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                    {pReq.items.map((item) => {
+                      const weighedLabel = item.exactWeightKg ? `${item.exactWeightKg} kg` : "Pending weigh-in";
+                      return (
+                        <div key={item.id} className="flex flex-col gap-1 items-start bg-white border border-neutral-100 p-2 rounded-lg shadow-sm">
+                          <WasteCategoryChip category={item.category} />
+                          <span className="text-caption text-neutral-500 font-medium px-1 truncate w-full" title={weighedLabel}>
+                            {weighedLabel}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Details */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex-1 flex items-center gap-4 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4">
+                    <Icon icon={Calendar} size="sm" className="text-emerald-600 shrink-0" />
+                    <div>
+                      <p className="text-caption text-neutral-500 mb-0.5">Time window</p>
+                      <span className="font-semibold text-neutral-900">{formatPickupWindow(pReq.pickupDate)}</span>
+                    </div>
+                  </div>
+                  <div className="flex-1 flex items-center gap-4 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4">
+                    <Icon icon={MapPin} size="sm" className="text-emerald-600 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-caption text-neutral-500 mb-0.5">Address</p>
+                      <p className="text-body-sm font-semibold text-neutral-900 truncate" title={pReq.pickupFormattedAddress}>{pReq.pickupFormattedAddress}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-neutral-100">
+                {pReq.status === "COMPLETED" && !pReq.hasRating && (
+                  <Button
+                    onClick={() => setRatingModalPickupId(pReq.id)}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    size="sm"
+                  >
+                    Rate collector
+                  </Button>
+                )}
+                {pReq.status === "COMPLETED" && (
+                  <Button
+                    onClick={() => setReceiptModalPickupId(pReq.id)}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    View receipt
+                  </Button>
+                )}
+
+                {pReq.status === "PENDING" && (
+                  <>
+                    {cancelErrors[pReq.id] && <ErrorBanner className="w-full mb-2">{cancelErrors[pReq.id]}</ErrorBanner>}
+                    <Button 
+                      onClick={() => setExpandedView(expandedView === "offers" ? null : "offers")} 
+                      variant="secondary" 
+                      size="sm"
+                    >
+                      {expandedView === "offers" ? "Hide offers" : "View offers"}
+                    </Button>
+                    <InlineConfirm
+                      confirming={confirmingId === pReq.id}
+                      triggerRef={getCancelTriggerRef(pReq.id)}
+                      trigger={
+                        <Button
+                          ref={getCancelTriggerRef(pReq.id)}
+                          variant="destructive"
+                          size="sm"
+                          disabled={cancellingId === pReq.id}
+                          onClick={() => setConfirmingId(pReq.id)}
+                        >
+                          {cancellingId === pReq.id ? "Cancelling…" : "Cancel request"}
+                        </Button>
+                      }
+                      message="Cancel this pickup request? This can't be undone."
+                      confirmLabel={cancellingId === pReq.id ? "Cancelling…" : "Yes, cancel"}
+                      cancelLabel="Never mind"
+                      isConfirmPending={cancellingId === pReq.id}
+                      onConfirm={() => {
+                        setConfirmingId(null);
+                        void handleCancelPickup(pReq.id);
+                      }}
+                      onCancel={() => setConfirmingId(null)}
+                    />
+                  </>
+                )}
+
+                {(pReq.status === "ASSIGNED" || pReq.status === "EN_ROUTE" || pReq.status === "ARRIVED" || pReq.status === "VERIFYING_WEIGHTS") && (
+                  <Button 
+                    onClick={() => setExpandedView(expandedView === "track" ? null : "track")} 
+                    variant="secondary" 
+                    size="sm"
+                  >
+                    {expandedView === "track" ? "Hide tracking" : "Track pickup"}
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {isOffersView && (
+            <PickupOffersPanel 
+              pickup={pReq} 
+              onOfferAccepted={() => {
+                fetchPickups().then(() => {
+                  setExpandedView("track");
+                });
+              }} 
+            />
+          )}
+
+          {isTrackView && (
+            <TrackPickupPanel 
+              pickupSummary={pReq}
+              onCompleted={() => {
+                fetchPickups().then(() => {
+                  setExpandedPickupId(null);
+                  setExpandedView(null);
+                });
+              }}
+            />
+          )}
+        </div>
+      </Card>
+    );
   };
 
   return (

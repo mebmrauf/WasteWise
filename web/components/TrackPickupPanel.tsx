@@ -76,6 +76,7 @@ export function TrackPickupPanel({
   const [pickupLocation, setPickupLocation] = React.useState<{ lat: number; lng: number } | null>(null);
   const [collector, setCollector] = React.useState<TrackedCollector | null>(null);
   const [routeInfo, setRouteInfo] = React.useState<{ distance: string; duration: string } | null>(null);
+  const [routeQueue, setRouteQueue] = React.useState<{ queuePosition: number; stopsRemaining: number } | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -131,6 +132,11 @@ export function TrackPickupPanel({
     function handleStatus(payload: PickupStatusPayload) {
       if (payload.pickupRequestId !== pickupSummary.id) return;
       setStatus(payload.status);
+      setRouteQueue(
+        payload.queuePosition != null && payload.stopsRemaining != null
+          ? { queuePosition: payload.queuePosition, stopsRemaining: payload.stopsRemaining }
+          : null,
+      );
       if (payload.status === "COMPLETED") {
         onCompleted?.();
       }
@@ -201,6 +207,11 @@ export function TrackPickupPanel({
           )}
 
           <Card className="flex flex-1 flex-col bg-white/50 border border-neutral-100 shadow-sm">
+            {status === "ASSIGNED" && routeQueue && (
+              <div className="mb-4 rounded-lg bg-primary-50 px-4 py-3 text-body-sm text-primary-700">
+                You&apos;re stop {routeQueue.queuePosition} of {routeQueue.stopsRemaining} on your collector&apos;s route today.
+              </div>
+            )}
             {status === "CANCELLED" ? (
               <div className="flex flex-col items-center gap-2 py-4 text-center">
                 <Icon icon={Ban} size="lg" className="text-error-500" aria-hidden />

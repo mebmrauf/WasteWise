@@ -61,20 +61,20 @@ export function ComplaintsView({ limitedOptions = false }: ComplaintsViewProps) 
 
   return (
     <PageContainer className="py-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 p-8 mb-8 rounded-2xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-h2 text-neutral-900 flex items-center gap-2">
-            <Megaphone className="w-8 h-8 text-primary-600" />
+          <h1 className="text-3xl font-bold tracking-tight text-neutral-900 flex items-center gap-2">
+            <Megaphone className="w-8 h-8 text-emerald-600" />
             Complaints
           </h1>
-          <p className="text-body text-neutral-600 mt-1">
+          <p className="mt-2 text-neutral-600">
             File and track issues regarding your pickups.
           </p>
         </div>
         <Button variant="primary" onClick={() => setIsModalOpen(true)}>
           File a Complaint
         </Button>
-      </div>
+      </Card>
 
       {successMsg && (
         <div className="mb-6 p-4 bg-success-50 text-success-700 rounded-xl border border-success-200">
