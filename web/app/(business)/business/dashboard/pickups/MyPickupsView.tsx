@@ -10,11 +10,8 @@ import { Icon } from "@/components/Icon";
 import { InlineConfirm } from "@/components/InlineConfirm";
 import { PageContainer } from "@/components/PageContainer";
 import { CollectorRatingModal } from "@/components/CollectorRatingModal";
-<<<<<<< Updated upstream
-=======
 import { formatDate } from "@/components/AvailableJobListItem";
 import { StatusTimeline } from "@/components/StatusTimeline";
->>>>>>> Stashed changes
 import { ReceiptModal } from "@/components/ReceiptModal";
 import { CompanyRatingModal } from "@/components/CompanyRatingModal";
 import { StatusPill } from "@/components/StatusPill";

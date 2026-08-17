@@ -1,11 +1,7 @@
 "use client";
 
 import * as React from "react";
-<<<<<<< Updated upstream
-import { Search, User, LayoutDashboard, Briefcase, History } from "lucide-react";
-=======
 import { Search, User, LayoutDashboard, Briefcase, History, Megaphone, Route } from "lucide-react";
->>>>>>> Stashed changes
 import { DashboardNav, type DashboardNavItem } from "@/components/DashboardNav";
 import { PageContainer } from "@/components/PageContainer";
 import { useRequireRole } from "@/lib/auth/AuthContext";

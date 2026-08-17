@@ -78,12 +78,9 @@ model User {
   routePlans                            RoutePlan[]                 @relation("CollectorRoutePlans")
   wasteRecognitionLogs                  WasteRecognitionLog[]
   weightRecordsLogged                   WeightRecord[]              @relation("WeightLogger")
-<<<<<<< Updated upstream
-=======
   paymentsAsCustomer                    Payment[]                   @relation("PaymentCustomer")
   paymentsAsPayer                       Payment[]                   @relation("PaymentPayer")
   ignoredPickups                        PickupRequest[]             @relation("IgnoredPickups")
->>>>>>> Stashed changes
 }
 
 model OAuthAccount {
@@ -434,10 +431,7 @@ model BulkMarketplaceRequest {
   business              User                   @relation("BusinessRequests", fields: [businessId], references: [id])
   quotations            MarketplaceQuotation[]
   rating                Rating?
-<<<<<<< Updated upstream
-=======
   payments              Payment[]
->>>>>>> Stashed changes
 
   @@index([businessId])
   @@index([status])
@@ -656,8 +650,6 @@ enum MobileRechargeStatus {
   SUCCESS
   FAILED
 }
-<<<<<<< Updated upstream
-=======
 
 model Payment {
   id                            String                  @id @default(cuid())
@@ -696,4 +688,3 @@ enum PaymentStatus {
   REFUNDED
   CANCELLED
 }
->>>>>>> Stashed changes
