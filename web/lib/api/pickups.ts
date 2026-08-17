@@ -89,6 +89,7 @@ export interface PickupRequestSummary {
   isBulk: boolean;
   bidAmountsPerKg: Record<string, number> | null;
   hasRating: boolean;
+  hasPayment?: boolean;
   createdAt: string;
   updatedAt: string;
 }

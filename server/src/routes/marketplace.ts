@@ -4,9 +4,11 @@ import { prisma } from "../lib/prisma";
 import { requireAuth, requireRole } from "../lib/rbac";
 import { asyncHandler } from "../lib/asyncHandler";
 import { sendData, sendError } from "../lib/apiResponse";
-import { WasteCategory, VehicleType, Prisma, Role } from "@prisma/client";
+import { WasteCategory, VehicleType, Prisma, Role, PaymentStatus, PaymentMethod } from "@prisma/client";
 import { createNotification } from "../lib/notifications";
 import { calculateMembershipLevel, getMembershipBonusPercentage, getMembershipBadge } from "../lib/rewards";
+import { calculateBulkPickupAmount } from "../lib/paymentCalculator";
+import { logger } from "../lib/logger";
 
 export const marketplaceRouter = Router();
 
@@ -132,13 +134,26 @@ marketplaceRouter.get(
         ...(isRecyclingCompany ? {
           quotations: {
             where: { companyId: req.user!.id }
+          },
+          rating: {
+            select: { score: true }
           }
-        } : {})
+        } : {}),
+        payments: {
+          where: { status: "COMPLETED" },
+          select: { id: true }
+        }
       },
       orderBy: { createdAt: "desc" },
     });
 
-    sendData(res, 200, { requests });
+    // Send back with mapped hasPayment
+    const mappedRequests = requests.map(r => ({
+      ...r,
+      hasPayment: r.payments ? r.payments.length > 0 : false
+    }));
+
+    sendData(res, 200, { requests: mappedRequests });
   })
 );
 
@@ -156,7 +171,11 @@ marketplaceRouter.get(
         quotations: {
           where: { companyId: req.user!.id }
         },
-        rating: true
+        rating: true,
+        payments: {
+          where: { status: "COMPLETED" },
+          select: { id: true }
+        }
       }
     });
 
@@ -186,7 +205,12 @@ marketplaceRouter.get(
       return;
     }
 
-    sendData(res, 200, { request });
+    const mappedRequest = {
+      ...request,
+      hasPayment: request.payments ? request.payments.length > 0 : false
+    };
+
+    sendData(res, 200, { request: mappedRequest });
   })
 );
 
@@ -571,10 +595,28 @@ marketplaceRouter.post(
       return;
     }
 
-    await prisma.bulkMarketplaceRequest.update({
+    const updatedRequest = await prisma.bulkMarketplaceRequest.update({
       where: { id },
       data: { status: "COMPLETED" }
     });
+
+    if (updatedRequest.assignedCompanyId) {
+      try {
+        const { amount, customerId } = await calculateBulkPickupAmount(id);
+        await prisma.payment.create({
+          data: {
+            bulkRequestId: id,
+            customerId,
+            payerId: updatedRequest.assignedCompanyId,
+            amount,
+            paymentMethod: PaymentMethod.NOT_SELECTED,
+            status: PaymentStatus.PENDING,
+          }
+        });
+      } catch (err) {
+        logger.error({ err, bulkRequestId: id }, "Failed to auto-create pending payment for bulk request");
+      }
+    }
 
     void createNotification({
       userId: request.assignedCompanyId!,
