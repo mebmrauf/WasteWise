@@ -19,6 +19,12 @@ export interface NavBarProps {
   actions?: React.ReactNode;
   accent?: RoleAccent;
   className?: string;
+  /**
+   * Dashboard shells render a fixed-width sidebar/rail pinned to the true left edge, so
+   * centering this header within `max-w-content` leaves a large empty gap between the
+   * actions and the real right edge on wide viewports. Set true to render edge-to-edge instead.
+   */
+  edgeToEdge?: boolean;
 }
 
 const accentActiveTextClasses: Record<RoleAccent, string> = {
@@ -45,15 +51,20 @@ const accentHoverTextClasses: Record<RoleAccent, string> = {
   admin: "hover:text-role-admin-700",
 };
 
-export function NavBar({ brand, links = [], actions, accent = "user", className }: NavBarProps) {
+export function NavBar({ brand, links = [], actions, accent = "user", className, edgeToEdge = false }: NavBarProps) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const mobileMenuId = React.useId();
   const hasLinks = links.length > 0;
   const [scrolled, setScrolled] = React.useState(false);
 
   React.useEffect(() => {
+    // Hysteresis (enter at 24px, exit at 8px) so a 1-2px scroll-anchoring
+    // correction near a single threshold can't flip this back and forth.
     const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
+      setScrolled((prev) => {
+        if (prev) return window.scrollY > 8;
+        return window.scrollY > 24;
+      });
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
@@ -61,11 +72,14 @@ export function NavBar({ brand, links = [], actions, accent = "user", className 
 
   return (
     <header className={cn(
-      "sticky top-0 z-50 w-full transition-all duration-300",
-      scrolled ? "bg-white/95 backdrop-blur-md shadow-sm py-0" : "bg-white/80 backdrop-blur-md py-2",
+      "sticky top-0 z-50 w-full py-2 transition-colors duration-300",
+      scrolled ? "bg-white/95 backdrop-blur-md shadow-sm" : "bg-white/80 backdrop-blur-md",
       className
     )}>
-      <div className="flex h-[72px] w-full items-center justify-between mx-auto max-w-content px-6 md:px-12 lg:px-16">
+      <div className={cn(
+        "flex h-[72px] w-full items-center justify-between px-6 md:px-12 lg:px-16",
+        !edgeToEdge && "mx-auto max-w-content"
+      )}>
         <div className="flex items-center">{brand}</div>
 
         {hasLinks && (

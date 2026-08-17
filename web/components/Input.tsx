@@ -7,10 +7,12 @@ export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
   helperText?: string;
   errorText?: string;
   wrapperClassName?: string;
+  icon?: React.ReactNode;
+  iconPosition?: "left" | "right";
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, helperText, errorText, id, className, wrapperClassName, disabled, type, ...rest }, ref) => {
+  ({ label, helperText, errorText, id, className, wrapperClassName, disabled, type, icon, iconPosition = "left", ...rest }, ref) => {
     const generatedId = React.useId();
     const inputId = id ?? generatedId;
     const descriptionId = `${inputId}-description`;
@@ -27,6 +29,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           </label>
         )}
         <div className="relative">
+          {icon && iconPosition === "left" && (
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              {icon}
+            </div>
+          )}
           <input
             ref={ref}
             id={inputId}
@@ -41,10 +48,17 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               hasError ? "border-error-500 focus:border-error-500" : "border-neutral-300 focus:border-primary-500",
               disabled && "cursor-not-allowed border-neutral-300 bg-neutral-100 text-neutral-500",
               isPassword && "pr-10",
+              Boolean(icon) && iconPosition === "left" && "pl-10",
+              Boolean(icon) && iconPosition === "right" && !isPassword && "pr-10",
               className
             )}
             {...rest}
           />
+          {Boolean(icon) && iconPosition === "right" && !isPassword && (
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              {icon}
+            </div>
+          )}
           {isPassword && (
             <button
               type="button"

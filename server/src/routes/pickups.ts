@@ -18,15 +18,30 @@ import { getLoadSizeKgRange } from "../lib/loadSize";
 import { emitToRoom } from "../realtime/emitToRoom";
 import { PICKUP_STATUS_EVENT } from "../realtime/pickupEvents";
 import { computeRecyclingReminder } from "../lib/recyclingPattern";
-import { isWithinRadiusKm, MAX_COLLECTOR_MATCH_DISTANCE_KM } from "../lib/geoDistance";
+import { isWithinRadiusKm, distanceKm, MAX_COLLECTOR_MATCH_DISTANCE_KM } from "../lib/geoDistance";
 import { createPickupRequestSchema, ratePickupSchema } from "./pickups.schemas";
 
+
+async function autoCancelExpiredPickups() {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  
+  await prisma.pickupRequest.updateMany({
+    where: {
+      status: PickupStatus.PENDING,
+      pickupDate: { lt: startOfToday }
+    },
+    data: {
+      status: PickupStatus.CANCELLED
+    }
+  });
+}
 
 export const pickupsRouter = Router();
 
 const PICKUP_LIST_LIMIT = 50;
 
-function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[], rating?: any, payments?: any[] }) {
+export function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[], rating?: any, weightRecord?: { estimatedMinKg: number; estimatedMaxKg: number } | null, requester?: { fullName: string; phone: string | null; avatarUrl: string | null } | null, payments?: any[] }) {
   const acceptedOffer = pickup.offers?.find(o => o.status === "ACCEPTED");
   return {
     id: pickup.id,
@@ -38,8 +53,7 @@ function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], o
       loadSize: item.loadSize,
       exactWeightKg: item.exactWeightKg,
     })),
-    timeSlotStart: pickup.timeSlotStart,
-    timeSlotEnd: pickup.timeSlotEnd,
+    pickupDate: pickup.pickupDate,
     status: pickup.status,
     placeId: pickup.placeId,
     pickupFormattedAddress: pickup.pickupFormattedAddress,
@@ -51,9 +65,18 @@ function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], o
     isBulk: pickup.isBulk,
     bidAmountsPerKg: acceptedOffer?.bidAmountsPerKg ?? null,
     hasRating: !!pickup.rating,
+    estimatedMinKg: pickup.weightRecord?.estimatedMinKg ?? null,
+    estimatedMaxKg: pickup.weightRecord?.estimatedMaxKg ?? null,
     hasPayment: pickup.payments ? pickup.payments.length > 0 : false,
     createdAt: pickup.createdAt,
     updatedAt: pickup.updatedAt,
+    requester: pickup.requester
+      ? {
+          fullName: pickup.requester.fullName,
+          phone: pickup.requester.phone,
+          avatarUrl: pickup.requester.avatarUrl,
+        }
+      : null,
   };
 }
 
@@ -95,7 +118,7 @@ pickupsRouter.post(
       sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    const { items, timeSlotStart, timeSlotEnd, placeId, formattedAddress, latitude, longitude, serviceArea, preferredCollectorId, isExclusiveToPreferred, isBulk, estimatedTotalWeight } = parsed.data;
+    const { items, pickupDate, placeId, formattedAddress, latitude, longitude, serviceArea, preferredCollectorId, isExclusiveToPreferred, isBulk, estimatedTotalWeight } = parsed.data;
 
     if (isBulk) {
       const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
@@ -171,8 +194,7 @@ pickupsRouter.post(
         items: {
           create: items.map((item) => ({ category: item.category, loadSize: item.loadSize })),
         },
-        timeSlotStart: new Date(timeSlotStart),
-        timeSlotEnd: new Date(timeSlotEnd),
+        pickupDate: new Date(pickupDate),
         placeId,
         pickupFormattedAddress: resolvedAddress.formattedAddress,
         latitude: resolvedAddress.latitude,
@@ -231,11 +253,13 @@ pickupsRouter.get(
   "/",
   requireAuth,
   asyncHandler(async (req, res) => {
+    await autoCancelExpiredPickups();
+
     const pickups = await prisma.pickupRequest.findMany({
       where: { requesterId: req.user!.id },
       orderBy: { createdAt: "desc" },
       take: PICKUP_LIST_LIMIT,
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, payments: { where: { status: "COMPLETED" }, select: { id: true } } },
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, weightRecord: true, requester: { select: { fullName: true, phone: true, avatarUrl: true } }, payments: { where: { status: "COMPLETED" }, select: { id: true } } },
     });
 
     sendData(res, 200, { pickups: pickups.map(toPickupSummary) });
@@ -271,6 +295,8 @@ pickupsRouter.get(
   requireAuth,
   requireRole("COLLECTOR"),
   asyncHandler(async (req, res) => {
+    await autoCancelExpiredPickups();
+
     const collectorProfile = await prisma.collectorProfile.findUnique({
       where: { userId: req.user!.id },
     });
@@ -297,15 +323,14 @@ pickupsRouter.get(
     const pickups = await prisma.pickupRequest.findMany({
       where: {
         status: PickupStatus.PENDING,
+        ignoredByCollectors: { none: { id: req.user!.id } },
         isBulk: false,
         OR: [
           { isExclusiveToPreferred: false },
           { preferredCollectorId: req.user!.id }
         ]
       },
-      orderBy: { createdAt: "desc" },
-      take: PICKUP_LIST_LIMIT,
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } } },
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, weightRecord: true, requester: { select: { fullName: true, phone: true, avatarUrl: true } } },
     });
     
     console.log(`[GET /open] Found ${pickups.length} PENDING pickups for collector ${req.user!.id}`);
@@ -314,23 +339,37 @@ pickupsRouter.get(
     // to the same hard distance limit used for notification matching, even if
     // the collector configured a larger self-service radius. Collectors who
     // haven't set a geocoded service point yet fall back to unfiltered.
-    const nearbyPickups =
+    const hasServiceArea =
       collectorProfile.serviceAreaLatitude !== null &&
       collectorProfile.serviceAreaLongitude !== null &&
-      collectorProfile.serviceAreaRadiusKm !== null
-        ? pickups.filter((pickup) => {
-            if (pickup.latitude === null || pickup.longitude === null) return false;
-            return isWithinRadiusKm(
-              { lat: pickup.latitude, lng: pickup.longitude },
-              { lat: collectorProfile.serviceAreaLatitude as number, lng: collectorProfile.serviceAreaLongitude as number },
-              Math.min(collectorProfile.serviceAreaRadiusKm as number, MAX_COLLECTOR_MATCH_DISTANCE_KM),
-            );
-          })
-        : pickups;
+      collectorProfile.serviceAreaRadiusKm !== null;
 
+    const collectorCenter = hasServiceArea ? { lat: collectorProfile.serviceAreaLatitude as number, lng: collectorProfile.serviceAreaLongitude as number } : null;
+    const maxRadius = hasServiceArea ? Math.min(collectorProfile.serviceAreaRadiusKm as number, MAX_COLLECTOR_MATCH_DISTANCE_KM) : Infinity;
+
+    const pickupsWithDistance = pickups.map(pickup => {
+      let dist = Infinity;
+      if (hasServiceArea && pickup.latitude !== null && pickup.longitude !== null) {
+        dist = distanceKm({ lat: pickup.latitude, lng: pickup.longitude }, collectorCenter!);
+      }
+      return { pickup, dist };
+    });
+
+    const nearbyPickups = pickupsWithDistance.filter(p => {
+      if (!hasServiceArea) return true;
+      if (p.pickup.latitude === null || p.pickup.longitude === null) return false;
+      return p.dist <= maxRadius;
+    });
+
+    nearbyPickups.sort((a, b) => {
+      const dateA = a.pickup.pickupDate.getTime();
+      const dateB = b.pickup.pickupDate.getTime();
+      if (dateA !== dateB) return dateA - dateB;
+      return a.dist - b.dist;
+    });
+
+    sendData(res, 200, { pickups: nearbyPickups.map(p => toPickupSummary(p.pickup)).slice(0, PICKUP_LIST_LIMIT) });
     console.log(`[GET /open] Filtered to ${nearbyPickups.length} nearby pickups`);
-    
-    sendData(res, 200, { pickups: nearbyPickups.map(toPickupSummary) });
   }),
 );
 
@@ -347,7 +386,7 @@ pickupsRouter.get(
       },
       orderBy: { createdAt: "desc" },
       take: PICKUP_LIST_LIMIT,
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } } },
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, weightRecord: true, requester: { select: { fullName: true, phone: true, avatarUrl: true } } },
     });
 
     sendData(res, 200, { pickups: pickups.map(toPickupSummary) });
@@ -367,7 +406,7 @@ pickupsRouter.get(
       },
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, payments: { where: { status: "COMPLETED" }, select: { id: true } } },
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, weightRecord: true, requester: { select: { fullName: true, phone: true, avatarUrl: true } }, payments: { where: { status: "COMPLETED" }, select: { id: true } } },
     });
 
     sendData(res, 200, { pickups: pickups.map(toPickupSummary) });
@@ -506,6 +545,7 @@ pickupsRouter.get(
 
     let collectorLocation: { lat: number; lng: number; updatedAt: Date } | null = null;
     let collector: {
+      id: string;
       fullName: string;
       phone: string | null;
       vehicleType: string | null;
@@ -518,7 +558,7 @@ pickupsRouter.get(
         }),
         prisma.user.findUnique({
           where: { id: access.pickup.assignedCollectorId },
-          select: { fullName: true, phone: true, avatarUrl: true },
+          select: { id: true, fullName: true, phone: true, avatarUrl: true },
         }),
       ]);
       const isCollectorApproved = collectorProfile?.verificationStatus === VerificationStatus.APPROVED;
@@ -537,6 +577,7 @@ pickupsRouter.get(
       }
       if (isCollectorApproved && collectorUser) {
         collector = {
+          id: collectorUser.id,
           fullName: collectorUser.fullName,
           phone: collectorUser.phone,
           vehicleType: collectorProfile?.vehicleType ?? null,
@@ -677,5 +718,26 @@ pickupsRouter.post(
     });
 
     sendData(res, 201, { success: true });
+  }),
+);
+
+pickupsRouter.post(
+  "/:id/ignore",
+  requireAuth,
+  requireRole("COLLECTOR"),
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const pickupId = req.params.id;
+
+    await prisma.user.update({
+      where: { id: req.user!.id },
+      data: {
+        ignoredPickups: {
+          connect: { id: pickupId },
+        },
+      },
+    });
+
+    sendData(res, 200, { success: true });
   }),
 );

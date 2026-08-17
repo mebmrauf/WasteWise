@@ -5,6 +5,7 @@ import { Ban, Clock, Navigation } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { ChatWidget } from "@/components/ChatWidget";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
 import { Map } from "@/components/Map";
@@ -76,6 +77,7 @@ export function TrackPickupPanel({
   const [pickupLocation, setPickupLocation] = React.useState<{ lat: number; lng: number } | null>(null);
   const [collector, setCollector] = React.useState<TrackedCollector | null>(null);
   const [routeInfo, setRouteInfo] = React.useState<{ distance: string; duration: string } | null>(null);
+  const [routeQueue, setRouteQueue] = React.useState<{ queuePosition: number; stopsRemaining: number } | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -131,6 +133,11 @@ export function TrackPickupPanel({
     function handleStatus(payload: PickupStatusPayload) {
       if (payload.pickupRequestId !== pickupSummary.id) return;
       setStatus(payload.status);
+      setRouteQueue(
+        payload.queuePosition != null && payload.stopsRemaining != null
+          ? { queuePosition: payload.queuePosition, stopsRemaining: payload.stopsRemaining }
+          : null,
+      );
       if (payload.status === "COMPLETED") {
         onCompleted?.();
       }
@@ -201,6 +208,11 @@ export function TrackPickupPanel({
           )}
 
           <Card className="flex flex-1 flex-col bg-white/50 border border-neutral-100 shadow-sm">
+            {status === "ASSIGNED" && routeQueue && (
+              <div className="mb-4 rounded-lg bg-primary-50 px-4 py-3 text-body-sm text-primary-700">
+                You&apos;re stop {routeQueue.queuePosition} of {routeQueue.stopsRemaining} on your collector&apos;s route today.
+              </div>
+            )}
             {status === "CANCELLED" ? (
               <div className="flex flex-col items-center gap-2 py-4 text-center">
                 <Icon icon={Ban} size="lg" className="text-error-500" aria-hidden />
@@ -261,34 +273,45 @@ export function TrackPickupPanel({
           )}
         </div>
 
-        {status !== "COMPLETED" && (
-          <div className="relative overflow-hidden min-h-[300px] w-full lg:w-[400px] rounded-xl shadow-sm border border-neutral-200 bg-neutral-50 flex-shrink-0">
-            <Map
-              center={collectorLocation ?? DHAKA_FALLBACK_CENTER}
-              marker={collectorLocation ? { ...collectorLocation, label: "Collector" } : undefined}
-              routeOrigin={collectorLocation ?? undefined}
-              routeDestination={pickupLocation ?? undefined}
-              onRouteCalculated={setRouteInfo}
-              className="h-full w-full border-0 rounded-none shadow-none"
-            />
-            {routeInfo && (
-              <div className="absolute top-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-64 rounded-xl bg-white/95 p-4 shadow-lg backdrop-blur-md border border-neutral-200/50">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-600">
-                    <Icon icon={Clock} size="sm" />
+          <div className="flex flex-col gap-4 w-full lg:w-[400px] shrink-0">
+            {status !== "COMPLETED" && (
+              <div className="relative overflow-hidden min-h-[300px] rounded-xl shadow-sm border border-neutral-200 bg-neutral-50">
+                <Map
+                  center={collectorLocation ?? DHAKA_FALLBACK_CENTER}
+                  marker={collectorLocation ? { ...collectorLocation, label: "Collector" } : undefined}
+                  routeOrigin={collectorLocation ?? undefined}
+                  routeDestination={pickupLocation ?? undefined}
+                  onRouteCalculated={setRouteInfo}
+                  className="h-full w-full border-0 rounded-none shadow-none"
+                />
+                {routeInfo && (
+                  <div className="absolute top-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-64 rounded-xl bg-white/95 p-4 shadow-lg backdrop-blur-md border border-neutral-200/50">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-600">
+                        <Icon icon={Clock} size="sm" />
+                      </div>
+                      <div>
+                        <p className="text-body font-bold text-neutral-900">{routeInfo.duration}</p>
+                        <p className="text-caption text-neutral-500">
+                          <Icon icon={Navigation} size="sm" className="inline mr-1 align-text-bottom" />
+                          {routeInfo.distance} away
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-body font-bold text-neutral-900">{routeInfo.duration}</p>
-                    <p className="text-caption text-neutral-500">
-                      <Icon icon={Navigation} size="sm" className="inline mr-1 align-text-bottom" />
-                      {routeInfo.distance} away
-                    </p>
-                  </div>
-                </div>
+                )}
               </div>
             )}
+            
+            {collector && (
+              <ChatWidget
+                targetUserId={collector.id}
+                targetUserName={collector.fullName}
+                isActive={status !== "COMPLETED" && status !== "CANCELLED"}
+                className="mt-2 flex-1"
+              />
+            )}
           </div>
-        )}
       </div>
     </div>
   );

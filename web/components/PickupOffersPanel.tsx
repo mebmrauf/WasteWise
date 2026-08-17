@@ -9,7 +9,6 @@ import { AuthApiError } from "@/lib/api/auth";
 import { acceptOffer } from "@/lib/api/offers";
 import {
   getPickupOffers,
-  LOAD_SIZE_KG_RANGES,
   type PickupOffer,
   type PickupRequestSummary,
 } from "@/lib/api/pickups";
@@ -115,6 +114,11 @@ export function PickupOffersPanel({
       <h3 className="text-h4 text-neutral-900 mb-2">Available Offers</h3>
       <div className="flex flex-col gap-4 max-h-[400px] overflow-y-auto pr-2">
         {offers.map((offer) => {
+          const itemsWithoutExactWeight = pickup.items.filter((item) => typeof item.exactWeightKg !== "number").length;
+          // The household only entered one total weight estimate, not a per-category
+          // breakdown — split it evenly across categories still awaiting a weigh-in.
+          const perItemEstimateMinKg = itemsWithoutExactWeight > 0 ? (pickup.estimatedMinKg ?? 0) / itemsWithoutExactWeight : 0;
+          const perItemEstimateMaxKg = itemsWithoutExactWeight > 0 ? (pickup.estimatedMaxKg ?? 0) / itemsWithoutExactWeight : 0;
           const estimatedTotalBidRange = offer.bidAmountsPerKg
             ? pickup.items.reduce(
                 (acc, item) => {
@@ -124,13 +128,11 @@ export function PickupOffersPanel({
                       min: acc.min + bid * item.exactWeightKg,
                       max: acc.max + bid * item.exactWeightKg,
                     };
-                  } else {
-                    const range = LOAD_SIZE_KG_RANGES[item.loadSize];
-                    return {
-                      min: acc.min + bid * range.minKg,
-                      max: acc.max + bid * range.maxKg,
-                    };
                   }
+                  return {
+                    min: acc.min + bid * perItemEstimateMinKg,
+                    max: acc.max + bid * perItemEstimateMaxKg,
+                  };
                 },
                 { min: 0, max: 0 }
               )

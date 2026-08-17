@@ -7,6 +7,9 @@ import { createNotification } from "../lib/notifications";
 import { authorizePickupAccess } from "../lib/pickupAccess";
 import { calculateGreenPointsForPickup, calculateMembershipLevel, getMembershipBadge } from "../lib/rewards";
 import { getIO, pickupRoomName, type Server, type Socket } from "./socket";
+import { PICKUP_STATUS_EVENT } from "./events";
+export { PICKUP_STATUS_EVENT };
+import { advanceRouteIfNeeded } from "../lib/routeService";
 import {
   joinPickupRoomSchema,
   locationUpdateSchema,
@@ -25,7 +28,6 @@ const PICKUP_REJECT_WEIGHTS_EVENT = "pickup:reject-weights";
 
 const PICKUP_JOINED_EVENT = "pickup:joined";
 const PICKUP_LOCATION_EVENT = "pickup:location";
-export const PICKUP_STATUS_EVENT = "pickup:status";
 const PICKUP_ERROR_EVENT = "pickup:error";
 
 const TERMINAL_STATUSES: readonly PickupStatus[] = [PickupStatus.COMPLETED, PickupStatus.CANCELLED];
@@ -137,7 +139,7 @@ async function handleLocationUpdate(socket: Socket, payload: unknown): Promise<v
     );
     return;
   }
-  if (access.role !== "collector") {
+  if (access.role !== "collector" && access.role !== "both") {
     emitPickupError(
       socket,
       PICKUP_LOCATION_UPDATE_EVENT,
@@ -207,7 +209,7 @@ async function handleStatusUpdate(socket: Socket, payload: unknown): Promise<voi
     );
     return;
   }
-  if (access.role !== "collector") {
+  if (access.role !== "collector" && access.role !== "both") {
     emitPickupError(
       socket,
       PICKUP_STATUS_UPDATE_EVENT,
@@ -285,7 +287,7 @@ async function handleSubmitWeights(socket: Socket, payload: unknown): Promise<vo
   const { pickupRequestId, weights } = parsed.data;
 
   const access = await authorizePickupAccess(socket.data.user.id, pickupRequestId);
-  if (!access.ok || access.role !== "collector") {
+  if (!access.ok || (access.role !== "collector" && access.role !== "both")) {
     emitPickupError(socket, PICKUP_SUBMIT_WEIGHTS_EVENT, pickupRequestId, "FORBIDDEN", "Only the assigned collector can submit weights.");
     return;
   }
@@ -331,7 +333,7 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
   const { pickupRequestId } = parsed.data;
 
   const access = await authorizePickupAccess(socket.data.user.id, pickupRequestId);
-  if (!access.ok || access.role !== "requester") {
+  if (!access.ok || (access.role !== "requester" && access.role !== "both")) {
     emitPickupError(socket, PICKUP_ACCEPT_WEIGHTS_EVENT, pickupRequestId, "FORBIDDEN", "Only the requester can accept weights.");
     return;
   }
@@ -369,6 +371,8 @@ async function handleAcceptWeights(socket: Socket, payload: unknown): Promise<vo
     createdAt: trackingEvent.createdAt,
   });
 
+  await advanceRouteIfNeeded(pickupRequestId);
+
   if (updatedPickup.assignedCollectorId) {
     void createNotification({
       userId: updatedPickup.assignedCollectorId,
@@ -387,7 +391,7 @@ async function handleRejectWeights(socket: Socket, payload: unknown): Promise<vo
   const { pickupRequestId } = parsed.data;
 
   const access = await authorizePickupAccess(socket.data.user.id, pickupRequestId);
-  if (!access.ok || access.role !== "requester") {
+  if (!access.ok || (access.role !== "requester" && access.role !== "both")) {
     emitPickupError(socket, PICKUP_REJECT_WEIGHTS_EVENT, pickupRequestId, "FORBIDDEN", "Only the requester can reject weights.");
     return;
   }

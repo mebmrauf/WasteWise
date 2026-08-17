@@ -7,7 +7,7 @@ export interface PaymentRecord {
   customerId: string;
   payerId: string;
   amount: number;
-  paymentMethod: "SSLCOMMERZ" | "COD";
+  paymentMethod: "CASH" | "CARD" | "MOBILE_BANKING" | "SSLCOMMERZ" | "COD" | "NOT_SELECTED";
   status: "PENDING" | "COMPLETED" | "FAILED" | "CANCELLED";
   transactionId: string | null;
   createdAt: string;

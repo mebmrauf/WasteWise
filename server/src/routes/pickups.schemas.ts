@@ -23,8 +23,7 @@ const placeIdSchema = z.string().trim().min(1, "placeId is required").max(300);
 export const createPickupRequestSchema = z
   .object({
     items: itemsSchema,
-    timeSlotStart: isoDateTimeSchema,
-    timeSlotEnd: isoDateTimeSchema,
+    pickupDate: isoDateTimeSchema,
     placeId: placeIdSchema,
     formattedAddress: z.string().optional(),
     latitude: z.number().optional(),
@@ -37,22 +36,19 @@ export const createPickupRequestSchema = z
   })
   .strict()
   .superRefine((data, ctx) => {
-    const start = new Date(data.timeSlotStart);
-    const end = new Date(data.timeSlotEnd);
+    const pickup = new Date(data.pickupDate);
+    const now = new Date();
+    
+    // Allow scheduling from today onwards
+    now.setHours(0, 0, 0, 0);
+    const pickupDay = new Date(pickup);
+    pickupDay.setHours(0, 0, 0, 0);
 
-    if (end.getTime() <= start.getTime()) {
+    if (pickupDay < now) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "timeSlotEnd must be after timeSlotStart",
-        path: ["timeSlotEnd"],
-      });
-    }
-
-    if (start.getTime() < Date.now()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "timeSlotStart cannot be in the past",
-        path: ["timeSlotStart"],
+        message: "pickupDate cannot be in the past",
+        path: ["pickupDate"],
       });
     }
   });

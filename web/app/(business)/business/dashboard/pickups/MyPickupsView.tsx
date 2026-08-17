@@ -9,14 +9,57 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
 import { InlineConfirm } from "@/components/InlineConfirm";
 import { PageContainer } from "@/components/PageContainer";
+import { CollectorRatingModal } from "@/components/CollectorRatingModal";
+import { formatDate } from "@/components/AvailableJobListItem";
 import { StatusTimeline } from "@/components/StatusTimeline";
+import { ReceiptModal } from "@/components/ReceiptModal";
 import { CompanyRatingModal } from "@/components/CompanyRatingModal";
 import { CsrContributionModal } from "@/components/CsrContributionModal";
 import { createCsrContribution } from "@/lib/api/csr";
 import { StatusPill } from "@/components/StatusPill";
+import { PickupOffersPanel } from "@/components/PickupOffersPanel";
+import { TrackPickupPanel } from "@/components/TrackPickupPanel";
+import {
+  getTrackingSocket,
+  PICKUP_JOIN_EVENT,
+  PICKUP_STATUS_EVENT,
+  type PickupStatusPayload,
+} from "@/lib/socket";
+import { AuthApiError } from "@/lib/api/auth";
+import {
+  cancelPickupRequest,
+  listPickups,
+  formatEstimatedWeightRange,
+  type PickupRequestSummary,
+} from "@/lib/api/pickups";
+import { PICKUP_STATUS_TONE, PICKUP_STATUS_LABEL } from "@/lib/pickupStatus";
 import { getMarketplaceRequests, type BulkMarketplaceRequest } from "@/lib/api/marketplace";
 import { BulkPickupDetailsModal } from "@/components/BulkPickupDetailsModal";
 import { cn } from "@/lib/utils";
+
+const cancelPickupErrorMessages: Record<string, string> = {
+  INVALID_STATUS_TRANSITION:
+    "This pickup can no longer be cancelled — its status changed (e.g. a collector may have already accepted it). The list below has been refreshed.",
+  FORBIDDEN: "You're not able to cancel this pickup.",
+  NOT_FOUND: "This pickup no longer exists. The list below has been refreshed.",
+};
+
+function resolveCancelPickupErrorMessage(err: unknown): string {
+  if (err instanceof AuthApiError) {
+    return cancelPickupErrorMessages[err.code] ?? "Couldn't cancel this pickup. Try again.";
+  }
+  return "Couldn't cancel this pickup. Try again.";
+}
+
+function formatPickupWindow(pickupDate: string): string {
+  const start = new Date(pickupDate);
+  const dateStr = start.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  return `${dateStr}`;
+}
 
 type LoadState = "loading" | "ready" | "error";
 

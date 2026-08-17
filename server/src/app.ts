@@ -12,6 +12,7 @@ import { usersRouter } from "./routes/users";
 import { wasteRecognitionRouter, WASTE_PHOTO_UPLOAD_DIR } from "./routes/wasteRecognition";
 import { pickupsRouter } from "./routes/pickups";
 import { offersRouter } from "./routes/offers";
+import { routesRouter } from "./routes/routes";
 import { rewardsRouter } from "./routes/rewards";
 import { referralsRouter } from "./routes/referrals";
 import { notificationsRouter } from "./routes/notifications";
@@ -20,6 +21,7 @@ import { collectorsRouter } from "./routes/collectors";
 import { marketplaceRouter } from "./routes/marketplace";
 import { complaintsRouter, COMPLAINT_PHOTO_UPLOAD_DIR } from "./routes/complaints";
 import { csrRouter } from "./routes/csr";
+import { messagesRouter } from "./routes/messages";
 import paymentsRouter from "./routes/payments";
 
 export function createApp() {
@@ -56,6 +58,7 @@ export function createApp() {
   app.use("/api/v1/waste-recognition", wasteRecognitionRouter);
   app.use("/api/v1/pickups", pickupsRouter);
   app.use("/api/v1/offers", offersRouter);
+  app.use("/api/v1/routes", routesRouter);
   app.use("/api/v1/rewards", rewardsRouter);
   app.use("/api/v1/referrals", referralsRouter);
   app.use("/api/v1/notifications", notificationsRouter);
@@ -64,6 +67,7 @@ export function createApp() {
   app.use("/api/v1/marketplace", marketplaceRouter);
   app.use("/api/v1/complaints", complaintsRouter);
   app.use("/api/v1/csr", csrRouter);
+  app.use("/api/v1/messages", messagesRouter);
   app.use("/api/v1/payments", paymentsRouter);
 
   // Serves uploaded waste-recognition photos back out. Deliberately

@@ -8,7 +8,7 @@ import { InlineConfirm } from "@/components/InlineConfirm";
 import { StatusPill } from "@/components/StatusPill";
 import { OFFER_STATUS_TONE, OFFER_STATUS_LABEL, type OfferStatus } from "@/lib/offerStatus";
 import { VEHICLE_TYPE_LABELS, type VehicleType } from "@/lib/vehicleType";
-import { type PickupRequestSummary, LOAD_SIZE_KG_RANGES, formatKgRange, type LoadSize } from "@/lib/api/pickups";
+import { type PickupRequestSummary } from "@/lib/api/pickups";
 import { cn, formatBdt } from "@/lib/utils";
 
 interface OfferListItemCollector {
@@ -91,17 +91,11 @@ export function OfferListItem({
                     </div>
                   );
                 } else {
-                  const range = LOAD_SIZE_KG_RANGES[item.loadSize as LoadSize];
-                  const totalMin = amount * range.minKg;
-                  const totalMax = amount * range.maxKg;
                   return (
                     <div key={item.id} className="flex flex-col items-end border-b border-neutral-100 pb-2 last:border-0 last:pb-0">
                       <span className="text-body-sm font-medium text-neutral-900">{item.category}</span>
                       <span className="text-caption text-neutral-500">
-                        {formatKgRange(item.loadSize)} @ {formatBdt(amount)}/kg
-                      </span>
-                      <span className="font-data text-body-sm text-neutral-900 mt-1">
-                        Total: {formatBdt(totalMin)} - {formatBdt(totalMax)}
+                        {formatBdt(amount)}/kg
                       </span>
                     </div>
                   );
