@@ -7,14 +7,19 @@ import { Button } from "./Button";
 import { Icon } from "./Icon";
 import { confirmBulkCollection, type BulkMarketplaceRequest } from "@/lib/api/marketplace";
 import { CompanyRatingModal } from "./CompanyRatingModal";
+import { CsrContributionModal } from "./CsrContributionModal";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { createCsrContribution } from "@/lib/api/csr";
 
 interface BulkPickupDetailsModalProps {
   request: BulkMarketplaceRequest;
   onClose: () => void;
   onUpdate?: () => void;
+  onCsrTrigger?: (request: BulkMarketplaceRequest) => void;
 }
 
-export function BulkPickupDetailsModal({ request, onClose, onUpdate }: BulkPickupDetailsModalProps) {
+export function BulkPickupDetailsModal({ request, onClose, onUpdate, onCsrTrigger }: BulkPickupDetailsModalProps) {
+  const { user } = useAuth();
   const [isConfirming, setIsConfirming] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [showRatingModal, setShowRatingModal] = React.useState(false);
@@ -274,7 +279,16 @@ export function BulkPickupDetailsModal({ request, onClose, onUpdate }: BulkPicku
           onClose={() => setShowRatingModal(false)}
           onSuccess={() => {
             setShowRatingModal(false);
-            if (onUpdate) onUpdate();
+            const hasCsr = request.csrContributions && request.csrContributions.length > 0;
+            if (user?.businessProfile?.askForCsrContribution !== false && !hasCsr) {
+              if (onCsrTrigger) {
+                onClose();
+                onCsrTrigger(request);
+              }
+            } else {
+              if (onUpdate) onUpdate();
+              onClose();
+            }
           }}
         />
       )}

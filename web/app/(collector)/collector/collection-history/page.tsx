@@ -13,78 +13,114 @@ import { Card } from "@/components/Card";
 import { useRequireRole } from "@/lib/auth/AuthContext";
 import { WasteCategoryChip } from "@/components/WasteCategoryChip";
 
+import { MakePaymentModal } from "@/components/MakePaymentModal";
+
 function CollectionHistoryModal({ request, onClose }: { request: PickupRequestSummary; onClose: () => void }) {
+  const [showPayment, setShowPayment] = React.useState(false);
   const totalEarned = request.bidAmountsPerKg ? 
     request.items.reduce((sum, item) => sum + (item.exactWeightKg || 0) * (request.bidAmountsPerKg![item.category] || 0), 0)
     : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/50 p-4 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between p-6 border-b border-neutral-100 bg-neutral-50/50 shrink-0">
-          <div>
-            <h2 className="text-xl font-bold text-neutral-900">Completed Collection</h2>
-            <p className="text-sm text-neutral-500 mt-1">Pickup ID: {request.id.slice(0, 8)}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="h-10 w-10 flex items-center justify-center rounded-full bg-white border border-neutral-200 text-neutral-500 hover:bg-neutral-100 transition-colors"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="p-6 overflow-y-auto flex flex-col gap-8">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full uppercase tracking-wide flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4" />
-                Collection Completed
-              </span>
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/50 p-4 backdrop-blur-sm animate-fade-in">
+        <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="flex items-center justify-between p-6 border-b border-neutral-100 bg-neutral-50/50 shrink-0">
+            <div>
+              <h2 className="text-xl font-bold text-neutral-900">Completed Collection</h2>
+              <p className="text-sm text-neutral-500 mt-1">Pickup ID: {request.id.slice(0, 8)}</p>
             </div>
-            
-            <div className="flex items-center gap-4 bg-neutral-50 border border-neutral-100 rounded-xl p-4">
-              <div className="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                <Icon icon={MapPin} />
-              </div>
-              <div>
-                <p className="text-xs text-neutral-500 uppercase tracking-widest font-semibold">Location</p>
-                <p className="text-lg font-bold text-neutral-900 line-clamp-1">{request.pickupFormattedAddress}</p>
-              </div>
-            </div>
+            <button
+              onClick={onClose}
+              className="h-10 w-10 flex items-center justify-center rounded-full bg-white border border-neutral-200 text-neutral-500 hover:bg-neutral-100 transition-colors"
+            >
+              <X size={20} />
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-6 overflow-y-auto flex flex-col gap-8">
             <div className="flex flex-col gap-4">
-              <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wider border-b border-neutral-100 pb-2">
-                Collection Info
-              </h3>
+              <div className="flex items-center justify-between gap-2">
+                <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full uppercase tracking-wide flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Collection Completed
+                </span>
+              </div>
+                
+              {totalEarned ? (
+                <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-xl border ${request.hasPayment ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-200'}`}>
+                  <div>
+                    <p className="text-xs uppercase tracking-wider font-bold text-neutral-500 mb-1">Payment Status</p>
+                    {request.hasPayment ? (
+                      <div className="flex items-center gap-2 text-emerald-700 font-bold">
+                        <CheckCircle2 className="w-5 h-5" />
+                        <span className="text-lg">Payment Completed</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-amber-700 font-bold">
+                        <AlertCircle className="w-5 h-5" />
+                        <span className="text-lg">Payment Pending</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {request.hasPayment ? (
+                      <>
+                        <Button variant="secondary" size="sm" onClick={() => window.open(`/receipt/${request.id}`, '_blank')}>View Receipt</Button>
+                        <Button variant="primary" size="sm" onClick={() => window.open(`/receipt/${request.id}?download=true`, '_blank')}>Download Receipt</Button>
+                      </>
+                    ) : (
+                      <Button 
+                        variant="primary" 
+                        size="md" 
+                        className="w-full sm:w-auto shadow-sm"
+                        onClick={() => setShowPayment(true)}
+                      >
+                        Make Payment
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+              
+              <div className="flex items-center gap-4 bg-neutral-50 border border-neutral-100 rounded-xl p-4 mt-2">
+                <div className="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                  <Icon icon={MapPin} />
+                </div>
+                <div>
+                  <p className="text-xs text-neutral-500 uppercase tracking-widest font-semibold">Location</p>
+                  <p className="text-lg font-bold text-neutral-900 line-clamp-1">{request.pickupFormattedAddress}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-4">
-                <div className="flex items-start gap-3">
-                  <Icon icon={Tag} className="text-emerald-500 shrink-0 mt-0.5" size="sm" />
-                  <div>
-                    <p className="text-xs text-neutral-500">Earned Amount</p>
-                    <p className="font-semibold text-neutral-900">
-                      {totalEarned ? `৳${totalEarned.toLocaleString()}` : "N/A"}
-                    </p>
+                <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wider border-b border-neutral-100 pb-2">
+                  Collection Info
+                </h3>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-start gap-3">
+                    <Icon icon={Tag} className="text-emerald-500 shrink-0 mt-0.5" size="sm" />
+                    <div>
+                      <p className="text-xs text-neutral-500">Payable Amount</p>
+                      <p className="font-semibold text-neutral-900">
+                        {totalEarned ? `৳${totalEarned.toLocaleString()}` : "N/A"}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Icon icon={Calendar} className="text-blue-500 shrink-0 mt-0.5" size="sm" />
-                  <div>
-                    <p className="text-xs text-neutral-500">Completed Date</p>
-                    <p className="font-semibold text-neutral-900">
-                      {format(new Date(request.updatedAt), "MMMM d, yyyy 'at' h:mm a")}
-                    </p>
+                  <div className="flex items-start gap-3">
+                    <Icon icon={Calendar} className="text-blue-500 shrink-0 mt-0.5" size="sm" />
+                    <div>
+                      <p className="text-xs text-neutral-500">Completed Date</p>
+                      <p className="font-semibold text-neutral-900">
+                        {format(new Date(request.updatedAt), "MMMM d, yyyy 'at' h:mm a")}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex flex-col gap-4">
-              <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wider border-b border-neutral-100 pb-2">
-                Collected Materials
-              </h3>
               <div className="flex flex-col gap-4">
                 <div className="flex items-start gap-3">
                   <Icon icon={Package} className="text-purple-500 shrink-0 mt-0.5" size="sm" />
@@ -106,7 +142,19 @@ function CollectionHistoryModal({ request, onClose }: { request: PickupRequestSu
           </div>
         </div>
       </div>
-    </div>
+      
+      {showPayment && totalEarned && (
+        <MakePaymentModal 
+          pickupId={request.id} 
+          amount={totalEarned} 
+          onClose={() => setShowPayment(false)} 
+          onSuccess={() => {
+            setShowPayment(false);
+            onClose(); // and maybe refresh page, but this is fine for now
+          }} 
+        />
+      )}
+    </>
   );
 }
 

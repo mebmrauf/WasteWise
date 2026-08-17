@@ -4,10 +4,17 @@ import { prisma } from "../lib/prisma";
 import { requireAuth, requireRole } from "../lib/rbac";
 import { asyncHandler } from "../lib/asyncHandler";
 import { sendData, sendError } from "../lib/apiResponse";
-import { WasteCategory, VehicleType, Prisma, Role } from "@prisma/client";
+import { WasteCategory, VehicleType, Prisma, Role, PaymentStatus, PaymentMethod } from "@prisma/client";
 import { createNotification } from "../lib/notifications";
+import { calculateMembershipLevel, getMembershipBonusPercentage, getMembershipBadge } from "../lib/rewards";
+import { calculateBulkPickupAmount } from "../lib/paymentCalculator";
+import { logger } from "../lib/logger";
 
 export const marketplaceRouter = Router();
+
+// Configurable bidding duration (in minutes) - Set to 3 for testing, change to 1440 (24h) for production
+const BIDDING_DURATION_MINUTES = 1440;
+const BIDDING_DURATION_MS = BIDDING_DURATION_MINUTES * 60 * 1000;
 
 // Zod schemas
 const createRequestSchema = z.object({
@@ -65,6 +72,7 @@ marketplaceRouter.post(
         businessId: req.user!.id,
         ...parsed.data,
         status: "OPEN_FOR_BIDDING",
+        bidEndsAt: new Date(Date.now() + BIDDING_DURATION_MS),
       },
     });
 
@@ -118,18 +126,34 @@ marketplaceRouter.get(
           },
           rating: {
             select: { score: true }
+          },
+          csrContributions: {
+            select: { id: true }
           }
         } : {}),
         ...(isRecyclingCompany ? {
           quotations: {
             where: { companyId: req.user!.id }
+          },
+          rating: {
+            select: { score: true }
           }
-        } : {})
+        } : {}),
+        payments: {
+          where: { status: "COMPLETED" },
+          select: { id: true }
+        }
       },
       orderBy: { createdAt: "desc" },
     });
 
-    sendData(res, 200, { requests });
+    // Send back with mapped hasPayment
+    const mappedRequests = requests.map(r => ({
+      ...r,
+      hasPayment: r.payments ? r.payments.length > 0 : false
+    }));
+
+    sendData(res, 200, { requests: mappedRequests });
   })
 );
 
@@ -147,7 +171,11 @@ marketplaceRouter.get(
         quotations: {
           where: { companyId: req.user!.id }
         },
-        rating: true
+        rating: true,
+        payments: {
+          where: { status: "COMPLETED" },
+          select: { id: true }
+        }
       }
     });
 
@@ -167,7 +195,8 @@ marketplaceRouter.get(
       }
     } else if (isRecyclingCompany) {
       const hasAcceptedQuote = request.quotations.some((q: any) => q.status === "ACCEPTED");
-      if (request.status !== "OPEN_FOR_BIDDING" && request.assignedCompanyId !== req.user!.id && !hasAcceptedQuote) {
+      const hasQuotation = request.quotations.length > 0;
+      if (request.status !== "OPEN_FOR_BIDDING" && request.assignedCompanyId !== req.user!.id && !hasQuotation) {
         sendError(res, 403, "FORBIDDEN", "You do not have permission to view this request.");
         return;
       }
@@ -176,7 +205,12 @@ marketplaceRouter.get(
       return;
     }
 
-    sendData(res, 200, { request });
+    const mappedRequest = {
+      ...request,
+      hasPayment: request.payments ? request.payments.length > 0 : false
+    };
+
+    sendData(res, 200, { request: mappedRequest });
   })
 );
 
@@ -202,7 +236,9 @@ marketplaceRouter.post(
       return;
     }
 
-    if (request.status !== "OPEN_FOR_BIDDING") {
+    const expirationTime = request.bidEndsAt ? request.bidEndsAt.getTime() : new Date(request.createdAt).getTime() + 24 * 60 * 60 * 1000;
+
+    if (request.status !== "OPEN_FOR_BIDDING" || Date.now() >= expirationTime) {
       sendError(res, 400, "BAD_REQUEST", "Request is no longer open for bidding.");
       return;
     }
@@ -295,14 +331,19 @@ marketplaceRouter.post(
       return;
     }
 
-    if (request.status !== "OPEN_FOR_BIDDING") {
-      sendError(res, 400, "BAD_REQUEST", "Request is not open for bidding.");
+    if (request.status !== "BIDDING_CLOSED") {
+      sendError(res, 400, "BAD_REQUEST", "Bidding has not closed yet.");
       return;
     }
 
     const quotation = await prisma.marketplaceQuotation.findUnique({ where: { id: quoteId } });
     if (!quotation || quotation.requestId !== requestId) {
       sendError(res, 404, "NOT_FOUND", "Quotation not found.");
+      return;
+    }
+
+    if (!quotation.isHighestBid) {
+      sendError(res, 400, "BAD_REQUEST", "You can only accept the highest bid.");
       return;
     }
 
@@ -314,8 +355,8 @@ marketplaceRouter.post(
     try {
       await prisma.$transaction(async (tx) => {
         const currentRequest = await tx.bulkMarketplaceRequest.findUnique({ where: { id: requestId } });
-        if (currentRequest?.status !== "OPEN_FOR_BIDDING") {
-          throw new Error("NOT_OPEN");
+        if (currentRequest?.status !== "BIDDING_CLOSED") {
+          throw new Error("NOT_CLOSED");
         }
 
         // 1. Mark accepted quotation
@@ -340,8 +381,8 @@ marketplaceRouter.post(
         });
       });
     } catch (err: any) {
-      if (err.message === "NOT_OPEN") {
-        sendError(res, 400, "BAD_REQUEST", "Request is no longer open for bidding. Another quotation may have already been accepted.");
+      if (err.message === "NOT_CLOSED") {
+        sendError(res, 400, "BAD_REQUEST", "Bidding is not closed or already decided.");
         return;
       }
       throw err;
@@ -366,6 +407,77 @@ marketplaceRouter.post(
         emailPreference: "emailNotificationsEnabled",
       });
     }
+
+    sendData(res, 200, { success: true });
+  })
+);
+
+// Reject Quotation (Business only)
+marketplaceRouter.post(
+  "/requests/:id/quotations/:quoteId/reject",
+  requireAuth,
+  requireRole(Role.USER),
+  asyncHandler(async (req, res) => {
+    const dbUser = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!dbUser || dbUser.accountType !== "BUSINESS") {
+      sendError(res, 403, "FORBIDDEN", "Only Business accounts can reject quotations.");
+      return;
+    }
+
+    const { id: requestId, quoteId } = req.params;
+
+    const request = await prisma.bulkMarketplaceRequest.findUnique({ where: { id: requestId } });
+    if (!request || request.businessId !== req.user!.id) {
+      sendError(res, 404, "NOT_FOUND", "Request not found.");
+      return;
+    }
+
+    if (request.status !== "BIDDING_CLOSED") {
+      sendError(res, 400, "BAD_REQUEST", "Bidding has not closed yet.");
+      return;
+    }
+
+    const quotation = await prisma.marketplaceQuotation.findUnique({ where: { id: quoteId } });
+    if (!quotation || quotation.requestId !== requestId) {
+      sendError(res, 404, "NOT_FOUND", "Quotation not found.");
+      return;
+    }
+
+    if (!quotation.isHighestBid) {
+      sendError(res, 400, "BAD_REQUEST", "You can only reject the highest bid.");
+      return;
+    }
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        const currentRequest = await tx.bulkMarketplaceRequest.findUnique({ where: { id: requestId } });
+        if (currentRequest?.status !== "BIDDING_CLOSED") {
+          throw new Error("NOT_CLOSED");
+        }
+
+        // Mark highest quotation as rejected
+        await tx.marketplaceQuotation.update({
+          where: { id: quoteId },
+          data: { status: "REJECTED" }
+        });
+
+        // Request stays in BIDDING_CLOSED (unassigned state)
+      });
+    } catch (err: any) {
+      if (err.message === "NOT_CLOSED") {
+        sendError(res, 400, "BAD_REQUEST", "Bidding is not closed or already decided.");
+        return;
+      }
+      throw err;
+    }
+
+    void createNotification({
+      userId: quotation.companyId,
+      type: "PICKUP_STATUS_UPDATE",
+      title: "Quotation Not Selected",
+      message: "Your highest quotation was rejected by the Business.",
+      emailPreference: "emailNotificationsEnabled",
+    });
 
     sendData(res, 200, { success: true });
   })
@@ -400,7 +512,7 @@ marketplaceRouter.post(
   asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
-    
+
     if (!["EN_ROUTE", "ARRIVED", "IN_PROGRESS"].includes(status)) {
       sendError(res, 400, "BAD_REQUEST", "Invalid status update.");
       return;
@@ -471,7 +583,7 @@ marketplaceRouter.post(
   requireRole(Role.USER),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
-    
+
     const request = await prisma.bulkMarketplaceRequest.findUnique({ where: { id } });
     if (!request || request.businessId !== req.user!.id) {
       sendError(res, 404, "NOT_FOUND", "Request not found.");
@@ -483,39 +595,152 @@ marketplaceRouter.post(
       return;
     }
 
-    await prisma.bulkMarketplaceRequest.update({
+    const updatedRequest = await prisma.bulkMarketplaceRequest.update({
       where: { id },
       data: { status: "COMPLETED" }
     });
-    
+
+    if (updatedRequest.assignedCompanyId) {
+      try {
+        const { amount, customerId } = await calculateBulkPickupAmount(id);
+        await prisma.payment.create({
+          data: {
+            bulkRequestId: id,
+            customerId,
+            payerId: updatedRequest.assignedCompanyId,
+            amount,
+            paymentMethod: PaymentMethod.NOT_SELECTED,
+            status: PaymentStatus.PENDING,
+          }
+        });
+      } catch (err) {
+        logger.error({ err, bulkRequestId: id }, "Failed to auto-create pending payment for bulk request");
+      }
+    }
+
     void createNotification({
       userId: request.assignedCompanyId!,
       type: "PICKUP_STATUS_UPDATE",
       title: "Collection Confirmed",
-      message: `The business has confirmed the collection for request ${id.slice(0,8)}.`,
+      message: `The business has confirmed the collection for request ${id.slice(0, 8)}.`,
       emailPreference: "emailNotificationsEnabled",
     });
-    
-    // Also award points to business (simplified here)
+
+    // Also award points to business and update membership
     if (request.verifiedTotalWeightKg) {
-      const points = Math.floor(request.verifiedTotalWeightKg * 2);
-      await prisma.user.update({
+      const basePoints = Math.floor(request.verifiedTotalWeightKg * 2);
+      
+      const user = await prisma.user.findUnique({
         where: { id: req.user!.id },
-        data: {
-          greenPointsBalance: { increment: points },
-          totalGreenPoints: { increment: points }
+        select: {
+          greenPointsBalance: true,
+          totalGreenPoints: true,
+          accountType: true,
+          membershipLevel: true,
+          sustainabilityCertificateUrl: true
         }
       });
-      await prisma.greenPointsTransaction.create({
-        data: {
-          userId: req.user!.id,
-          points,
-          type: "EARNED",
-          category: "PICKUP",
-          description: "Earned from Bulk Marketplace Collection",
-          totalPoints: points,
+
+      if (user) {
+        const lifetimePoints = Math.max(user.totalGreenPoints, user.greenPointsBalance);
+        const currentLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
+        const bonusPercentage = getMembershipBonusPercentage(currentLevel);
+        const bonusPoints = Math.round(basePoints * (bonusPercentage / 100));
+        const totalPoints = basePoints + bonusPoints;
+
+        const newLifetimePoints = lifetimePoints + totalPoints;
+        const newLevel = calculateMembershipLevel(newLifetimePoints, user.accountType);
+        const newBadge = getMembershipBadge(newLevel);
+
+        const bonusesBreakdown = [];
+        bonusesBreakdown.push({
+          name: `${currentLevel.charAt(0).toUpperCase() + currentLevel.slice(1).toLowerCase()} Bonus${bonusPercentage > 0 ? ` (${bonusPercentage}%)` : ''}`,
+          points: bonusPoints
+        });
+
+        const rewardReason = {
+          basePoints,
+          bonusPoints,
+          totalPoints,
+          bonuses: bonusesBreakdown
+        };
+
+        const updateData: any = {
+          greenPointsBalance: { increment: totalPoints },
+          totalGreenPoints: { increment: totalPoints },
+          membershipLevel: newLevel,
+          membershipBadge: newBadge
+        };
+
+        // If newly reached GOLD and no certificate yet, unlock it
+        let unlockedCertificate = false;
+        if ((newLevel === "GOLD" || newLevel === "PLATINUM") && !user.sustainabilityCertificateUrl) {
+          updateData.sustainabilityCertificateUrl = "UNLOCKED";
+          unlockedCertificate = true;
         }
-      });
+
+        await prisma.user.update({
+          where: { id: req.user!.id },
+          data: updateData
+        });
+
+        await prisma.greenPointsTransaction.create({
+          data: {
+            userId: req.user!.id,
+            points: basePoints,
+            type: "EARNED",
+            category: "PICKUP",
+            description: `Earned from Bulk Marketplace Collection (Req: ${id.slice(0, 8)})`,
+            basePoints,
+            bonusPoints,
+            totalPoints,
+            rewardReason: rewardReason as any
+          }
+        });
+
+        await prisma.greenPointsTransaction.create({
+          data: {
+            userId: req.user!.id,
+            points: bonusPoints,
+            type: "EARNED",
+            category: "LOYALTY",
+            description: `${currentLevel.charAt(0).toUpperCase() + currentLevel.slice(1).toLowerCase()} Membership Bonus${bonusPercentage > 0 ? ` (${bonusPercentage}%)` : ''}`,
+            basePoints: 0,
+            bonusPoints: bonusPoints,
+            totalPoints: bonusPoints,
+          }
+        });
+
+        if (currentLevel !== newLevel) {
+          await prisma.greenPointsTransaction.create({
+            data: {
+              userId: req.user!.id,
+              points: 0,
+              type: "EARNED",
+              category: "BONUS",
+              description: `${newLevel.charAt(0).toUpperCase() + newLevel.slice(1).toLowerCase()} Membership Unlocked`,
+              basePoints: 0,
+              bonusPoints: 0,
+              totalPoints: 0,
+            }
+          });
+        }
+
+        if (unlockedCertificate) {
+          await prisma.greenPointsTransaction.create({
+            data: {
+              userId: req.user!.id,
+              points: 0,
+              type: "EARNED",
+              category: "BONUS",
+              description: "Sustainability Certificate Awarded",
+              basePoints: 0,
+              bonusPoints: 0,
+              totalPoints: 0,
+            }
+          });
+        }
+      }
     }
 
     sendData(res, 200, { success: true });
@@ -530,7 +755,7 @@ marketplaceRouter.post(
   asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { rating, review } = req.body;
-    
+
     const request = await prisma.bulkMarketplaceRequest.findUnique({ where: { id } });
     if (!request || request.businessId !== req.user!.id) {
       sendError(res, 404, "NOT_FOUND", "Request not found.");
@@ -541,7 +766,7 @@ marketplaceRouter.post(
       sendError(res, 400, "BAD_REQUEST", "Can only rate completed requests.");
       return;
     }
-    
+
     if (!request.assignedCompanyId) {
       sendError(res, 400, "BAD_REQUEST", "No assigned company to rate.");
       return;

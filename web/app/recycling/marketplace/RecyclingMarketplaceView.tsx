@@ -8,6 +8,39 @@ import { Icon } from "@/components/Icon";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { format } from "date-fns";
 
+function BiddingCountdown({ request }: { request: BulkMarketplaceRequest }) {
+  const [timeLeft, setTimeLeft] = React.useState<number>(0);
+
+  React.useEffect(() => {
+    // Use bidEndsAt if available, otherwise fallback to 24 hours from createdAt
+    const target = request.bidEndsAt 
+      ? new Date(request.bidEndsAt).getTime() 
+      : new Date(request.createdAt).getTime() + 24 * 60 * 60 * 1000;
+      
+    const update = () => {
+      const diff = target - Date.now();
+      setTimeLeft(diff > 0 ? diff : 0);
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [request.bidEndsAt, request.createdAt]);
+
+  if (timeLeft <= 0) return null;
+  
+  const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+  const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+  
+  return (
+    <div className="text-right mb-2">
+      <span className="text-sm font-medium text-primary-600">
+        Closes in: {String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+      </span>
+    </div>
+  );
+}
+
 export function RecyclingMarketplaceView() {
   const [requests, setRequests] = React.useState<BulkMarketplaceRequest[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -104,6 +137,7 @@ export function RecyclingMarketplaceView() {
               <div className="text-right mb-2">
                 <span className="text-body-sm text-neutral-500">{req._count?.quotations || 0} quotes so far</span>
               </div>
+              <BiddingCountdown request={req} />
               {req.quotations && req.quotations.length > 0 ? (
                 req.quotations[0].status === "ACCEPTED" ? (
                   <Button disabled variant="secondary" className="w-full bg-emerald-100 text-emerald-800 border-emerald-200">

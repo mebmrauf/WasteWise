@@ -188,7 +188,7 @@ export async function calculateGreenPointsForPickup(
   const subtotal = totalBasePoints + totalBonusPoints;
   const membershipBonusPoints = Math.round(subtotal * (membershipBonusPercentage / 100));
   
-  if (membershipBonusPoints > 0) {
+  if (membershipBonusPoints > 0 || user?.accountType === "BUSINESS") {
     bonusesBreakdown.push({
       name: `${currentLevel.charAt(0).toUpperCase() + currentLevel.slice(1).toLowerCase()} Member Bonus (${membershipBonusPercentage}%)`,
       points: membershipBonusPoints,

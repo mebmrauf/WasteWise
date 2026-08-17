@@ -91,6 +91,7 @@ export interface PickupRequestSummary {
   /** The household's own entered weight estimate for the whole pickup — not broken down per item. */
   estimatedMinKg: number | null;
   estimatedMaxKg: number | null;
+  hasPayment?: boolean;
   createdAt: string;
   updatedAt: string;
   requester?: {
@@ -194,7 +195,7 @@ export function listCollectorHistory(): Promise<{ pickups: PickupRequestSummary[
 
 export interface PickupOffer {
   id: string;
-  pickupRequestId: string;
+  pickupRequestId: string;v
   bidAmount: number;
   bidAmountsPerKg?: Record<string, number> | null;
   message: string | null;

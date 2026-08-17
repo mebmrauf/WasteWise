@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Gift, HandCoins, MapPin, Megaphone, Truck, User, Camera, LayoutDashboard, Users, Package } from "lucide-react";
+import { ClipboardList, Gift, HandCoins, MapPin, Megaphone, Truck, User, Camera, LayoutDashboard, Users, Package, Banknote } from "lucide-react";
 import { DashboardNav, type DashboardNavItem } from "@/components/DashboardNav";
 import { PageContainer } from "@/components/PageContainer";
 import { useRequireRole } from "@/lib/auth/AuthContext";
@@ -24,7 +24,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       return [
         { label: "Dashboard", href: "/business/dashboard", icon: LayoutDashboard },
         { label: "Profile", href: "/business/profile", icon: User },
-        { label: "Smart Pickup", href: "/business/dashboard/pickups/new", icon: Truck },
         { label: "Bulk Marketplace", href: "/business/dashboard/marketplace", icon: Package },
         {
           label: "Pickup History",
@@ -32,6 +31,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           icon: ClipboardList,
           active: onTrackDetail || onOffersDetail ? true : undefined,
         },
+        { label: "Payment History", href: "/business/dashboard/payments", icon: Banknote },
         { label: "Green Rewards", href: "/business/dashboard/rewards", icon: Gift },
         { label: "Complaints", href: "/business/dashboard/complaints", icon: Megaphone },
       ];

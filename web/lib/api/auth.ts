@@ -35,6 +35,7 @@ export interface AuthUser {
   formattedAddress?: string;
   recyclingCompanyProfile?: any;
   collectorProfile?: any;
+  businessProfile?: any;
 }
 
 export interface ApiError {

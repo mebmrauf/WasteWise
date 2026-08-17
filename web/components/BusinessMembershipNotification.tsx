@@ -6,20 +6,10 @@ import { cn } from "@/lib/utils";
 
 interface BusinessMembershipNotificationProps {
   level: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
-  goldEligible?: boolean;
-  goldNextDate?: string | null;
-  platinumEligible?: boolean;
-  platinumNextDate?: string | null;
-
 }
 
 export function BusinessMembershipNotification({
-  level,
-  goldEligible,
-  goldNextDate,
-  platinumEligible,
-  platinumNextDate,
-
+  level
 }: BusinessMembershipNotificationProps) {
   const [isVisible, setIsVisible] = React.useState(true);
 
@@ -44,57 +34,28 @@ export function BusinessMembershipNotification({
       bgColor = "bg-slate-100 border-slate-300 text-slate-900";
       content = (
         <span>
-          Congratulations! You are now a <strong>Silver Business Member</strong>. You now earn 5% extra Green Points on every completed pickup. Keep recycling to reach Gold (3,001 Green Points) and unlock even more rewards!
+          Congratulations! You are now a <strong>Silver Business Member</strong>. You now earn 5% extra Green Points on every completed pickup. Keep recycling to reach Gold (3,001 Green Points) and unlock your Sustainability Certificate!
         </span>
       );
       break;
+
     case "GOLD":
       icon = <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-200 text-yellow-700 shrink-0"><Award className="w-5 h-5" /></div>;
       bgColor = "bg-yellow-50 border-yellow-200 text-yellow-900";
-      if (goldEligible) {
-        content = (
-          <span>
-            Your <strong>5% Eco Shop Discount</strong> is ready to claim!
-          </span>
-        );
-      } else if (goldNextDate) {
-        const formattedDate = new Date(goldNextDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-        content = (
-          <span>
-            Your next <strong>5% Eco Shop Discount</strong> will be available on <strong>{formattedDate}</strong>.
-          </span>
-        );
-      } else {
-        content = (
-          <span>
-            You&apos;re a <strong>Gold Business Member</strong>! You now earn 10% extra Green Points and have earned a Digital Sustainability Certificate. Keep going to reach Platinum (4,501 Green Points) for exclusive gifts and higher bonuses!
-          </span>
-        );
-      }
+      content = (
+        <span>
+          Congratulations! You are now a <strong>Gold Business Member</strong>. You earn 10% extra Green Points, and your <strong>Sustainability Certificate</strong> is ready to download! Keep recycling to reach Platinum!
+        </span>
+      );
       break;
     case "PLATINUM":
       icon = <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-200 text-purple-700 shrink-0"><Diamond className="w-5 h-5" /></div>;
       bgColor = "bg-purple-50 border-purple-200 text-purple-900";
-      if (platinumEligible) {
-        content = (
-          <span>
-            Your Tree Plantation Reward is ready to claim!
-          </span>
-        );
-      } else if (platinumNextDate) {
-        const formattedDate = new Date(platinumNextDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-        content = (
-          <span>
-            Your next Tree Plantation Reward will be available on <strong>{formattedDate}</strong>.
-          </span>
-        );
-      } else {
-        content = (
-          <span>
-            You are a <strong>Platinum Business Member</strong>! You earn 15% extra Green Points on every completed pickup.
-          </span>
-        );
-      }
+      content = (
+        <span>
+          You are a <strong>Platinum Business Member</strong>! You earn 15% extra Green Points on every completed pickup, and you are eligible for Tree Plantations.
+        </span>
+      );
       break;
   }
 

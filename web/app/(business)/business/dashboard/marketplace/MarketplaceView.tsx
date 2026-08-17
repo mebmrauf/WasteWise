@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { ErrorBanner } from "@/components/ErrorBanner";
-import { createBulkRequest, getMarketplaceRequests, getQuotations, acceptQuotation, type BulkMarketplaceRequest, type MarketplaceQuotation } from "@/lib/api/marketplace";
+import { createBulkRequest, getMarketplaceRequests, getQuotations, acceptQuotation, rejectHighestQuotation, type BulkMarketplaceRequest, type MarketplaceQuotation } from "@/lib/api/marketplace";
 import { Package, Clock, MapPin, Camera, Navigation, Search, Home, X, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Card } from "@/components/Card";
@@ -24,6 +24,61 @@ const ADDRESS_DEBOUNCE_MS = 300;
 const ADDRESS_MIN_QUERY_LENGTH = 3;
 
 
+
+function useBiddingStatus(request: BulkMarketplaceRequest) {
+  const [isTimeUp, setIsTimeUp] = React.useState(false);
+
+  React.useEffect(() => {
+    if (request.status === "BIDDING_CLOSED") {
+      setIsTimeUp(true);
+      return;
+    }
+    const target = request.bidEndsAt 
+      ? new Date(request.bidEndsAt).getTime() 
+      : new Date(request.createdAt).getTime() + 24 * 60 * 60 * 1000;
+      
+    const check = () => setIsTimeUp(Date.now() >= target);
+    check();
+    const id = setInterval(check, 1000);
+    return () => clearInterval(id);
+  }, [request]);
+
+  const isClosed = request.status === "BIDDING_CLOSED" || isTimeUp;
+  return { isClosed };
+}
+
+function BiddingCountdown({ request }: { request: BulkMarketplaceRequest }) {
+  const [timeLeft, setTimeLeft] = React.useState<number>(0);
+  const { isClosed } = useBiddingStatus(request);
+
+  React.useEffect(() => {
+    if (isClosed) return;
+    const target = request.bidEndsAt 
+      ? new Date(request.bidEndsAt).getTime() 
+      : new Date(request.createdAt).getTime() + 24 * 60 * 60 * 1000;
+      
+    const update = () => {
+      const diff = target - Date.now();
+      setTimeLeft(diff > 0 ? diff : 0);
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [request.bidEndsAt, request.createdAt, isClosed]);
+
+  if (isClosed) return <span className="text-neutral-500 font-medium">Bidding Closed</span>;
+  if (timeLeft <= 0) return null;
+  
+  const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+  const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+  
+  return (
+    <span className="text-primary-600 font-medium">
+      Bidding closes in: {String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+    </span>
+  );
+}
 
 export function MarketplaceView() {
   const { user } = useAuth();
@@ -413,8 +468,15 @@ export function MarketplaceView() {
                       <p className="text-display text-primary-600 leading-none">{req._count?.quotations || 0}</p>
                       <p className="text-caption text-neutral-500">Quotations</p>
                     </div>
-                    {req.status === "OPEN_FOR_BIDDING" && req._count?.quotations ? (
-                      <Button variant="secondary" size="sm" onClick={() => setReviewingRequest(req)}>Review Bids</Button>
+                    {req.status === "OPEN_FOR_BIDDING" ? (
+                      <div className="flex flex-col items-end gap-1">
+                        <BiddingCountdown request={req} />
+                        {req._count?.quotations ? (
+                          <Button variant="secondary" size="sm" onClick={() => setReviewingRequest(req)}>View Bids</Button>
+                        ) : null}
+                      </div>
+                    ) : req.status === "BIDDING_CLOSED" && req._count?.quotations ? (
+                      <Button variant="primary" size="sm" onClick={() => setReviewingRequest(req)}>Review Bids</Button>
                     ) : null}
                   </div>
                 </div>
@@ -751,7 +813,6 @@ export function MarketplaceView() {
           request={reviewingRequest} 
           onClose={() => setReviewingRequest(null)}
           onAccept={() => {
-            setReviewingRequest(null);
             void loadRequests();
           }}
         />
@@ -763,8 +824,21 @@ export function MarketplaceView() {
 function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketplaceRequest; onClose: () => void; onAccept: () => void }) {
   const [quotations, setQuotations] = React.useState<MarketplaceQuotation[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [acceptingId, setAcceptingId] = React.useState<string | null>(null);
+  const [processingId, setProcessingId] = React.useState<string | null>(null);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+
+  const { isClosed } = useBiddingStatus(request);
+
+  const highestQuoteId = React.useMemo(() => {
+    if (!quotations || quotations.length === 0) return null;
+    const serverHighest = quotations.find(q => q.isHighestBid);
+    if (serverHighest) return serverHighest.id;
+    const sorted = [...quotations].sort((a, b) => {
+      if (a.purchasePrice !== b.purchasePrice) return b.purchasePrice - a.purchasePrice;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+    return sorted[0].id;
+  }, [quotations]);
 
   React.useEffect(() => {
     async function load() {
@@ -782,14 +856,33 @@ function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketpl
 
   const handleAccept = async (quoteId: string) => {
     try {
-      setAcceptingId(quoteId);
+      setProcessingId(quoteId);
       setErrorMsg(null);
       await acceptQuotation(request.id, quoteId);
       onAccept();
+      
+      const data = await getQuotations(request.id);
+      setQuotations(data);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to accept quotation");
     } finally {
-      setAcceptingId(null);
+      setProcessingId(null);
+    }
+  };
+
+  const handleReject = async (quoteId: string) => {
+    try {
+      setProcessingId(quoteId);
+      setErrorMsg(null);
+      await rejectHighestQuotation(request.id, quoteId);
+      onAccept();
+      
+      const data = await getQuotations(request.id);
+      setQuotations(data);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to reject quotation");
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -803,6 +896,24 @@ function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketpl
           </button>
         </div>
         <div className="p-6 overflow-y-auto">
+          {!isClosed ? (
+            <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-blue-900">Bidding is still open</h3>
+                <p className="text-sm text-blue-700">You can accept an offer once the bidding period expires.</p>
+              </div>
+              <BiddingCountdown request={request} />
+            </div>
+          ) : quotations.length > 0 ? (
+            <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-emerald-900">Bidding has closed</h3>
+                <p className="text-sm text-emerald-700">The highest quotation has been selected automatically. Please review it and decide whether to accept or reject the offer.</p>
+              </div>
+              <span className="text-emerald-700 font-medium whitespace-nowrap ml-4">Bidding Closed</span>
+            </div>
+          ) : null}
+
           {errorMsg && <ErrorBanner className="mb-4">{errorMsg}</ErrorBanner>}
           {loading ? (
             <div className="flex h-32 items-center justify-center">
@@ -812,57 +923,105 @@ function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketpl
             <p className="text-center text-neutral-500 py-8">No bids found for this request.</p>
           ) : (
             <div className="space-y-4">
-              {quotations.map(quote => (
-                <div key={quote.id} className="border border-neutral-200 rounded-xl p-5 hover:border-emerald-200 transition-colors">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      {quote.company?.avatarUrl ? (
-                        <img src={quote.company.avatarUrl} alt={quote.company.fullName} className="w-10 h-10 rounded-full object-cover bg-neutral-100" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold">
-                          {quote.company?.fullName?.charAt(0) || "C"}
+              {quotations.map(quote => {
+                const isHighest = quote.id === highestQuoteId;
+                const canDecide = isClosed && isHighest && quote.status === "PENDING";
+
+                return (
+                  <div key={quote.id} className={cn(
+                    "border rounded-xl p-5 transition-colors",
+                    isClosed && isHighest ? "border-emerald-500 bg-emerald-50/30" : "border-neutral-200"
+                  )}>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        {quote.company?.avatarUrl ? (
+                          <img src={quote.company.avatarUrl} alt={quote.company.fullName} className="w-10 h-10 rounded-full object-cover bg-neutral-100" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold">
+                            {quote.company?.fullName?.charAt(0) || "C"}
+                          </div>
+                        )}
+                        <div>
+                          <h4 className="font-semibold text-neutral-900">{quote.company?.fullName}</h4>
+                          <p className="text-xs text-neutral-500">Status: {quote.status}</p>
                         </div>
-                      )}
-                      <div>
-                        <h4 className="font-semibold text-neutral-900">{quote.company?.fullName}</h4>
-                        <p className="text-xs text-neutral-500">Status: {quote.status}</p>
+                      </div>
+                      <div className="text-right flex flex-col items-end">
+                        {isClosed && isHighest && (
+                          <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600 bg-emerald-100 px-2 py-1 rounded-md mb-1">
+                            Highest Bid
+                          </span>
+                        )}
+                        <p className="text-xl font-bold text-emerald-600">BDT {quote.purchasePrice}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xl font-bold text-emerald-600">BDT {quote.purchasePrice}</p>
+                    
+                    <div className="mt-4 grid grid-cols-2 gap-4 text-sm bg-neutral-50 p-4 rounded-lg">
+                      <div>
+                        <span className="block text-neutral-500 text-xs mb-1">Proposed Pickup</span>
+                        <span className="font-medium text-neutral-900">
+                          {new Date(quote.estimatedPickupDate).toLocaleDateString()} {quote.estimatedPickupTime && `at ${quote.estimatedPickupTime}`}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-neutral-500 text-xs mb-1">Vehicle Type</span>
+                        <span className="font-medium text-neutral-900 capitalize">{quote.vehicleType.replace(/_/g, ' ').toLowerCase()}</span>
+                      </div>
+                      {quote.additionalNotes && (
+                        <div className="col-span-2">
+                          <span className="block text-neutral-500 text-xs mb-1">Additional Notes</span>
+                          <span className="text-neutral-700">{quote.additionalNotes}</span>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-4 text-sm bg-neutral-50 p-4 rounded-lg">
-                    <div>
-                      <span className="block text-neutral-500 text-xs mb-1">Proposed Pickup</span>
-                      <span className="font-medium text-neutral-900">
-                        {new Date(quote.estimatedPickupDate).toLocaleDateString()} {quote.estimatedPickupTime && `at ${quote.estimatedPickupTime}`}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="block text-neutral-500 text-xs mb-1">Vehicle Type</span>
-                      <span className="font-medium text-neutral-900 capitalize">{quote.vehicleType.replace(/_/g, ' ').toLowerCase()}</span>
-                    </div>
-                    {quote.additionalNotes && (
-                      <div className="col-span-2">
-                        <span className="block text-neutral-500 text-xs mb-1">Additional Notes</span>
-                        <span className="text-neutral-700">{quote.additionalNotes}</span>
+
+                    {canDecide && (
+                      <div className="mt-6 border-t border-emerald-100 pt-4 flex flex-col items-center">
+                        <p className="text-body font-medium text-neutral-900 mb-4 text-center">
+                          The highest quotation has been selected automatically. Do you want to accept this offer?
+                        </p>
+                        <div className="flex gap-4">
+                          <Button 
+                            variant="secondary"
+                            onClick={() => handleReject(quote.id)} 
+                            disabled={processingId !== null}
+                          >
+                            {processingId === quote.id ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            Reject
+                          </Button>
+                          <Button 
+                            onClick={() => handleAccept(quote.id)} 
+                            disabled={processingId !== null}
+                          >
+                            {processingId === quote.id ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            Accept
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {quote.status === "ACCEPTED" && (
+                      <div className="mt-4 flex justify-end">
+                        <Button disabled className="bg-emerald-100 text-emerald-800 border-emerald-200 opacity-100">
+                          Accepted
+                        </Button>
+                      </div>
+                    )}
+                    {quote.status === "REJECTED" && (
+                      <div className="mt-4 flex justify-end">
+                        <Button disabled className="bg-neutral-100 text-neutral-500 border-neutral-200 opacity-100">
+                          Rejected
+                        </Button>
+                      </div>
+                    )}
+                    {quote.status === "PENDING" && !canDecide && request.status !== "OPEN_FOR_BIDDING" && (
+                      <div className="mt-4 flex justify-end">
+                        <span className="text-sm font-medium text-neutral-400">Not Selected</span>
                       </div>
                     )}
                   </div>
-                  {quote.status === "PENDING" && (
-                    <div className="mt-4 flex justify-end">
-                      <Button 
-                        onClick={() => handleAccept(quote.id)} 
-                        disabled={acceptingId !== null}
-                      >
-                        {acceptingId === quote.id ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                        Accept Quotation
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

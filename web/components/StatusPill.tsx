@@ -9,7 +9,7 @@ const toneClasses: Record<StatusTone, string> = {
   warning: "border-warning-500 bg-warning-50 text-warning-700",
   error: "border-error-500 bg-error-50 text-error-700",
   info: "border-info-500 bg-info-50 text-info-700",
-  neutral: "border-neutral-500 bg-neutral-50 text-neutral-700",
+  neutral: "border-neutral-200 bg-neutral-50 text-neutral-700",
 };
 
 const ToneIcons = {
@@ -17,7 +17,7 @@ const ToneIcons = {
   warning: AlertTriangle,
   error: XCircle,
   info: Info,
-  neutral: Circle,
+  neutral: Info,
 };
 
 export interface StatusPillProps {

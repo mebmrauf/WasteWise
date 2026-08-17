@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { getMyComplaints, type Complaint } from "@/lib/api/complaints";
+import { publicEnv } from "@/lib/env";
 import { Card } from "./Card";
 import { Button } from "./Button";
 import { ErrorBanner } from "./ErrorBanner";
@@ -101,7 +102,9 @@ export function ComplaintsView({ limitedOptions = false }: ComplaintsViewProps) 
                     Complaint ID: <span className="text-neutral-900">{c.id.slice(-6).toUpperCase()}</span> • {new Date(c.createdAt).toLocaleDateString()}
                   </div>
                   <div className="text-body font-medium text-neutral-900">
-                    Pickup: {c.pickupRequestId ? c.pickupRequestId.slice(-6).toUpperCase() : "N/A"}
+                    {c.pickupRequestId && `Pickup: ${c.pickupRequestId.slice(-6).toUpperCase()}`}
+                    {c.bulkRequestId && `Bulk Request: ${c.bulkRequestId.slice(0, 8).toUpperCase()}`}
+                    {!c.pickupRequestId && !c.bulkRequestId && "General Complaint"}
                   </div>
                 </div>
                 <StatusPill tone={getStatusTone(c.status)}>
@@ -111,6 +114,24 @@ export function ComplaintsView({ limitedOptions = false }: ComplaintsViewProps) 
 
               <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-100 text-body-sm text-neutral-700 mb-4">
                 {c.description}
+                {c.photos && c.photos.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {c.photos.map((photoUrl, idx) => (
+                      <a 
+                        key={idx} 
+                        href={`${publicEnv.NEXT_PUBLIC_API_URL.replace("/api/v1", "")}${photoUrl}`} 
+                        target="_blank" 
+                        rel="noreferrer"
+                      >
+                        <img 
+                          src={`${publicEnv.NEXT_PUBLIC_API_URL.replace("/api/v1", "")}${photoUrl}`} 
+                          alt={`Attachment ${idx + 1}`} 
+                          className="h-24 w-24 object-cover rounded-md border border-neutral-200" 
+                        />
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {c.resolutionNotes && (

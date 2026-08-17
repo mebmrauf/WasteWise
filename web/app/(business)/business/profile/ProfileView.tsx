@@ -331,6 +331,18 @@ export function ProfileView() {
     }
   }
 
+  async function handleToggleCsr(checked: boolean) {
+    if (!businessProfile) return;
+    const previous = { ...businessProfile };
+    try {
+      setBusinessProfile({ ...businessProfile, askForCsrContribution: checked });
+      await updateBusinessProfile({ askForCsrContribution: checked });
+    } catch (err) {
+      setBusinessProfile(previous);
+      alert("Couldn't save CSR preference. Try again.");
+    }
+  }
+
   async function handleAvatarFileSelected(file: File) {
     setAvatarUploadState({ isUploading: true, error: null });
     try {
@@ -453,6 +465,19 @@ export function ProfileView() {
             errorText={tradeLicenseSave.error}
             disabled={!businessProfile}
           />
+          <div className="flex items-center justify-between border border-neutral-100 p-4 rounded-xl">
+            <div className="flex flex-col">
+              <span className="text-body font-semibold text-neutral-900">CSR Contributions</span>
+              <span className="text-body-sm text-neutral-500">Ask for a CSR contribution after every completed Bulk Marketplace pickup.</span>
+            </div>
+            <input
+              type="checkbox"
+              className="h-5 w-5 accent-emerald-600 rounded shrink-0 cursor-pointer"
+              checked={businessProfile?.askForCsrContribution ?? false}
+              onChange={(e) => void handleToggleCsr(e.target.checked)}
+              disabled={!businessProfile}
+            />
+          </div>
         </div>
       </Card>
 

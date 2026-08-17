@@ -17,6 +17,10 @@ export interface RewardsBalance {
   giftClaimed: boolean;
   accountType: "HOUSEHOLD" | "BUSINESS" | null;
   environmentalImpact: { totalWasteRecycledKg: number; totalCo2ReducedKg: number; totalTreesSaved: number } | null;
+  lastTreePlantationClaimDate?: string | null;
+  nextTreePlantationEligibleDate?: string | null;
+  treePlantationClaimed?: boolean;
+  sustainabilityCertificateUrl?: string | null;
 }
 
 export function getRewardsBalance(): Promise<RewardsBalance> {
@@ -61,10 +65,28 @@ export interface MobileRechargeTransaction {
 export function getRewardsHistory(): Promise<{
   greenPointsTransactions: GreenPointsTransaction[];
   mobileRechargeTransactions: MobileRechargeTransaction[];
+  csrContributions?: {
+    id: string;
+    pickupId: string;
+    donationAmount: number;
+    donationPercentage: number | null;
+    selectedCause: string;
+    paymentAmount: number;
+    createdAt: string;
+  }[];
 }> {
   return authFetch<{
     greenPointsTransactions: GreenPointsTransaction[];
     mobileRechargeTransactions: MobileRechargeTransaction[];
+    csrContributions?: {
+      id: string;
+      pickupId: string;
+      donationAmount: number;
+      donationPercentage: number | null;
+      selectedCause: string;
+      paymentAmount: number;
+      createdAt: string;
+    }[];
   }>("/rewards/history", { method: "GET" });
 }
 
@@ -113,6 +135,13 @@ export function claimPlatinumGift(gift: string): Promise<ClaimPlatinumGiftResult
     method: "POST",
     body: JSON.stringify({ gift }),
     headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export function claimTreePlantation(): Promise<{ lastTreePlantationClaimDate: string; nextTreePlantationEligibleDate: string; treePlantationClaimed: boolean }> {
+  return authFetch("/rewards/claim-tree-plantation", {
+    method: "POST",
+    headers: { "x-csrf-token": readCsrfToken() || "" },
   });
 }
 

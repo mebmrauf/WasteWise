@@ -19,6 +19,9 @@ import { notificationsRouter } from "./routes/notifications";
 import { adminRouter } from "./routes/admin";
 import { collectorsRouter } from "./routes/collectors";
 import { marketplaceRouter } from "./routes/marketplace";
+import { complaintsRouter, COMPLAINT_PHOTO_UPLOAD_DIR } from "./routes/complaints";
+import { csrRouter } from "./routes/csr";
+import paymentsRouter from "./routes/payments";
 
 export function createApp() {
   const app = express();
@@ -40,6 +43,7 @@ export function createApp() {
   );
   app.use(generalRateLimiter);
   app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
 
   app.get("/health", (_req, res) => {
@@ -60,6 +64,9 @@ export function createApp() {
   app.use("/api/v1/admin", adminRouter);
   app.use("/api/v1/collectors", collectorsRouter);
   app.use("/api/v1/marketplace", marketplaceRouter);
+  app.use("/api/v1/complaints", complaintsRouter);
+  app.use("/api/v1/csr", csrRouter);
+  app.use("/api/v1/payments", paymentsRouter);
 
   // Serves uploaded waste-recognition photos back out. Deliberately
   // root-relative (not under /api/v1) since it's static file serving, not a
@@ -73,6 +80,17 @@ export function createApp() {
       next();
     },
     express.static(WASTE_PHOTO_UPLOAD_DIR),
+  );
+
+  app.use(
+    "/uploads/complaints",
+    helmet.crossOriginResourcePolicy({ policy: "cross-origin" }),
+    (req, res, next) => {
+      res.setHeader("Content-Disposition", "attachment");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      next();
+    },
+    express.static(COMPLAINT_PHOTO_UPLOAD_DIR),
   );
 
   // 404 fallback — kept last so it never shadows a real route.

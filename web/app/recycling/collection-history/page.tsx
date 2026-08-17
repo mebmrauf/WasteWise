@@ -10,7 +10,10 @@ import { Icon } from "@/components/Icon";
 import { RecyclingVerificationGate } from "../RecyclingVerificationGate";
 import { Button } from "@/components/Button";
 
+import { MakePaymentModal } from "@/components/MakePaymentModal";
+
 function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplaceRequest; onClose: () => void }) {
+  const [showPayment, setShowPayment] = React.useState(false);
   const acceptedQuote = request.quotations?.find((q: any) => q.status === "ACCEPTED");
   
   let wasteTypesArr: any[] = [];
@@ -21,31 +24,68 @@ function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplace
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/50 p-4 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between p-6 border-b border-neutral-100 bg-neutral-50/50 shrink-0">
-          <div>
-            <h2 className="text-xl font-bold text-neutral-900">Completed Collection</h2>
-            <p className="text-sm text-neutral-500 mt-1">Request ID: {request.id.slice(0, 8)}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="h-10 w-10 flex items-center justify-center rounded-full bg-white border border-neutral-200 text-neutral-500 hover:bg-neutral-100 transition-colors"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="p-6 overflow-y-auto flex flex-col gap-8">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full uppercase tracking-wide flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4" />
-                Business Confirmed &amp; Completed
-              </span>
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/50 p-4 backdrop-blur-sm animate-fade-in">
+        <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="flex items-center justify-between p-6 border-b border-neutral-100 bg-neutral-50/50 shrink-0">
+            <div>
+              <h2 className="text-xl font-bold text-neutral-900">Completed Collection</h2>
+              <p className="text-sm text-neutral-500 mt-1">Request ID: {request.id.slice(0, 8)}</p>
             </div>
+            <button
+              onClick={onClose}
+              className="h-10 w-10 flex items-center justify-center rounded-full bg-white border border-neutral-200 text-neutral-500 hover:bg-neutral-100 transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="p-6 overflow-y-auto flex flex-col gap-8">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full uppercase tracking-wide flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Business Confirmed &amp; Completed
+                </span>
+              </div>
+                
+              {acceptedQuote && acceptedQuote.purchasePrice > 0 ? (
+                <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-xl border ${request.hasPayment ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-200'}`}>
+                  <div>
+                    <p className="text-xs uppercase tracking-wider font-bold text-neutral-500 mb-1">Payment Status</p>
+                    {request.hasPayment ? (
+                      <div className="flex items-center gap-2 text-emerald-700 font-bold">
+                        <CheckCircle2 className="w-5 h-5" />
+                        <span className="text-lg">Payment Completed</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-amber-700 font-bold">
+                        <AlertCircle className="w-5 h-5" />
+                        <span className="text-lg">Payment Pending</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {request.hasPayment ? (
+                      <>
+                        <Button variant="secondary" size="sm" onClick={() => window.open(`/receipt/${request.id}?type=bulk`, '_blank')}>View Receipt</Button>
+                        <Button variant="primary" size="sm" onClick={() => window.open(`/receipt/${request.id}?type=bulk&download=true`, '_blank')}>Download Receipt</Button>
+                      </>
+                    ) : (
+                      <Button 
+                        variant="primary" 
+                        size="md" 
+                        className="w-full sm:w-auto shadow-sm"
+                        onClick={() => setShowPayment(true)}
+                      >
+                        Make Payment
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ) : null}
             
-            <div className="flex items-center gap-4 bg-neutral-50 border border-neutral-100 rounded-xl p-4">
+            <div className="flex items-center gap-4 bg-neutral-50 border border-neutral-100 rounded-xl p-4 mt-2">
               {request.business?.avatarUrl ? (
                 <img src={request.business.avatarUrl} alt="Business" className="h-12 w-12 rounded-full object-cover shrink-0" />
               ) : (
@@ -143,7 +183,20 @@ function CollectionHistoryModal({ request, onClose }: { request: BulkMarketplace
           )}
         </div>
       </div>
-    </div>
+      </div>
+      
+      {showPayment && acceptedQuote && (
+        <MakePaymentModal 
+          bulkRequestId={request.id} 
+          amount={acceptedQuote.purchasePrice} 
+          onClose={() => setShowPayment(false)} 
+          onSuccess={() => {
+            setShowPayment(false);
+            onClose(); // Close both modals
+          }} 
+        />
+      )}
+    </>
   );
 }
 

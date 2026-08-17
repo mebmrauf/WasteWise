@@ -81,6 +81,9 @@ model User {
   paymentsAsCustomer                    Payment[]                   @relation("PaymentCustomer")
   paymentsAsPayer                       Payment[]                   @relation("PaymentPayer")
   ignoredPickups                        PickupRequest[]             @relation("IgnoredPickups")
+  csrContributions                      CsrContribution[]           @relation("BusinessCsrContributions")
+  paymentsReceived                      Payment[]                   @relation("PaymentsReceived")
+  paymentsMade                          Payment[]                   @relation("PaymentsMade")
 }
 
 model OAuthAccount {
@@ -143,8 +146,8 @@ model CollectorProfile {
   user   User   @relation("CollectorProfileUser", fields: [userId], references: [id], onDelete: Cascade)
 
   vehicleType   VehicleType
-  vehicleNumber String @default("")
-  licenseNumber String @default("")
+  vehicleNumber String      @default("")
+  licenseNumber String      @default("")
 
   serviceArea String @default("")
 
@@ -201,6 +204,7 @@ model BusinessProfile {
   verificationReviewedAt        DateTime?
   verificationReviewedByAdminId String?
   verificationRejectionReason   String?
+  askForCsrContribution         Boolean            @default(true)
   createdAt                     DateTime           @default(now())
   updatedAt                     DateTime           @updatedAt
   askForCsrContribution         Boolean            @default(false)
@@ -317,12 +321,13 @@ model Rating {
 }
 
 model Complaint {
-  id                String          @id @default(cuid())
+  id                String                  @id @default(cuid())
   pickupRequestId   String?
+  bulkRequestId     String?
   complainantId     String
   againstUserId     String?
   description       String
-  status            ComplaintStatus @default(OPEN)
+  status            ComplaintStatus         @default(OPEN)
   resolutionNotes   String?
   resolvedAt        DateTime?
   resolvedByAdminId String?
@@ -333,6 +338,14 @@ model Complaint {
   complainant       User            @relation("ComplaintFiler", fields: [complainantId], references: [id])
   pickupRequest     PickupRequest?  @relation(fields: [pickupRequestId], references: [id])
   resolvedByAdmin   User?           @relation("ComplaintResolver", fields: [resolvedByAdminId], references: [id])
+  photos            String[]                @default([])
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  againstUser       User?                   @relation("ComplaintTarget", fields: [againstUserId], references: [id])
+  complainant       User                    @relation("ComplaintFiler", fields: [complainantId], references: [id])
+  pickupRequest     PickupRequest?          @relation(fields: [pickupRequestId], references: [id])
+  bulkRequest       BulkMarketplaceRequest? @relation(fields: [bulkRequestId], references: [id])
+  resolvedByAdmin   User?                   @relation("ComplaintResolver", fields: [resolvedByAdminId], references: [id])
 
   @@index([status])
 }
@@ -422,6 +435,7 @@ model BulkMarketplaceRequest {
   images                String[]
   additionalNotes       String?
   status                BulkRequestStatus      @default(OPEN_FOR_BIDDING)
+  bidEndsAt             DateTime?
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   collectionPhotos      String[]
@@ -431,6 +445,8 @@ model BulkMarketplaceRequest {
   business              User                   @relation("BusinessRequests", fields: [businessId], references: [id])
   quotations            MarketplaceQuotation[]
   rating                Rating?
+  csrContributions      CsrContribution[]
+  complaints            Complaint[]
   payments              Payment[]
 
   @@index([businessId])
@@ -447,6 +463,7 @@ model MarketplaceQuotation {
   estimatedPickupTime String?
   additionalNotes     String?
   status              QuotationStatus        @default(PENDING)
+  isHighestBid        Boolean                @default(false)
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
   isHighestBid        Boolean                @default(false)
@@ -585,6 +602,7 @@ enum OfferStatus {
 
 enum BulkRequestStatus {
   OPEN_FOR_BIDDING
+  BIDDING_CLOSED
   RECYCLING_COMPANY_ASSIGNED
   EN_ROUTE
   ARRIVED
@@ -614,6 +632,7 @@ enum NotificationType {
   REMINDER
   VERIFICATION_UPDATE
   COMPLAINT_UPDATE
+  ROUTE_UPDATE
   GENERIC
   ROUTE_UPDATE
 }
@@ -629,6 +648,7 @@ enum TransactionCategory {
   REFERRAL
   LOYALTY
   REDEMPTION
+  CSR_CONTRIBUTION
   OTHER
   CSR_CONTRIBUTION
 }
@@ -667,6 +687,41 @@ model Payment {
   customer                      User                    @relation("PaymentCustomer", fields: [customerId], references: [id])
   payer                         User                    @relation("PaymentPayer", fields: [payerId], references: [id])
   pickupRequest                 PickupRequest?          @relation(fields: [pickupId], references: [id])
+model CsrContribution {
+  id                 String   @id @default(cuid())
+  businessId         String
+  pickupId           String
+  donationAmount     Float
+  donationPercentage Float?
+  selectedCause      String
+  paymentAmount      Float
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  business User                   @relation("BusinessCsrContributions", fields: [businessId], references: [id], onDelete: Cascade)
+  pickup   BulkMarketplaceRequest @relation(fields: [pickupId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([pickupId])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  pickupId      String? // For smart pickups
+  bulkRequestId String? // For bulk pickups
+  customerId    String // The user/business receiving payment
+  payerId       String // The collector/recycling company making payment
+  amount        Float
+  paymentMethod PaymentMethod
+  status        PaymentStatus @default(PENDING)
+  transactionId String? // For SSLCommerz
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  customer    User                    @relation("PaymentsReceived", fields: [customerId], references: [id])
+  payer       User                    @relation("PaymentsMade", fields: [payerId], references: [id])
+  pickup      PickupRequest?          @relation(fields: [pickupId], references: [id])
+  bulkRequest BulkMarketplaceRequest? @relation(fields: [bulkRequestId], references: [id])
 
   @@index([customerId])
   @@index([payerId])

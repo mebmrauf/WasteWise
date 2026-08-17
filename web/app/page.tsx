@@ -14,7 +14,11 @@ import {
   Route,
   ClipboardList,
   CheckCircle2,
+  FilePlus,
+  FileText,
+  ThumbsUp,
 } from "lucide-react";
+import { HowItWorks } from "@/components/HowItWorks";
 
 export default async function Home() {
   const cookieStore = await cookies();
@@ -132,43 +136,7 @@ export default async function Home() {
         </section>
 
         {/* HOW IT WORKS */}
-        <section id="how-it-works" className="py-24 lg:py-32 bg-white">
-          <PageContainer className="px-6 md:px-12 lg:px-16">
-            <div className="text-center max-w-2xl mx-auto mb-20">
-              <p className="font-heading text-overline text-green-700 mb-2">Simple Process</p>
-              <h2 className="text-h2 text-neutral-900">How WasteWise Works</h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-              {/* Connector line (desktop only) */}
-              <div className="hidden md:block absolute top-12 left-1/6 right-1/6 h-0.5 bg-neutral-100 -z-10" />
-
-              <div className="flex flex-col items-center text-center group">
-                <div className="w-24 h-24 rounded-full bg-green-50 border-8 border-white shadow-sm flex items-center justify-center text-[#114E29] mb-6 group-hover:scale-110 transition-transform">
-                  <Truck size={36} />
-                </div>
-                <h3 className="text-h4 mb-3 text-neutral-900">1. Post a Request</h3>
-                <p className="text-body text-neutral-600">Snap a photo or select your waste categories. We instantly estimate the weight and value.</p>
-              </div>
-
-              <div className="flex flex-col items-center text-center group">
-                <div className="w-24 h-24 rounded-full bg-blue-50 border-8 border-white shadow-sm flex items-center justify-center text-blue-600 mb-6 group-hover:scale-110 transition-transform">
-                  <ClipboardList size={36} />
-                </div>
-                <h3 className="text-h4 mb-3 text-neutral-900">2. Collectors Bid</h3>
-                <p className="text-body text-neutral-600">Nearby verified collectors see your request and accept the job based on your preferred time.</p>
-              </div>
-
-              <div className="flex flex-col items-center text-center group">
-                <div className="w-24 h-24 rounded-full bg-yellow-50 border-8 border-white shadow-sm flex items-center justify-center text-yellow-600 mb-6 group-hover:scale-110 transition-transform">
-                  <MapPin size={36} />
-                </div>
-                <h3 className="text-h4 mb-3 text-neutral-900">3. Track & Complete</h3>
-                <p className="text-body text-neutral-600">Track them live on the map. They weigh it, take it, and you instantly earn Green Points.</p>
-              </div>
-            </div>
-          </PageContainer>
-        </section>
+        <HowItWorks />
 
         {/* FEATURES BENTO GRID */}
         <section id="features" className="py-24 lg:py-32 bg-neutral-50/50">
@@ -346,13 +314,13 @@ export default async function Home() {
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-white py-16 border-t border-neutral-100">
-        <PageContainer className="flex flex-col md:flex-row items-center justify-between gap-6 px-6 md:px-12 lg:px-16">
-          <div className="flex flex-col items-center md:items-start gap-2">
-            <span className="font-heading text-xl font-bold text-neutral-900">WasteWise</span>
-            <span className="text-caption text-neutral-500 uppercase tracking-wider">Formalizing Waste Management</span>
-          </div>
-          <p className="text-body-sm text-neutral-500">
+      <footer className="bg-white py-3 md:py-4 border-t border-neutral-200">
+        <PageContainer className="px-6 md:px-12 lg:px-16 max-w-[800px] mx-auto flex flex-col items-center justify-center text-center gap-1 md:gap-1.5">
+          <span className="font-heading text-[18px] font-bold text-neutral-900 tracking-tight leading-none">WasteWise</span>
+          <p className="text-[13px] text-neutral-500 leading-tight">
+            Building a cleaner, greener, and smarter Bangladesh.
+          </p>
+          <p className="text-[12px] text-neutral-400 leading-tight">
             &copy; {new Date().getFullYear()} WasteWise. All rights reserved.
           </p>
         </PageContainer>

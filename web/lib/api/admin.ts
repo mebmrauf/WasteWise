@@ -84,3 +84,21 @@ export function verifyBusiness(
     headers: { "x-csrf-token": readCsrfToken() },
   });
 }
+
+import type { Complaint } from "./complaints";
+
+export function getAllComplaints(): Promise<{ complaints: Complaint[] }> {
+  return authFetch<{ complaints: Complaint[] }>("/admin/complaints");
+}
+
+export function updateComplaintStatus(
+  id: string,
+  status: string,
+  resolutionNotes?: string,
+): Promise<{ complaint: Complaint }> {
+  return authFetch<{ complaint: Complaint }>(`/admin/complaints/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status, resolutionNotes }),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}

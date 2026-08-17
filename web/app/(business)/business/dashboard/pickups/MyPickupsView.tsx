@@ -14,6 +14,8 @@ import { formatDate } from "@/components/AvailableJobListItem";
 import { StatusTimeline } from "@/components/StatusTimeline";
 import { ReceiptModal } from "@/components/ReceiptModal";
 import { CompanyRatingModal } from "@/components/CompanyRatingModal";
+import { CsrContributionModal } from "@/components/CsrContributionModal";
+import { createCsrContribution } from "@/lib/api/csr";
 import { StatusPill } from "@/components/StatusPill";
 import { PickupOffersPanel } from "@/components/PickupOffersPanel";
 import { TrackPickupPanel } from "@/components/TrackPickupPanel";
@@ -61,76 +63,36 @@ function formatPickupWindow(pickupDate: string): string {
 
 type LoadState = "loading" | "ready" | "error";
 
+
 export function MyPickupsView() {
   const [loadState, setLoadState] = React.useState<LoadState>("loading");
   const [loadError, setLoadError] = React.useState<string | null>(null);
-  const [pickups, setPickups] = React.useState<(PickupRequestSummary | BulkMarketplaceRequest)[]>([]);
+  const [pickups, setPickups] = React.useState<BulkMarketplaceRequest[]>([]);
   const [bulkDetailsPickup, setBulkDetailsPickup] = React.useState<BulkMarketplaceRequest | null>(null);
+  const [csrModalPickup, setCsrModalPickup] = React.useState<BulkMarketplaceRequest | null>(null);
 
   // Filtering states
-  const [typeFilter, setTypeFilter] = React.useState<"ALL" | "SMART" | "BULK">("ALL");
   const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  const [cancellingId, setCancellingId] = React.useState<string | null>(null);
-  const [cancelErrors, setCancelErrors] = React.useState<Record<string, string>>({});
-  const [confirmingId, setConfirmingId] = React.useState<string | null>(null);
-  const [receiptModalPickupId, setReceiptModalPickupId] = React.useState<string | null>(null);
-  const [ratingModalPickupId, setRatingModalPickupId] = React.useState<string | null>(null);
   const [companyRatingModalPickupId, setCompanyRatingModalPickupId] = React.useState<string | null>(null);
-  
-  const [expandedPickupId, setExpandedPickupId] = React.useState<string | null>(null);
-  const [expandedView, setExpandedView] = React.useState<"offers" | "track" | null>(null);
-
-  React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search);
-      const openPickupId = urlParams.get("pickupId");
-      const openView = urlParams.get("view");
-      
-      if (openPickupId && (openView === "offers" || openView === "track")) {
-        setExpandedPickupId(openPickupId);
-        setExpandedView(openView as "offers" | "track");
-        
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    }
-  }, []);
-
-  const cancelTriggerRefs = React.useRef<Map<string, React.RefObject<HTMLButtonElement | HTMLAnchorElement>>>(new Map());
-  function getCancelTriggerRef(pickupId: string) {
-    let ref = cancelTriggerRefs.current.get(pickupId);
-    if (!ref) {
-      ref = React.createRef<HTMLButtonElement | HTMLAnchorElement>();
-      cancelTriggerRefs.current.set(pickupId, ref);
-    }
-    return ref;
-  }
 
   const fetchPickups = React.useCallback((silent: boolean = false) => {
     if (!silent) {
       setLoadState("loading");
       setLoadError(null);
     }
-    return Promise.all([
-      listPickups().catch(() => ({ pickups: [] })),
-      getMarketplaceRequests().catch(() => [])
-    ])
-      .then(([smartData, bulkData]) => {
-        const smartPickups = smartData.pickups.filter(p => !('wasteTypes' in p) && !p.isBulk); 
+    return getMarketplaceRequests()
+      .then((bulkData) => {
         const bulkPickups = bulkData.filter(b => b.assignedCompanyId !== null);
-        setPickups([...smartPickups, ...bulkPickups]);
+        setPickups(bulkPickups);
         if (!silent) {
           setLoadState("ready");
         }
       })
-      .catch((err: unknown) => {
+      .catch(() => {
         if (!silent) {
-          setLoadError(
-            err instanceof AuthApiError
-              ? "Couldn't load your pickups. Try refreshing the page."
-              : "Something went wrong loading your pickups. Try refreshing the page.",
-          );
+          setLoadError("Something went wrong loading your pickups. Try refreshing the page.");
           setLoadState("error");
         }
       });
@@ -157,175 +119,48 @@ export function MyPickupsView() {
     }
   }, [pickups, bulkDetailsPickup]);
 
-  // Keep expanded pickup synced if data refreshes
-  React.useEffect(() => {
-    const socket = getTrackingSocket();
 
-    function handleStatus(payload: PickupStatusPayload) {
-      setPickups((prev) => {
-        let changed = false;
-        const next = prev.map((p) => {
-          if ('items' in p && p.id === payload.pickupRequestId && p.status !== payload.status) {
-            changed = true;
-            return { ...p, status: payload.status as any };
-          }
-          return p;
-        });
-
-        if (changed && payload.status === "VERIFYING_WEIGHTS") {
-          setExpandedPickupId(payload.pickupRequestId);
-          setExpandedView("track");
-        }
-        if (changed && payload.status === "COMPLETED") {
-          const p = next.find(p => p.id === payload.pickupRequestId);
-          if (p && 'isBulk' in p && p.isBulk) {
-            setCompanyRatingModalPickupId(payload.pickupRequestId);
-          } else {
-            setRatingModalPickupId(payload.pickupRequestId);
-          }
-        }
-        
-        return changed ? next : prev;
-      });
-    }
-
-    socket.on(PICKUP_STATUS_EVENT, handleStatus);
-    return () => {
-      socket.off(PICKUP_STATUS_EVENT, handleStatus);
-    };
-  }, []);
-
-  // Join the tracking room for all active pickups
-  React.useEffect(() => {
-    const socket = getTrackingSocket();
-    const activePickups = pickups.filter((p) => p.status !== "COMPLETED" && p.status !== "CANCELLED");
-    
-    activePickups.forEach((p) => {
-      socket.emit(PICKUP_JOIN_EVENT, { pickupRequestId: p.id });
-    });
-  }, [pickups]);
-
-  async function handleCancelPickup(pickupId: string) {
-    setCancelErrors((prev) => {
-      const next = { ...prev };
-      delete next[pickupId];
-      return next;
-    });
-    setCancellingId(pickupId);
-    try {
-      const { pickup: updated } = await cancelPickupRequest(pickupId);
-      setPickups((prev) => prev.map((pickup) => (pickup.id === updated.id ? { ...pickup, ...updated } : pickup)));
-      setCancellingId(null);
-    } catch (err) {
-      setCancellingId(null);
-      setCancelErrors((prev) => ({ ...prev, [pickupId]: resolveCancelPickupErrorMessage(err) }));
-      if (err instanceof AuthApiError && (err.code === "INVALID_STATUS_TRANSITION" || err.code === "NOT_FOUND")) {
-        void fetchPickups();
-      }
-    }
-  }
 
   // Derived filtered pickups
   const filteredPickups = React.useMemo(() => {
     const sorted = [...pickups].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return sorted.filter((p) => {
-      if (typeFilter === "SMART" && ('wasteTypes' in p)) return false;
-      if (typeFilter === "BULK" && !('wasteTypes' in p)) return false;
-      
       if (statusFilter !== "ALL" && p.status !== statusFilter) return false;
       
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesId = p.id.toLowerCase().includes(query);
-        const address = 'pickupAddress' in p ? p.pickupAddress : p.pickupFormattedAddress;
-        const matchesAddress = (address || "").toLowerCase().includes(query);
+        const matchesAddress = (p.pickupAddress || "").toLowerCase().includes(query);
         
         let matchesMaterial = false;
-        if ('items' in p) {
-          matchesMaterial = p.items.some(i => i.category.toLowerCase().includes(query));
-        } else {
-          try {
-            const types = typeof p.wasteTypes === 'string' ? JSON.parse(p.wasteTypes) : p.wasteTypes;
-            matchesMaterial = types.some((w: any) => w.category.toLowerCase().includes(query));
-          } catch (e) {}
-        }
+        try {
+          const types = typeof p.wasteTypes === 'string' ? JSON.parse(p.wasteTypes) : p.wasteTypes;
+          matchesMaterial = types.some((w: any) => w.category.toLowerCase().includes(query));
+        } catch (e) {}
         
-        let statusLabel = 'items' in p ? PICKUP_STATUS_LABEL[p.status] : p.status.replace(/_/g, " ");
-        const matchesStatus = statusLabel.toLowerCase().includes(query);
+        const matchesStatus = p.status.replace(/_/g, " ").toLowerCase().includes(query);
         
         if (!matchesId && !matchesAddress && !matchesMaterial && !matchesStatus) return false;
       }
       return true;
     });
-  }, [pickups, typeFilter, statusFilter, searchQuery]);
+  }, [pickups, statusFilter, searchQuery]);
 
   // Statistics
   const totalRequests = pickups.length;
-  const smartPickups = pickups.filter(p => !('wasteTypes' in p)).length;
-  const bulkPickups = pickups.filter(p => ('wasteTypes' in p)).length;
   const completedCount = pickups.filter(p => p.status === "COMPLETED").length;
-  const pendingCount = pickups.filter(p => p.status === "PENDING").length;
+  const pendingCount = pickups.filter(p => p.status === "OPEN_FOR_BIDDING" || p.status === "BIDDING_CLOSED").length;
 
-  const renderProgressTimeline = (pickup: PickupRequestSummary) => {
-    const isBulk = false;
-    
-    // Status progressions
-    let step = 0;
-    if (pickup.status === "PENDING") step = 0; // Request Submitted / Open for Bidding
-    else if (pickup.status === "ASSIGNED") step = 1;
-    else if (pickup.status === "EN_ROUTE" || pickup.status === "ARRIVED" || pickup.status === "VERIFYING_WEIGHTS") step = 2;
-    else if (pickup.status === "COMPLETED") step = 3;
-    else if (pickup.status === "CANCELLED") step = -1;
-
-    const widthPercent = step === -1 ? "0%" : step === 0 ? "0%" : step === 1 ? "33%" : step === 2 ? "66%" : "100%";
-
-    return (
-      <div className="relative pt-1 pb-3 px-2 sm:px-6 mt-4 mb-2">
-        {/* Background track */}
-        <div className="absolute top-2.5 left-10 right-10 h-0.5 bg-neutral-200 rounded-full" />
-        
-        {/* Active track */}
-        <div 
-          className="absolute top-2.5 left-10 h-0.5 bg-emerald-500 rounded-full transition-all duration-500" 
-          style={{ width: widthPercent }}
-        />
-
-        <div className="relative flex justify-between text-center">
-          <div className="flex flex-col items-center gap-2 w-20 -ml-6">
-            <div className={cn("h-4 w-4 rounded-full border-4 border-white z-10", step >= 0 ? "bg-emerald-500" : "bg-neutral-300")} />
-            <span className={cn("text-[10px] uppercase font-bold tracking-wider", step >= 0 ? "text-emerald-700" : "text-neutral-400")}>Submitted</span>
-          </div>
-          <div className="flex flex-col items-center gap-2 w-20">
-            <div className={cn("h-4 w-4 rounded-full border-4 border-white z-10", step >= 1 ? "bg-emerald-500" : "bg-neutral-300")} />
-            <span className={cn("text-[10px] uppercase font-bold tracking-wider", step >= 1 ? "text-emerald-700" : "text-neutral-400")}>Assigned</span>
-          </div>
-          <div className="flex flex-col items-center gap-2 w-20">
-            <div className={cn("h-4 w-4 rounded-full border-4 border-white z-10", step >= 2 ? "bg-emerald-500" : "bg-neutral-300")} />
-            <span className={cn("text-[10px] uppercase font-bold tracking-wider", step >= 2 ? "text-emerald-700" : "text-neutral-400")}>In Progress</span>
-          </div>
-          <div className="flex flex-col items-center gap-2 w-20 -mr-6">
-            <div className={cn("h-4 w-4 rounded-full border-4 border-white z-10", step >= 3 ? "bg-emerald-500" : "bg-neutral-300")} />
-            <span className={cn("text-[10px] uppercase font-bold tracking-wider", step >= 3 ? "text-emerald-700" : "text-neutral-400")}>Completed</span>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderCard = (pickup: PickupRequestSummary | BulkMarketplaceRequest) => {
-    const isBulkReq = 'wasteTypes' in pickup;
-    
-    if (isBulkReq) {
-      const bReq = pickup as BulkMarketplaceRequest;
-      const displayStatus = bReq.status.replace(/_/g, " ");
-      const acceptedQuote = bReq.quotations?.find((q: any) => q.status === "ACCEPTED");
+  const renderCard = (pickup: BulkMarketplaceRequest) => {
+      const displayStatus = pickup.status.replace(/_/g, " ");
+      const acceptedQuote = pickup.quotations?.find((q: any) => q.status === "ACCEPTED");
       let materials: any[] = [];
       try {
-        materials = typeof bReq.wasteTypes === 'string' ? JSON.parse(bReq.wasteTypes) : bReq.wasteTypes;
+        materials = typeof pickup.wasteTypes === 'string' ? JSON.parse(pickup.wasteTypes) : pickup.wasteTypes;
       } catch(e) {}
       
       return (
-        <Card key={bReq.id} className="relative flex flex-col border border-neutral-100 shadow-sm transition-shadow hover:shadow-md overflow-hidden rounded-2xl p-0 bg-white">
+        <Card key={pickup.id} className="relative flex flex-col border border-neutral-100 shadow-sm transition-shadow hover:shadow-md overflow-hidden rounded-2xl p-0 bg-white">
           <div className="p-5 sm:p-6 flex flex-col gap-5">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-4">
               <div className="flex items-center gap-4 min-w-0">
@@ -337,10 +172,10 @@ export function MyPickupsView() {
                     <h3 className="text-lg font-bold text-neutral-900 leading-tight truncate">
                       Bulk Waste Pickup
                     </h3>
-                    <span className="text-xs font-data text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">#{bReq.id.slice(0, 8).toUpperCase()}</span>
+                    <span className="text-xs font-data text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">#{pickup.id.slice(0, 8).toUpperCase()}</span>
                   </div>
                   <p className="text-sm font-medium text-neutral-500 mt-0.5">
-                    {new Date(bReq.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {new Date(pickup.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                   </p>
                 </div>
               </div>
@@ -348,17 +183,17 @@ export function MyPickupsView() {
                 <span className="px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm bg-blue-100 text-blue-800 tracking-wide uppercase">
                   {displayStatus}
                 </span>
-                <Button variant="secondary" size="sm" onClick={() => setBulkDetailsPickup(bReq)}>
+                <Button variant="secondary" size="sm" onClick={() => setBulkDetailsPickup(pickup)}>
                   View Details
                 </Button>
-                {bReq.status === "COMPLETED" && (
-                  (bReq as any).rating ? (
+                {pickup.status === "COMPLETED" && (
+                  (pickup as any).rating ? (
                     <div className="flex items-center gap-1 bg-yellow-50 text-yellow-700 px-3 py-1.5 rounded-full text-sm font-medium border border-yellow-200">
                       <Icon icon={Star} size="sm" className="fill-current w-4 h-4" />
-                      <span>{(bReq as any).rating.score}</span>
+                      <span>{(pickup as any).rating.score}</span>
                     </div>
                   ) : (
-                    <Button className="bg-yellow-500 hover:bg-yellow-600 text-white border-transparent" size="sm" onClick={() => setCompanyRatingModalPickupId(bReq.id)}>
+                    <Button className="bg-yellow-500 hover:bg-yellow-600 text-white border-transparent" size="sm" onClick={() => setCompanyRatingModalPickupId(pickup.id)}>
                       Rate Company
                     </Button>
                   )
@@ -385,7 +220,7 @@ export function MyPickupsView() {
                   <Icon icon={Building2} size="sm" className="text-blue-600 shrink-0" />
                   <div>
                     <p className="text-caption text-neutral-500 mb-0.5">Assigned Recycling Company</p>
-                    <p className="text-body-sm font-semibold text-neutral-900">{bReq.assignedCompany?.fullName || "N/A"}</p>
+                    <p className="text-body-sm font-semibold text-neutral-900">{pickup.assignedCompany?.fullName || "N/A"}</p>
                   </div>
                 </div>
                 <div className="flex-1 flex items-center gap-4 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4">
@@ -633,18 +468,10 @@ export function MyPickupsView() {
       {loadState === "ready" && pickups.length > 0 && (
         <div className="mt-8">
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
             <Card className="p-4 bg-white border border-neutral-100 shadow-sm text-center">
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Total</p>
               <p className="text-3xl font-black text-neutral-900 mt-2">{totalRequests}</p>
-            </Card>
-            <Card className="p-4 bg-white border border-neutral-100 shadow-sm text-center">
-              <p className="text-xs font-bold text-emerald-700 uppercase tracking-widest">Smart Pickups</p>
-              <p className="text-3xl font-black text-emerald-900 mt-2">{smartPickups}</p>
-            </Card>
-            <Card className="p-4 bg-white border border-neutral-100 shadow-sm text-center">
-              <p className="text-xs font-bold text-blue-700 uppercase tracking-widest">Bulk Pickups</p>
-              <p className="text-3xl font-black text-blue-900 mt-2">{bulkPickups}</p>
             </Card>
             <Card className="p-4 bg-white border border-neutral-100 shadow-sm text-center">
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Completed</p>
@@ -658,26 +485,6 @@ export function MyPickupsView() {
 
           {/* Filters & Search */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
-            <div className="flex bg-neutral-100 rounded-xl p-1 overflow-x-auto w-full lg:w-auto shrink-0 hide-scrollbar">
-              <button 
-                onClick={() => setTypeFilter("ALL")}
-                className={cn("px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap flex-1 lg:flex-none", typeFilter === "ALL" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
-              >
-                All
-              </button>
-              <button 
-                onClick={() => setTypeFilter("SMART")}
-                className={cn("px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap flex-1 lg:flex-none", typeFilter === "SMART" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
-              >
-                Smart Pickup
-              </button>
-              <button 
-                onClick={() => setTypeFilter("BULK")}
-                className={cn("px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap flex-1 lg:flex-none", typeFilter === "BULK" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
-              >
-                Bulk Pickup
-              </button>
-            </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full xl:w-auto shrink-0">
               <select 
@@ -686,10 +493,12 @@ export function MyPickupsView() {
                 className="bg-white border border-neutral-200 text-sm font-medium rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-[200px] shrink-0"
               >
                 <option value="ALL">All Statuses</option>
-                <option value="PENDING">Pending &amp; Bidding</option>
-                <option value="ASSIGNED">Collector Assigned</option>
+                <option value="OPEN_FOR_BIDDING">Bidding Open</option>
+                <option value="BIDDING_CLOSED">Bidding Closed</option>
+                <option value="RECYCLING_COMPANY_ASSIGNED">Company Assigned</option>
                 <option value="EN_ROUTE">En Route</option>
                 <option value="ARRIVED">Arrived</option>
+                <option value="IN_PROGRESS">In Progress</option>
                 <option value="VERIFYING_WEIGHTS">Verifying Weights</option>
                 <option value="COMPLETED">Completed</option>
                 <option value="CANCELLED">Cancelled</option>
@@ -724,29 +533,6 @@ export function MyPickupsView() {
         </div>
       )}
 
-      {receiptModalPickupId && (
-        <ReceiptModal 
-          pickupId={receiptModalPickupId} 
-          onClose={() => setReceiptModalPickupId(null)} 
-          onRateCollector={() => {
-            const id = receiptModalPickupId;
-            setReceiptModalPickupId(null);
-            setTimeout(() => setRatingModalPickupId(id), 0);
-          }}
-        />
-      )}
-
-      {ratingModalPickupId && (
-        <CollectorRatingModal
-          pickupId={ratingModalPickupId}
-          onClose={() => setRatingModalPickupId(null)}
-          onSuccess={() => {
-            setRatingModalPickupId(null);
-            void fetchPickups(true);
-          }}
-        />
-      )}
-
       {companyRatingModalPickupId && (
         <CompanyRatingModal
           pickupId={companyRatingModalPickupId}
@@ -767,6 +553,27 @@ export function MyPickupsView() {
             fetchPickups(true).then(() => {
                // Update bulkDetailsPickup with fresh data if possible
                // We rely on the fetchPickups completion to update the parent state
+            });
+          }}
+          onCsrTrigger={(req) => setCsrModalPickup(req)}
+        />
+      )}
+
+      {csrModalPickup && (
+        <CsrContributionModal
+          isOpen={!!csrModalPickup}
+          onClose={() => {
+            setCsrModalPickup(null);
+            void fetchPickups(true);
+          }}
+          paymentAmount={csrModalPickup.quotations?.find(q => q.status === "ACCEPTED")?.purchasePrice || 0}
+          onConfirm={async (amount, percentage, cause) => {
+            await createCsrContribution({
+              pickupId: csrModalPickup.id,
+              donationAmount: amount,
+              donationPercentage: percentage,
+              selectedCause: cause,
+              paymentAmount: csrModalPickup.quotations?.find(q => q.status === "ACCEPTED")?.purchasePrice || 0,
             });
           }}
         />
