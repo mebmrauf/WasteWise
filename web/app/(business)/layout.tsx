@@ -14,6 +14,7 @@ export default function UserLayout({ children }: { children: ReactNode }) {
         }
         accent="business"
         actions={<NavAuthActions />}
+        edgeToEdge
       />
       <main>
         <DashboardShell>{children}</DashboardShell>

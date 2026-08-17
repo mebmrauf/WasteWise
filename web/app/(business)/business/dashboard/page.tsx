@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Battery, Camera, ClipboardList, Gift, Leaf, Medal, Package, Truck, Wind, BadgeCheck, Recycle } from "lucide-react";
+import { Battery, Camera, ClipboardList, Gift, Leaf, Medal, Package, Truck, Wind, Recycle } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { StatusPill } from "@/components/StatusPill";
 import { Card } from "@/components/Card";
@@ -279,7 +279,7 @@ export default function UserDashboardPage() {
 
           <div className="mb-10">
             <h2 className="text-xl font-semibold text-neutral-900 mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <DashboardFeatureTile
                 icon={Truck}
                 label="Request Pickup"
@@ -311,14 +311,6 @@ export default function UserDashboardPage() {
                 href="/business/dashboard/rewards"
                 className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"
                 iconContainerClassName="bg-yellow-100 text-yellow-600"
-              />
-              <DashboardFeatureTile
-                icon={BadgeCheck}
-                label="Find a Collector"
-                description="Find trusted collectors near you."
-                href="/dashboard/collectors"
-                className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 bg-white"
-                iconContainerClassName="bg-indigo-100 text-indigo-600"
               />
             </div>
           </div>

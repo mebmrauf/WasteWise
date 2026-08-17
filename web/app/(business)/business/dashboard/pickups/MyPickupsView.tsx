@@ -10,6 +10,11 @@ import { Icon } from "@/components/Icon";
 import { InlineConfirm } from "@/components/InlineConfirm";
 import { PageContainer } from "@/components/PageContainer";
 import { CollectorRatingModal } from "@/components/CollectorRatingModal";
+<<<<<<< Updated upstream
+=======
+import { formatDate } from "@/components/AvailableJobListItem";
+import { StatusTimeline } from "@/components/StatusTimeline";
+>>>>>>> Stashed changes
 import { ReceiptModal } from "@/components/ReceiptModal";
 import { CompanyRatingModal } from "@/components/CompanyRatingModal";
 import { StatusPill } from "@/components/StatusPill";
@@ -25,8 +30,7 @@ import { AuthApiError } from "@/lib/api/auth";
 import {
   cancelPickupRequest,
   listPickups,
-  LOAD_SIZE_LABELS,
-  formatKgRange,
+  formatEstimatedWeightRange,
   type PickupRequestSummary,
 } from "@/lib/api/pickups";
 import { PICKUP_STATUS_TONE, PICKUP_STATUS_LABEL } from "@/lib/pickupStatus";
@@ -48,13 +52,14 @@ function resolveCancelPickupErrorMessage(err: unknown): string {
   return "Couldn't cancel this pickup. Try again.";
 }
 
-function formatPickupWindow(startIso: string, endIso: string): string {
-  const start = new Date(startIso);
-  const end = new Date(endIso);
-  const dateLabel = start.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
-  const startTime = start.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: true });
-  const endTime = end.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: true });
-  return `${dateLabel} · ${startTime} - ${endTime}`;
+function formatPickupWindow(pickupDate: string): string {
+  const start = new Date(pickupDate);
+  const dateStr = start.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  return `${dateStr}`;
 }
 
 type LoadState = "loading" | "ready" | "error";
@@ -456,16 +461,26 @@ export function MyPickupsView() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Items */}
                 <div className="flex flex-col gap-3 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4">
-                  <p className="text-caption text-neutral-500 uppercase tracking-wider">Materials & Weight</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-caption text-neutral-500 uppercase tracking-wider">Materials & Weight</p>
+                    {formatEstimatedWeightRange(pReq.estimatedMinKg, pReq.estimatedMaxKg) && (
+                      <p className="text-caption text-neutral-500">
+                        Est. {formatEstimatedWeightRange(pReq.estimatedMinKg, pReq.estimatedMaxKg)}
+                      </p>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-                    {pReq.items.map((item) => (
-                      <div key={item.id} className="flex flex-col gap-1 items-start bg-white border border-neutral-100 p-2 rounded-lg shadow-sm">
-                        <WasteCategoryChip category={item.category} />
-                        <span className="text-caption text-neutral-500 font-medium px-1 truncate w-full" title={`${LOAD_SIZE_LABELS[item.loadSize]} (${formatKgRange(item.loadSize)})`}>
-                          {LOAD_SIZE_LABELS[item.loadSize]}
-                        </span>
-                      </div>
-                    ))}
+                    {pReq.items.map((item) => {
+                      const weighedLabel = item.exactWeightKg ? `${item.exactWeightKg} kg` : "Pending weigh-in";
+                      return (
+                        <div key={item.id} className="flex flex-col gap-1 items-start bg-white border border-neutral-100 p-2 rounded-lg shadow-sm">
+                          <WasteCategoryChip category={item.category} />
+                          <span className="text-caption text-neutral-500 font-medium px-1 truncate w-full" title={weighedLabel}>
+                            {weighedLabel}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -475,7 +490,7 @@ export function MyPickupsView() {
                     <Icon icon={Calendar} size="sm" className="text-emerald-600 shrink-0" />
                     <div>
                       <p className="text-caption text-neutral-500 mb-0.5">Time window</p>
-                      <p className="text-body-sm font-semibold text-neutral-900">{formatPickupWindow(pReq.timeSlotStart, pReq.timeSlotEnd)}</p>
+                      <span className="font-semibold text-neutral-900">{formatPickupWindow(pReq.pickupDate)}</span>
                     </div>
                   </div>
                   <div className="flex-1 flex items-center gap-4 bg-neutral-50/50 border border-neutral-100 rounded-xl p-4">

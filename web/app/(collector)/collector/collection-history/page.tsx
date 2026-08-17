@@ -9,9 +9,9 @@ import { format } from "date-fns";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Icon } from "@/components/Icon";
 import { Button } from "@/components/Button";
+import { Card } from "@/components/Card";
 import { useRequireRole } from "@/lib/auth/AuthContext";
 import { WasteCategoryChip } from "@/components/WasteCategoryChip";
-import { LOAD_SIZE_LABELS } from "@/lib/api/pickups";
 
 function CollectionHistoryModal({ request, onClose }: { request: PickupRequestSummary; onClose: () => void }) {
   const totalEarned = request.bidAmountsPerKg ? 
@@ -94,7 +94,7 @@ function CollectionHistoryModal({ request, onClose }: { request: PickupRequestSu
                         <div key={i} className="flex justify-between items-center bg-neutral-50 px-3 py-2 rounded-lg border border-neutral-100">
                           <span className="text-sm font-medium text-neutral-700 capitalize">{item.category.replace(/_/g, " ").toLowerCase()}</span>
                           <span className="text-sm font-bold text-neutral-900">
-                            {item.exactWeightKg ? `${item.exactWeightKg} kg` : LOAD_SIZE_LABELS[item.loadSize]}
+                            {item.exactWeightKg ? `${item.exactWeightKg} kg` : "—"}
                           </span>
                         </div>
                       ))}
@@ -173,12 +173,12 @@ export default function CollectionHistoryPage() {
   return (
     <PageContainer className="py-8">
       <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-h2 text-neutral-900">Collection History</h1>
-          <p className="text-body text-neutral-500 mt-1">
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 p-8 rounded-2xl shadow-sm">
+          <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Collection History</h1>
+          <p className="mt-2 text-neutral-600">
             Review your successfully completed pickups.
           </p>
-        </div>
+        </Card>
 
         {errorMsg && <ErrorBanner>{errorMsg}</ErrorBanner>}
 

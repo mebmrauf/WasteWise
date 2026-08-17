@@ -8,6 +8,7 @@ import { sendData, sendError } from "../lib/apiResponse";
 import { prisma } from "../lib/prisma";
 import { logger } from "../lib/logger";
 import { createNotification } from "../lib/notifications";
+import { attachPickupToActiveRouteIfAny } from "../lib/routeService";
 import { emitToRoom } from "../realtime/emitToRoom";
 import { PICKUP_STATUS_EVENT } from "../realtime/pickupEvents";
 import { submitOfferSchema } from "./offers.schemas";
@@ -205,6 +206,8 @@ offersRouter.post(
       );
     }
     
+    void attachPickupToActiveRouteIfAny(offer.collectorId, offer.pickupRequestId);
+
     // Notify the collector that their offer was accepted
     void createNotification({
       userId: offer.collectorId,
