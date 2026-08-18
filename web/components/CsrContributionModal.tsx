@@ -25,7 +25,7 @@ export function CsrContributionModal({ isOpen, onClose, onConfirm, paymentAmount
   const [customAmountStr, setCustomAmountStr] = React.useState<string>("");
   const [selectedCause, setSelectedCause] = React.useState<string>(CAUSES[0].id);
   const [isConfirming, setIsConfirming] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [processingState, setProcessingState] = React.useState<'donate' | 'skip' | null>(null);
 
   // Reset state when modal opens
   React.useEffect(() => {
@@ -34,7 +34,7 @@ export function CsrContributionModal({ isOpen, onClose, onConfirm, paymentAmount
       setCustomAmountStr("");
       setSelectedCause(CAUSES[0].id);
       setIsConfirming(false);
-      setIsSubmitting(false);
+      setProcessingState(null);
     }
   }, [isOpen]);
 
@@ -56,15 +56,25 @@ export function CsrContributionModal({ isOpen, onClose, onConfirm, paymentAmount
 
   const isInvalidAmount = donationAmount <= 0 || donationAmount > paymentAmount || isNaN(donationAmount);
 
+  const handleSkip = async () => {
+    if (processingState) return;
+    setProcessingState('skip');
+    try {
+      await Promise.resolve(onClose());
+    } finally {
+      setProcessingState(null);
+    }
+  };
+
   const handlePrimaryClick = async () => {
-    if (isInvalidAmount || !selectedCause) return;
+    if (isInvalidAmount || !selectedCause || processingState) return;
     
     if (!isConfirming) {
       setIsConfirming(true);
       return;
     }
 
-    setIsSubmitting(true);
+    setProcessingState('donate');
     try {
       await onConfirm(donationAmount, selectedPercentage, selectedCause);
       onClose();
@@ -72,7 +82,7 @@ export function CsrContributionModal({ isOpen, onClose, onConfirm, paymentAmount
       alert("Failed to submit CSR contribution. Please try again.");
       setIsConfirming(false);
     } finally {
-      setIsSubmitting(false);
+      setProcessingState(null);
     }
   };
 
@@ -82,7 +92,7 @@ export function CsrContributionModal({ isOpen, onClose, onConfirm, paymentAmount
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 text-neutral-400 hover:text-neutral-600 transition-colors rounded-full hover:bg-neutral-100 z-10 bg-white/80 backdrop-blur-sm"
-          disabled={isSubmitting}
+          disabled={processingState !== null}
         >
           <X className="w-5 h-5" />
         </button>
@@ -183,14 +193,21 @@ export function CsrContributionModal({ isOpen, onClose, onConfirm, paymentAmount
               </div>
 
               <div className="flex gap-3">
-                <Button variant="secondary" className="flex-1" onClick={onClose}>
+                <Button 
+                  variant="secondary" 
+                  className={`flex-1 ${processingState === 'donate' ? 'pointer-events-none' : ''}`}
+                  onClick={handleSkip}
+                  disabled={processingState === 'skip'}
+                >
+                  {processingState === 'skip' ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   Skip
                 </Button>
                 <Button 
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white border-none" 
+                  className={`flex-1 bg-emerald-600 hover:bg-emerald-700 text-white border-none ${processingState === 'skip' ? 'pointer-events-none' : ''}`} 
                   onClick={handlePrimaryClick}
-                  disabled={isInvalidAmount || !selectedCause}
+                  disabled={isInvalidAmount || !selectedCause || processingState === 'donate'}
                 >
+                  {processingState === 'donate' ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   Donate ৳{donationAmount.toLocaleString()}
                 </Button>
               </div>
@@ -208,18 +225,18 @@ export function CsrContributionModal({ isOpen, onClose, onConfirm, paymentAmount
               <div className="flex gap-3">
                 <Button 
                   variant="secondary" 
-                  className="flex-1" 
-                  onClick={() => setIsConfirming(false)}
-                  disabled={isSubmitting}
+                  className={`flex-1 ${processingState === 'donate' ? 'pointer-events-none' : ''}`} 
+                  onClick={() => { if (!processingState) setIsConfirming(false); }}
+                  disabled={processingState === 'skip'}
                 >
                   Cancel
                 </Button>
                 <Button 
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white border-none" 
+                  className={`flex-1 bg-emerald-600 hover:bg-emerald-700 text-white border-none ${processingState === 'skip' ? 'pointer-events-none' : ''}`} 
                   onClick={handlePrimaryClick}
-                  disabled={isSubmitting}
+                  disabled={processingState === 'donate'}
                 >
-                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+                  {processingState === 'donate' ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
                   Confirm Contribution
                 </Button>
               </div>
