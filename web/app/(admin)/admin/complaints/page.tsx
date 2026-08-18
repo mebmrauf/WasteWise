@@ -150,12 +150,12 @@ export default function AdminComplaintsPage() {
                           {c.photos.map((photoUrl, idx) => (
                             <a 
                               key={idx} 
-                              href={`${publicEnv.NEXT_PUBLIC_API_URL.replace("/api/v1", "")}${photoUrl}`} 
+                              href={photoUrl.startsWith('http') ? photoUrl : `${publicEnv.NEXT_PUBLIC_API_URL.replace("/api/v1", "")}${photoUrl}`} 
                               target="_blank" 
                               rel="noreferrer"
                             >
                               <img 
-                                src={`${publicEnv.NEXT_PUBLIC_API_URL.replace("/api/v1", "")}${photoUrl}`} 
+                                src={photoUrl.startsWith('http') ? photoUrl : `${publicEnv.NEXT_PUBLIC_API_URL.replace("/api/v1", "")}${photoUrl}`} 
                                 alt={`Attachment ${idx + 1}`} 
                                 className="h-24 w-24 object-cover rounded-md border border-neutral-200" 
                               />

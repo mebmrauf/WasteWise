@@ -64,7 +64,7 @@ export function WastePhotoUpload({ value, onChange, disabled, className }: Waste
           {value.map((url) => (
             <div key={url} className="relative h-20 w-20 shrink-0">
               <img
-                src={`${UPLOAD_BASE_URL}${url}`}
+                src={url.startsWith('http') ? url : `${UPLOAD_BASE_URL}${url}`}
                 alt="Uploaded waste photo"
                 className="h-20 w-20 rounded-lg object-cover border border-neutral-200"
               />
