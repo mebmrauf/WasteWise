@@ -8,6 +8,7 @@ export interface CsrContribution {
   donationPercentage: number | null;
   selectedCause: string;
   paymentAmount: number;
+  status: "PENDING" | "COMPLETED";
   createdAt: string;
   updatedAt: string;
   pickup?: {

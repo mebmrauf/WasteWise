@@ -667,6 +667,7 @@ model CsrContribution {
   donationPercentage Float?
   selectedCause      String
   paymentAmount      Float
+  status             CsrStatus @default(PENDING)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -728,4 +729,9 @@ enum PaymentStatus {
   FAILED
   REFUNDED
   CANCELLED
+}
+
+enum CsrStatus {
+  PENDING
+  COMPLETED
 }

@@ -96,9 +96,14 @@ export function CsrDashboard() {
               <div key={contribution.id} className="p-4 sm:p-6 hover:bg-neutral-50 transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                   <h4 className="font-semibold text-neutral-900">{contribution.selectedCause}</h4>
-                  <p className="text-sm text-neutral-500 mt-1">
-                    {formatDateTime(contribution.createdAt)} • Pickup ID: {contribution.pickupId.slice(0, 8)}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${contribution.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {contribution.status || 'PENDING'}
+                    </span>
+                    <p className="text-sm text-neutral-500">
+                      {formatDateTime(contribution.createdAt)} • Pickup ID: {contribution.pickupId.slice(0, 8)}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
                   <div className="text-right">
