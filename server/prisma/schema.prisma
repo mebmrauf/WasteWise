@@ -84,6 +84,8 @@ model User {
   csrContributions                      CsrContribution[]           @relation("BusinessCsrContributions")
   paymentsReceived                      Payment[]                   @relation("PaymentsReceived")
   paymentsMade                          Payment[]                   @relation("PaymentsMade")
+  wasteAnalysisReportsRequested         WasteAnalysisReport[]       @relation("WasteAnalysisRequester")
+  wasteAnalysisReportsReviewed          WasteAnalysisReport[]       @relation("WasteAnalysisReviewer")
 }
 
 model OAuthAccount {
@@ -228,6 +230,8 @@ model PickupRequest {
   preferredCollectorId    String?
   serviceArea             String?
   isBulk                  Boolean                  @default(false)
+  photoUrls               String[]                 @default([])
+  wasteDescription        String?
   complaints              Complaint[]
   greenPointsTransactions GreenPointsTransaction[]
   notifications           Notification[]
@@ -241,7 +245,7 @@ model PickupRequest {
   weightRecord            WeightRecord?
   payments                Payment[]
   ignoredByCollectors     User[]                   @relation("IgnoredPickups")
-
+  wasteAnalysisReports    WasteAnalysisReport[]
   @@index([status])
   @@index([assignedCollectorId])
   @@index([requesterId, createdAt])
@@ -373,6 +377,36 @@ model WasteRecognitionLog {
   @@index([userId])
 }
 
+model WasteAnalysisReport {
+  id                   String                    @id @default(cuid())
+  pickupRequestId      String?
+  bulkRequestId        String?
+  requesterId          String
+  photoUrls            String[]                  @default([])
+  description          String?
+  visionLabels         Json?
+  detectedCondition    WasteItemCondition?
+  estimatedUsagePeriod WasteUsagePeriod?
+  suggestedCategory    WasteCategory?
+  confidence           Float?
+  aiSummary            String?
+  needsAdminReview     Boolean                   @default(true)
+  reviewReason         String?
+  reviewStatus         WasteAnalysisReviewStatus @default(PENDING)
+  reviewedAt           DateTime?
+  reviewedByAdminId    String?
+  reviewNotes          String?
+  createdAt            DateTime                  @default(now())
+  pickupRequest        PickupRequest?            @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+  bulkRequest          BulkMarketplaceRequest?   @relation(fields: [bulkRequestId], references: [id], onDelete: Cascade)
+  requester            User                      @relation("WasteAnalysisRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  reviewedByAdmin      User?                     @relation("WasteAnalysisReviewer", fields: [reviewedByAdminId], references: [id])
+
+  @@index([reviewStatus])
+  @@index([pickupRequestId])
+  @@index([bulkRequestId])
+}
+
 model GreenPointsTransaction {
   id                        String                     @id @default(cuid())
   userId                    String
@@ -440,6 +474,7 @@ model BulkMarketplaceRequest {
   csrContributions      CsrContribution[]
   complaints            Complaint[]
   payments              Payment[]
+  wasteAnalysisReports  WasteAnalysisReport[]
 
   @@index([businessId])
   @@index([status])
@@ -607,6 +642,31 @@ enum QuotationStatus {
   PENDING
   ACCEPTED
   REJECTED
+}
+
+enum WasteAnalysisReviewStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+}
+
+enum WasteItemCondition {
+  NEW
+  LIGHTLY_USED
+  MODERATELY_USED
+  HEAVILY_USED
+  DAMAGED
+  BROKEN
+  UNKNOWN
+}
+
+enum WasteUsagePeriod {
+  UNDER_6_MONTHS
+  SIX_MONTHS_TO_1_YEAR
+  ONE_TO_3_YEARS
+  THREE_TO_5_YEARS
+  OVER_5_YEARS
+  UNKNOWN
 }
 
 enum ComplaintStatus {

@@ -6,16 +6,9 @@ import { requireCsrf } from "../lib/csrf";
 import { sendData, sendError } from "../lib/apiResponse";
 import { createComplaintSchema } from "./complaints.schemas";
 import multer, { MulterError } from "multer";
-import path from "path";
-import fs from "fs";
 import crypto from "crypto";
-
-export const COMPLAINT_PHOTO_UPLOAD_DIR = path.resolve(
-  __dirname,
-  "../../uploads/complaints"
-);
-fs.mkdirSync(COMPLAINT_PHOTO_UPLOAD_DIR, { recursive: true });
-
+import { uploadImage, isCloudinaryConfigured } from "../lib/cloudinary";
+import { logger } from "../lib/logger";
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024; // 2MB
 const PHOTO_MIME_EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -112,13 +105,25 @@ complaintsRouter.post(
     const actualBulkRequestId = bulkRequests.length === 1 ? bulkRequests[0].id : null;
 
     const photos: string[] = [];
-    if (req.files && Array.isArray(req.files)) {
+    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+      if (!isCloudinaryConfigured()) {
+        sendError(
+          res,
+          503,
+          "CLOUDINARY_NOT_CONFIGURED",
+          "Photo upload is currently unavailable. Please try again later.",
+        );
+        return;
+      }
       for (const file of req.files) {
-        const ext = PHOTO_MIME_EXTENSIONS[file.mimetype];
-        const filename = `${crypto.randomUUID()}.${ext}`;
-        const filepath = path.join(COMPLAINT_PHOTO_UPLOAD_DIR, filename);
-        fs.writeFileSync(filepath, file.buffer);
-        photos.push(`/uploads/complaints/${filename}`);
+        try {
+          const result = await uploadImage(file.buffer, "wastewise/complaints");
+          photos.push(result.url);
+        } catch (err) {
+          logger.error({ err }, "Cloudinary complaint photo upload failed");
+          sendError(res, 502, "PHOTO_UPLOAD_FAILED", "Couldn't upload photo. Please try again.");
+          return;
+        }
       }
     }
 

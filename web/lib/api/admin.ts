@@ -102,3 +102,73 @@ export function updateComplaintStatus(
     headers: { "x-csrf-token": readCsrfToken() },
   });
 }
+
+export interface WasteAnalysisReport {
+  id: string;
+  pickupRequestId: string | null;
+  bulkRequestId: string | null;
+  requesterId: string;
+  photoUrls: string[];
+  description: string | null;
+  detectedCondition: string | null;
+  estimatedUsagePeriod: string | null;
+  suggestedCategory: string | null;
+  confidence: number | null;
+  aiSummary: string | null;
+  needsAdminReview: boolean;
+  reviewReason: string | null;
+  reviewStatus: "PENDING" | "REVIEWED" | "DISMISSED";
+  reviewNotes: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  requester: Pick<AuthUser, "id" | "fullName" | "email"> & { accountType: string | null; role: string };
+  pickupRequest: { id: string; status: string; pickupDate: string; pickupFormattedAddress: string } | null;
+  bulkRequest: { id: string; status: string; pickupAddress: string } | null;
+  reviewedByAdmin: { id: string; fullName: string } | null;
+}
+
+export function getWasteAnalysisReports(): Promise<{ reports: WasteAnalysisReport[] }> {
+  return authFetch<{ reports: WasteAnalysisReport[] }>("/admin/waste-analysis-reports");
+}
+
+export interface WasteAnalysisSummaryBucket {
+  byCategory: Record<string, number>;
+  byCondition: Record<string, number>;
+  byUsagePeriod: Record<string, number>;
+}
+
+export interface WasteAnalysisSummary {
+  HOUSEHOLD: WasteAnalysisSummaryBucket;
+  BUSINESS: WasteAnalysisSummaryBucket;
+}
+
+/** Up to 20 highest-confidence classified examples per category, per requester bucket — only ones with a photo. */
+export interface WasteAnalysisTopClassified {
+  HOUSEHOLD: Record<string, WasteAnalysisReport[]>;
+  BUSINESS: Record<string, WasteAnalysisReport[]>;
+}
+
+export function getWasteAnalysisSummary(): Promise<{ summary: WasteAnalysisSummary; topClassified: WasteAnalysisTopClassified }> {
+  return authFetch<{ summary: WasteAnalysisSummary; topClassified: WasteAnalysisTopClassified }>("/admin/waste-analysis-summary");
+}
+
+/** Dismissing deletes the report outright (see server/src/routes/admin.ts) — `report` is only present when reviewed. */
+export function updateWasteAnalysisReview(
+  id: string,
+  status: "REVIEWED" | "DISMISSED",
+  reviewNotes?: string,
+): Promise<{ deleted: boolean; report?: WasteAnalysisReport }> {
+  return authFetch<{ deleted: boolean; report?: WasteAnalysisReport }>(`/admin/waste-analysis-reports/${id}/review`, {
+    method: "PATCH",
+    body: JSON.stringify({ status, reviewNotes }),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
+export function deleteWasteAnalysisReports(ids: string[]): Promise<{ deletedCount: number }> {
+  return authFetch<{ deletedCount: number }>("/admin/waste-analysis-reports", {
+    method: "DELETE",
+    body: JSON.stringify({ ids }),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}

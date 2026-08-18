@@ -21,6 +21,7 @@ export function MakePaymentModal({ pickupId, bulkRequestId, amount, onClose, onS
     setIsLoading(true);
     setError(null);
 
+
     if (selectedMethod === "SSLCOMMERZ") {
       try {
         const res = await authFetch<{ gatewayUrl?: string }>("/payments/initiate", {
@@ -65,15 +66,15 @@ export function MakePaymentModal({ pickupId, bulkRequestId, amount, onClose, onS
             <X size={16} />
           </button>
         </div>
-        
+
         <div className="p-6 flex flex-col gap-6">
           <div className="text-center">
             <p className="text-sm text-neutral-500 font-medium">Amount to Pay</p>
             <p className="text-4xl font-bold text-emerald-600 mt-2">৳{amount.toLocaleString()}</p>
           </div>
-          
+
           {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">{error}</p>}
-          
+
           <div className="flex flex-col gap-3 mt-4">
             <button
               onClick={() => setSelectedMethod("SSLCOMMERZ")}

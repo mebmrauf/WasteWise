@@ -9,7 +9,8 @@ import { logger } from "./lib/logger";
 import { sendError } from "./lib/apiResponse";
 import { authRouter } from "./routes/auth";
 import { usersRouter } from "./routes/users";
-import { wasteRecognitionRouter, WASTE_PHOTO_UPLOAD_DIR } from "./routes/wasteRecognition";
+import { wasteRecognitionRouter } from "./routes/wasteRecognition";
+import { wastePhotosRouter } from "./routes/wastePhotos";
 import { pickupsRouter } from "./routes/pickups";
 import { offersRouter } from "./routes/offers";
 import { routesRouter } from "./routes/routes";
@@ -19,7 +20,7 @@ import { notificationsRouter } from "./routes/notifications";
 import { adminRouter } from "./routes/admin";
 import { collectorsRouter } from "./routes/collectors";
 import { marketplaceRouter } from "./routes/marketplace";
-import { complaintsRouter, COMPLAINT_PHOTO_UPLOAD_DIR } from "./routes/complaints";
+import { complaintsRouter } from "./routes/complaints";
 import { csrRouter } from "./routes/csr";
 import { messagesRouter } from "./routes/messages";
 import paymentsRouter from "./routes/payments";
@@ -56,6 +57,7 @@ export function createApp() {
   app.use("/api/v1/auth", authRouter);
   app.use("/api/v1/users", usersRouter);
   app.use("/api/v1/waste-recognition", wasteRecognitionRouter);
+  app.use("/api/v1/waste-photos", wastePhotosRouter);
   app.use("/api/v1/pickups", pickupsRouter);
   app.use("/api/v1/offers", offersRouter);
   app.use("/api/v1/routes", routesRouter);
@@ -70,30 +72,6 @@ export function createApp() {
   app.use("/api/v1/messages", messagesRouter);
   app.use("/api/v1/payments", paymentsRouter);
 
-  // Serves uploaded waste-recognition photos back out. Deliberately
-  // root-relative (not under /api/v1) since it's static file serving, not a
-  // JSON API route.
-  app.use(
-    "/uploads/waste-recognition",
-    helmet.crossOriginResourcePolicy({ policy: "cross-origin" }),
-    (req, res, next) => {
-      res.setHeader("Content-Disposition", "attachment");
-      res.setHeader("X-Content-Type-Options", "nosniff");
-      next();
-    },
-    express.static(WASTE_PHOTO_UPLOAD_DIR),
-  );
-
-  app.use(
-    "/uploads/complaints",
-    helmet.crossOriginResourcePolicy({ policy: "cross-origin" }),
-    (req, res, next) => {
-      res.setHeader("Content-Disposition", "attachment");
-      res.setHeader("X-Content-Type-Options", "nosniff");
-      next();
-    },
-    express.static(COMPLAINT_PHOTO_UPLOAD_DIR),
-  );
 
   // 404 fallback — kept last so it never shadows a real route.
   app.use((_req, res) => {
@@ -101,9 +79,10 @@ export function createApp() {
   });
 
   app.use(
-    (err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    (err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
       logger.error({ err, path: req.path }, "Unhandled error");
-      sendError(res, 500, "INTERNAL_ERROR", err?.message || `Something went wrong on backend path ${req.path}. Please try again.`);
+      const message = err instanceof Error ? err.message : `Something went wrong on backend path ${req.path}. Please try again.`;
+      sendError(res, 500, "INTERNAL_ERROR", message);
     },
   );
 

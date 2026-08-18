@@ -33,7 +33,7 @@ messagesRouter.get("/chat/:userId", requireAuth, async (req, res) => {
     }
 
     sendData(res, 200, { messages: messages.reverse(), nextCursor });
-  } catch (error) {
+  } catch {
     sendError(res, 400, "BAD_REQUEST", "Failed to fetch messages");
   }
 });

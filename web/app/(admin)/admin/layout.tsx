@@ -59,6 +59,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               Payments
             </Link>
+            <Link
+              href="/admin/waste-analysis"
+              className={cn(
+                "text-body-sm font-medium transition-colors",
+                pathname.startsWith("/admin/waste-analysis") ? "text-primary-600" : "text-neutral-500 hover:text-neutral-900"
+              )}
+            >
+              Waste Analysis
+            </Link>
           </nav>
         )}
         {user && user.role === "ADMIN" && (

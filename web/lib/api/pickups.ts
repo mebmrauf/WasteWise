@@ -150,6 +150,8 @@ export interface CreatePickupRequestInput {
   isExclusiveToPreferred?: boolean;
   isBulk?: boolean;
   estimatedTotalWeight?: number;
+  photoUrls?: string[];
+  wasteDescription?: string;
 }
 
 export function createPickupRequest(input: CreatePickupRequestInput): Promise<{ pickup: PickupRequestDetail }> {

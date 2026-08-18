@@ -146,7 +146,7 @@ const avatarUpload = multer({
 
 function runAvatarUpload(req: Request, res: Response): Promise<void> {
   return new Promise((resolve, reject) => {
-    avatarUpload.single("avatar")(req, res, (err: unknown) => {
+    avatarUpload.single("avatar")(req, res, (err: any) => {
       if (err) reject(err);
       else resolve();
     });
