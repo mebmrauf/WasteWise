@@ -31,6 +31,6 @@ export const authRateLimiter = rateLimit({
 export const secureCookieOptions = {
   httpOnly: true,
   secure: env.NODE_ENV === "production",
-  sameSite: (env.NODE_ENV === "production" ? "none" : "lax") as "none" | "lax",
+  sameSite: "lax" as const,
   path: "/",
 };
