@@ -74,7 +74,7 @@ router.post("/initiate", requireAuth, async (req: Request, res: Response) => {
     }
 
     // Find the existing PENDING payment
-    const existingPayment = await prisma.payment.findFirst({
+    let existingPayment = await prisma.payment.findFirst({
       where: {
         OR: [
           { pickupId: pickupId || undefined },
@@ -85,7 +85,18 @@ router.post("/initiate", requireAuth, async (req: Request, res: Response) => {
     });
 
     if (!existingPayment) {
-      return res.status(404).json({ error: "NOT_FOUND", message: "Pending payment record not found. Please contact support." });
+      // Self-heal: create the missing payment record
+      existingPayment = await prisma.payment.create({
+        data: {
+          pickupId: pickupId || undefined,
+          bulkRequestId: bulkRequestId || undefined,
+          customerId,
+          payerId,
+          amount,
+          paymentMethod: PaymentMethod.NOT_SELECTED,
+          status: PaymentStatus.PENDING,
+        }
+      });
     }
 
     if (existingPayment.status === "COMPLETED") {
@@ -187,7 +198,7 @@ router.post("/cod", requireAuth, async (req: Request, res: Response) => {
     }
 
     // Find the existing PENDING payment
-    const existingPayment = await prisma.payment.findFirst({
+    let existingPayment = await prisma.payment.findFirst({
       where: {
         OR: [
           { pickupId: pickupId || undefined },
@@ -198,7 +209,18 @@ router.post("/cod", requireAuth, async (req: Request, res: Response) => {
     });
 
     if (!existingPayment) {
-      return res.status(404).json({ error: "NOT_FOUND", message: "Pending payment record not found. Please contact support." });
+      // Self-heal: create the missing payment record
+      existingPayment = await prisma.payment.create({
+        data: {
+          pickupId: pickupId || undefined,
+          bulkRequestId: bulkRequestId || undefined,
+          customerId,
+          payerId,
+          amount,
+          paymentMethod: PaymentMethod.NOT_SELECTED,
+          status: PaymentStatus.PENDING,
+        }
+      });
     }
 
     if (existingPayment.status === "COMPLETED") {

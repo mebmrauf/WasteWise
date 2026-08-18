@@ -342,7 +342,28 @@ marketplaceRouter.post(
       return;
     }
 
-    if (!quotation.isHighestBid) {
+    // Self-healing: if no highest bid is marked, calculate and persist it
+    let highestBidId = quotation.isHighestBid ? quotation.id : null;
+    if (!highestBidId) {
+      const allQuotes = await prisma.marketplaceQuotation.findMany({ where: { requestId } });
+      const existingHighest = allQuotes.find(q => q.isHighestBid);
+      if (existingHighest) {
+        highestBidId = existingHighest.id;
+      } else if (allQuotes.length > 0) {
+        const sorted = [...allQuotes].sort((a, b) => {
+          if (a.purchasePrice !== b.purchasePrice) return b.purchasePrice - a.purchasePrice;
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        });
+        highestBidId = sorted[0].id;
+        
+        await prisma.marketplaceQuotation.update({
+          where: { id: highestBidId },
+          data: { isHighestBid: true }
+        });
+      }
+    }
+
+    if (!quotation.isHighestBid && quotation.id !== highestBidId) {
       sendError(res, 400, "BAD_REQUEST", "You can only accept the highest bid.");
       return;
     }
@@ -443,7 +464,28 @@ marketplaceRouter.post(
       return;
     }
 
-    if (!quotation.isHighestBid) {
+    // Self-healing: if no highest bid is marked, calculate and persist it
+    let highestBidId = quotation.isHighestBid ? quotation.id : null;
+    if (!highestBidId) {
+      const allQuotes = await prisma.marketplaceQuotation.findMany({ where: { requestId } });
+      const existingHighest = allQuotes.find(q => q.isHighestBid);
+      if (existingHighest) {
+        highestBidId = existingHighest.id;
+      } else if (allQuotes.length > 0) {
+        const sorted = [...allQuotes].sort((a, b) => {
+          if (a.purchasePrice !== b.purchasePrice) return b.purchasePrice - a.purchasePrice;
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        });
+        highestBidId = sorted[0].id;
+        
+        await prisma.marketplaceQuotation.update({
+          where: { id: highestBidId },
+          data: { isHighestBid: true }
+        });
+      }
+    }
+
+    if (!quotation.isHighestBid && quotation.id !== highestBidId) {
       sendError(res, 400, "BAD_REQUEST", "You can only reject the highest bid.");
       return;
     }

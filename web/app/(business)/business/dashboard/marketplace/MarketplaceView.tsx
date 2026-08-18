@@ -824,7 +824,7 @@ export function MarketplaceView() {
 function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketplaceRequest; onClose: () => void; onAccept: () => void }) {
   const [quotations, setQuotations] = React.useState<MarketplaceQuotation[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [processingId, setProcessingId] = React.useState<string | null>(null);
+  const [processingState, setProcessingState] = React.useState<{ id: string; action: 'accept' | 'reject' } | null>(null);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
   const { isClosed } = useBiddingStatus(request);
@@ -856,7 +856,7 @@ function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketpl
 
   const handleAccept = async (quoteId: string) => {
     try {
-      setProcessingId(quoteId);
+      setProcessingState({ id: quoteId, action: 'accept' });
       setErrorMsg(null);
       await acceptQuotation(request.id, quoteId);
       onAccept();
@@ -866,13 +866,13 @@ function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketpl
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to accept quotation");
     } finally {
-      setProcessingId(null);
+      setProcessingState(null);
     }
   };
 
   const handleReject = async (quoteId: string) => {
     try {
-      setProcessingId(quoteId);
+      setProcessingState({ id: quoteId, action: 'reject' });
       setErrorMsg(null);
       await rejectHighestQuotation(request.id, quoteId);
       onAccept();
@@ -882,7 +882,7 @@ function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketpl
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to reject quotation");
     } finally {
-      setProcessingId(null);
+      setProcessingState(null);
     }
   };
 
@@ -983,17 +983,19 @@ function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketpl
                         <div className="flex gap-4">
                           <Button 
                             variant="secondary"
-                            onClick={() => handleReject(quote.id)} 
-                            disabled={processingId !== null}
+                            onClick={() => { if (!processingState) handleReject(quote.id); }} 
+                            disabled={processingState?.id === quote.id && processingState.action === 'reject'}
+                            className={processingState !== null && !(processingState.id === quote.id && processingState.action === 'reject') ? "pointer-events-none" : ""}
                           >
-                            {processingId === quote.id ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            {processingState?.id === quote.id && processingState.action === 'reject' ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                             Reject
                           </Button>
                           <Button 
-                            onClick={() => handleAccept(quote.id)} 
-                            disabled={processingId !== null}
+                            onClick={() => { if (!processingState) handleAccept(quote.id); }} 
+                            disabled={processingState?.id === quote.id && processingState.action === 'accept'}
+                            className={processingState !== null && !(processingState.id === quote.id && processingState.action === 'accept') ? "pointer-events-none" : ""}
                           >
-                            {processingId === quote.id ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            {processingState?.id === quote.id && processingState.action === 'accept' ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                             Accept
                           </Button>
                         </div>
