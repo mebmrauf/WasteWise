@@ -259,7 +259,7 @@ export default function AdminWasteAnalysisPage() {
                             className="text-left w-full h-full block focus-visible:outline-none"
                           >
                             <img
-                              src={`${UPLOAD_BASE_URL}${item.photoUrls[0]}`}
+                              src={item.photoUrls[0]?.startsWith('http') ? item.photoUrls[0] : `${UPLOAD_BASE_URL}${item.photoUrls[0]}`}
                               alt={`${category} example`}
                               className="w-full h-[140px] object-cover"
                             />
@@ -450,9 +450,9 @@ export default function AdminWasteAnalysisPage() {
               {selectedReport.photoUrls.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {selectedReport.photoUrls.map((photoUrl, idx) => (
-                    <button key={idx} type="button" onClick={() => setPreviewUrl(`${UPLOAD_BASE_URL}${photoUrl}`)}>
+                    <button key={idx} type="button" onClick={() => setPreviewUrl(photoUrl.startsWith('http') ? photoUrl : `${UPLOAD_BASE_URL}${photoUrl}`)}>
                       <img
-                        src={`${UPLOAD_BASE_URL}${photoUrl}`}
+                        src={photoUrl.startsWith('http') ? photoUrl : `${UPLOAD_BASE_URL}${photoUrl}`}
                         alt={`Attachment ${idx + 1}`}
                         className="h-24 w-24 object-cover rounded-md border border-neutral-200 hover:opacity-90 transition-opacity"
                       />
