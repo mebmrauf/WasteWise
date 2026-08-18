@@ -43,6 +43,7 @@ export interface CollectorLocation {
 }
 
 export interface TrackedCollector {
+  id: string;
   fullName: string;
   phone: string | null;
   vehicleType: VehicleType | null;
@@ -197,7 +198,7 @@ export function listCollectorHistory(): Promise<{ pickups: PickupRequestSummary[
 
 export interface PickupOffer {
   id: string;
-  pickupRequestId: string;v
+  pickupRequestId: string;
   bidAmount: number;
   bidAmountsPerKg?: Record<string, number> | null;
   message: string | null;

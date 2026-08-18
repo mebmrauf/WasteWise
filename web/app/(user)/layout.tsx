@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { NavBar } from "@/components/NavBar";
-import { NavAuthActions } from "@/components/NavAuthActions";
+import { NotificationsPanel } from "@/components/NotificationsPanel";
 import { DashboardShell } from "./DashboardShell";
+
 export default function UserLayout({ children }: { children: ReactNode }) {
   return (
     <>
@@ -12,7 +13,7 @@ export default function UserLayout({ children }: { children: ReactNode }) {
           </a>
         }
         accent="user"
-        actions={<NavAuthActions />}
+        actions={<NotificationsPanel />}
         edgeToEdge
       />
       <main>

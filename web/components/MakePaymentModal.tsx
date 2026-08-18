@@ -20,39 +20,7 @@ export function MakePaymentModal({ pickupId, bulkRequestId, amount, onClose, onS
     if (!selectedMethod) return;
     setIsLoading(true);
     setError(null);
-<<<<<<< HEAD
-    try {
-      const res = await authFetch<{ gatewayUrl?: string }>("/payments/initiate", {
-        method: "POST",
-        body: JSON.stringify({ pickupId, bulkRequestId }),
-      });
 
-      console.log("SSLCommerz Initiate Response:", res);
-
-      if (!res?.gatewayUrl) {
-        throw new Error("Failed to initialize SSLCommerz payment: Invalid gateway URL");
-      }
-
-      window.location.href = res.gatewayUrl;
-    } catch (err: any) {
-      setError(err.message || "Failed to initiate payment");
-      setIsLoading(false);
-    }
-  };
-
-  const handleCOD = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      await authFetch("/payments/cod", {
-        method: "POST",
-        body: JSON.stringify({ pickupId, bulkRequestId }),
-      });
-      onSuccess();
-    } catch (err: any) {
-      setError(err.message || "Failed to complete COD payment");
-      setIsLoading(false);
-=======
 
     if (selectedMethod === "SSLCOMMERZ") {
       try {
@@ -83,7 +51,6 @@ export function MakePaymentModal({ pickupId, bulkRequestId, amount, onClose, onS
         setError(err.message || "Failed to complete COD payment");
         setIsLoading(false);
       }
->>>>>>> 4d230576b3977a8f2212bcc00c70d81eee221d69
     }
   };
 
@@ -118,17 +85,6 @@ export function MakePaymentModal({ pickupId, bulkRequestId, amount, onClose, onS
                   : "border-neutral-200 bg-white text-neutral-700 hover:border-emerald-300 hover:bg-neutral-50"
               } ${isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
             >
-<<<<<<< HEAD
-              <CreditCard size={20} />
-              Pay Online (SSLCommerz)
-            </Button>
-
-            <Button
-              variant="secondary"
-              size="lg"
-              className="w-full flex justify-center items-center gap-2 py-4 border-2"
-              onClick={handleCOD}
-=======
               <CreditCard size={24} className={selectedMethod === "SSLCOMMERZ" ? "text-emerald-600" : "text-neutral-400"} />
               <div className="flex flex-col items-start">
                 <span className="font-semibold text-lg">Pay Online</span>
@@ -138,7 +94,6 @@ export function MakePaymentModal({ pickupId, bulkRequestId, amount, onClose, onS
             
             <button
               onClick={() => setSelectedMethod("COD")}
->>>>>>> 4d230576b3977a8f2212bcc00c70d81eee221d69
               disabled={isLoading}
               className={`w-full flex justify-start items-center gap-4 py-4 px-6 border-2 rounded-xl transition-all ${
                 selectedMethod === "COD"

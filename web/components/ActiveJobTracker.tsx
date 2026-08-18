@@ -8,6 +8,11 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { formatDate } from "@/components/AvailableJobListItem";
 import { Icon } from "@/components/Icon";
 import { Input } from "@/components/Input";
+import { ChatWidget } from "@/components/ChatWidget";
+
+import { StatusPill } from "@/components/StatusPill";
+import { StatusTimeline, type PickupTrackingStatus } from "@/components/StatusTimeline";
+import { SummaryRow } from "@/components/SummaryPanel";
 import { Map as MapView } from "@/components/Map";
 import { AuthApiError } from "@/lib/api/auth";
 import {
@@ -605,6 +610,14 @@ function ActiveJobCard({
           </div>
         )}
       </div>
+      
+      <ChatWidget
+        targetUserId={job.requesterId}
+        targetUserName={job.isBulk ? "Business" : "Household"}
+        isActive={status !== "COMPLETED" && status !== "CANCELLED"}
+        className="mt-4 border-t-0 border-x-0 border-b-0 rounded-none bg-neutral-50/50"
+      />
+    
     </div>
   );
 }
