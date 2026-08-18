@@ -13,7 +13,7 @@ referralsRouter.get(
   asyncHandler(async (req, res) => {
     const userId = req.user!.id;
 
-    let user = await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         referralCode: true,

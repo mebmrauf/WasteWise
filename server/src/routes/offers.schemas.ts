@@ -29,4 +29,4 @@ export const submitOfferSchema = z
     message: offerMessageSchema,
   })
   .strict();
-type SubmitOfferInput = z.infer<typeof submitOfferSchema>;
+export type SubmitOfferInput = z.infer<typeof submitOfferSchema>;

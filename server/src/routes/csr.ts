@@ -61,6 +61,11 @@ csrRouter.post(
     }
 
     const contribution = await prisma.$transaction(async (tx) => {
+      const payment = await tx.payment.findFirst({
+        where: { bulkRequestId: pickupId, status: "COMPLETED" }
+      });
+      const status = payment ? "COMPLETED" : "PENDING";
+
       const newContribution = await tx.csrContribution.create({
         data: {
           businessId: req.user!.id,
@@ -69,6 +74,7 @@ csrRouter.post(
           donationPercentage: donationPercentage || null,
           selectedCause,
           paymentAmount,
+          status,
         }
       });
 

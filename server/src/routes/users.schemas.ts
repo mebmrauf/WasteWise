@@ -16,7 +16,7 @@ export const updateProfileSchema = z
     rewardsEmailNotificationsEnabled: z.boolean().optional(),
   })
   .strict();
-type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
 export const updateCollectorProfileSchema = z
   .object({
@@ -60,7 +60,7 @@ export const updateCollectorProfileSchema = z
     }
   });
 
-type UpdateCollectorProfileInput = z.infer<typeof updateCollectorProfileSchema>;
+export type UpdateCollectorProfileInput = z.infer<typeof updateCollectorProfileSchema>;
 
 export const updateRecyclingProfileSchema = z
   .object({

@@ -38,6 +38,9 @@ const envSchema = z.object({
   GOOGLE_MAPS_SERVER_API_KEY: z.string().optional().default(""),
   // --- AI Vision (Waste Recognition, optional — feature disabled if blank) ---
   GOOGLE_VISION_API_KEY: z.string().transform(s => s.replace(/^["']|["']$/g, '').trim()).optional().default(""),
+  // --- Gemini (Waste Analysis, optional — feature disabled if blank) ---
+  GEMINI_API_KEY: z.string().transform(s => s.replace(/^["']|["']$/g, '').trim()).optional().default(""),
+  GEMINI_MODEL: z.string().optional().default("gemini-3.6-flash"),
 
   CLOUDINARY_CLOUD_NAME: z.string().optional().default(""),
   CLOUDINARY_API_KEY: z.string().optional().default(""),

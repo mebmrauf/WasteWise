@@ -19,6 +19,7 @@ import { emitToRoom } from "../realtime/emitToRoom";
 import { PICKUP_STATUS_EVENT } from "../realtime/pickupEvents";
 import { computeRecyclingReminder } from "../lib/recyclingPattern";
 import { isWithinRadiusKm, distanceKm, MAX_COLLECTOR_MATCH_DISTANCE_KM } from "../lib/geoDistance";
+import { analyzeWasteSubmission } from "../lib/wasteAnalysis";
 import { createPickupRequestSchema, ratePickupSchema } from "./pickups.schemas";
 
 
@@ -41,8 +42,7 @@ export const pickupsRouter = Router();
 
 const PICKUP_LIST_LIMIT = 50;
 
-export function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[], rating?: any, weightRecord?: { estimatedMinKg: number; estimatedMaxKg: number } | null, requester?: { fullName: string; phone: string | null; avatarUrl: string | null } | null }) {
-function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[], rating?: any, payments?: any[] }) {
+export function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: unknown }[], rating?: unknown, weightRecord?: { estimatedMinKg: number; estimatedMaxKg: number } | null, requester?: { fullName: string; phone: string | null; avatarUrl: string | null } | null, payments?: unknown[] }) {
   const acceptedOffer = pickup.offers?.find(o => o.status === "ACCEPTED");
   return {
     id: pickup.id,
@@ -82,7 +82,7 @@ function toPickupSummary(pickup: PickupRequest & { items: PickupRequestItem[], o
 }
 
 function toPickupDetail(
-  pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: any }[], payments?: any[] },
+  pickup: PickupRequest & { items: PickupRequestItem[], offers?: { status: string; bidAmountsPerKg: unknown }[], payments?: unknown[] },
   weightRecord: WeightRecord | null,
   rating?: { score: number; comment: string | null; createdAt: Date } | null,
   pointsEarned?: number | null,
@@ -119,7 +119,7 @@ pickupsRouter.post(
       sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    const { items, pickupDate, placeId, formattedAddress, latitude, longitude, serviceArea, preferredCollectorId, isExclusiveToPreferred, isBulk, estimatedTotalWeight } = parsed.data;
+    const { items, pickupDate, placeId, formattedAddress, latitude, longitude, serviceArea, preferredCollectorId, isExclusiveToPreferred, isBulk, estimatedTotalWeight, photoUrls, wasteDescription } = parsed.data;
 
     if (isBulk) {
       const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
@@ -204,6 +204,8 @@ pickupsRouter.post(
         preferredCollectorId,
         isExclusiveToPreferred,
         isBulk,
+        photoUrls,
+        wasteDescription,
         weightRecord: {
           create: {
             estimatedMinKg: minKg,
@@ -213,6 +215,15 @@ pickupsRouter.post(
       },
       include: { items: true, weightRecord: true, offers: { where: { status: OfferStatus.ACCEPTED } } },
     });
+
+    if (photoUrls.length > 0 || wasteDescription) {
+      void analyzeWasteSubmission({
+        pickupRequestId: pickup.id,
+        requesterId: req.user!.id,
+        photoUrls,
+        description: wasteDescription ?? null,
+      });
+    }
 
     // Notify verified collectors whose service radius covers this pickup.
     if (resolvedAddress.latitude !== null && resolvedAddress.longitude !== null) {
@@ -260,8 +271,7 @@ pickupsRouter.get(
       where: { requesterId: req.user!.id },
       orderBy: { createdAt: "desc" },
       take: PICKUP_LIST_LIMIT,
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, weightRecord: true, requester: { select: { fullName: true, phone: true, avatarUrl: true } } },
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, payments: { where: { status: "COMPLETED" }, select: { id: true } } },
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, weightRecord: true, requester: { select: { fullName: true, phone: true, avatarUrl: true } }, payments: { where: { status: "COMPLETED" }, select: { id: true } } },
     });
 
     sendData(res, 200, { pickups: pickups.map(toPickupSummary) });
@@ -335,7 +345,7 @@ pickupsRouter.get(
       include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, weightRecord: true, requester: { select: { fullName: true, phone: true, avatarUrl: true } } },
     });
     
-    console.log(`[GET /open] Found ${pickups.length} PENDING pickups for collector ${req.user!.id}`);
+    logger.debug(`[GET /open] Found ${pickups.length} PENDING pickups for collector ${req.user!.id}`);
 
     // A collector 100km away can't realistically make the trip — cap browsing
     // to the same hard distance limit used for notification matching, even if
@@ -371,9 +381,7 @@ pickupsRouter.get(
     });
 
     sendData(res, 200, { pickups: nearbyPickups.map(p => toPickupSummary(p.pickup)).slice(0, PICKUP_LIST_LIMIT) });
-    console.log(`[GET /open] Filtered to ${nearbyPickups.length} nearby pickups`);
-    
-    sendData(res, 200, { pickups: nearbyPickups.map(toPickupSummary) });
+    logger.debug(`[GET /open] Filtered to ${nearbyPickups.length} nearby pickups`);
   }),
 );
 
@@ -410,8 +418,7 @@ pickupsRouter.get(
       },
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, weightRecord: true, requester: { select: { fullName: true, phone: true, avatarUrl: true } } },
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, payments: { where: { status: "COMPLETED" }, select: { id: true } } },
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, rating: true, weightRecord: true, requester: { select: { fullName: true, phone: true, avatarUrl: true } }, payments: { where: { status: "COMPLETED" }, select: { id: true } } },
     });
 
     sendData(res, 200, { pickups: pickups.map(toPickupSummary) });

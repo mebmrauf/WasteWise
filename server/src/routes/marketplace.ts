@@ -4,10 +4,11 @@ import { prisma } from "../lib/prisma";
 import { requireAuth, requireRole } from "../lib/rbac";
 import { asyncHandler } from "../lib/asyncHandler";
 import { sendData, sendError } from "../lib/apiResponse";
-import { WasteCategory, VehicleType, Prisma, Role, PaymentStatus, PaymentMethod } from "@prisma/client";
+import { WasteCategory, VehicleType, Prisma, Role, PaymentStatus, PaymentMethod, BulkRequestStatus } from "@prisma/client";
 import { createNotification } from "../lib/notifications";
 import { calculateMembershipLevel, getMembershipBonusPercentage, getMembershipBadge } from "../lib/rewards";
 import { calculateBulkPickupAmount } from "../lib/paymentCalculator";
+import { analyzeWasteSubmission } from "../lib/wasteAnalysis";
 import { logger } from "../lib/logger";
 
 export const marketplaceRouter = Router();
@@ -28,7 +29,7 @@ const createRequestSchema = z.object({
   longitude: z.number().optional(),
   placeId: z.string().optional(),
   preferredPickupDate: z.string().datetime(),
-  images: z.array(z.string()),
+  images: z.array(z.string()).max(4, "You can attach at most 4 photos"),
   additionalNotes: z.string().optional(),
 });
 
@@ -75,6 +76,15 @@ marketplaceRouter.post(
         bidEndsAt: new Date(Date.now() + BIDDING_DURATION_MS),
       },
     });
+
+    if (parsed.data.images.length > 0 || parsed.data.additionalNotes) {
+      void analyzeWasteSubmission({
+        bulkRequestId: request.id,
+        requesterId: req.user!.id,
+        photoUrls: parsed.data.images,
+        description: parsed.data.additionalNotes ?? null,
+      });
+    }
 
     sendData(res, 201, { request });
   })
@@ -194,7 +204,7 @@ marketplaceRouter.get(
         return;
       }
     } else if (isRecyclingCompany) {
-      const hasAcceptedQuote = request.quotations.some((q: any) => q.status === "ACCEPTED");
+      const _hasAcceptedQuote = request.quotations.some((q) => q.status === "ACCEPTED");
       const hasQuotation = request.quotations.length > 0;
       if (request.status !== "OPEN_FOR_BIDDING" && request.assignedCompanyId !== req.user!.id && !hasQuotation) {
         sendError(res, 403, "FORBIDDEN", "You do not have permission to view this request.");
@@ -342,7 +352,28 @@ marketplaceRouter.post(
       return;
     }
 
-    if (!quotation.isHighestBid) {
+    // Self-healing: if no highest bid is marked, calculate and persist it
+    let highestBidId = quotation.isHighestBid ? quotation.id : null;
+    if (!highestBidId) {
+      const allQuotes = await prisma.marketplaceQuotation.findMany({ where: { requestId } });
+      const existingHighest = allQuotes.find(q => q.isHighestBid);
+      if (existingHighest) {
+        highestBidId = existingHighest.id;
+      } else if (allQuotes.length > 0) {
+        const sorted = [...allQuotes].sort((a, b) => {
+          if (a.purchasePrice !== b.purchasePrice) return b.purchasePrice - a.purchasePrice;
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        });
+        highestBidId = sorted[0].id;
+        
+        await prisma.marketplaceQuotation.update({
+          where: { id: highestBidId },
+          data: { isHighestBid: true }
+        });
+      }
+    }
+
+    if (!quotation.isHighestBid && quotation.id !== highestBidId) {
       sendError(res, 400, "BAD_REQUEST", "You can only accept the highest bid.");
       return;
     }
@@ -380,8 +411,8 @@ marketplaceRouter.post(
           }
         });
       });
-    } catch (err: any) {
-      if (err.message === "NOT_CLOSED") {
+    } catch (err) {
+      if (err instanceof Error && err.message === "NOT_CLOSED") {
         sendError(res, 400, "BAD_REQUEST", "Bidding is not closed or already decided.");
         return;
       }
@@ -443,7 +474,28 @@ marketplaceRouter.post(
       return;
     }
 
-    if (!quotation.isHighestBid) {
+    // Self-healing: if no highest bid is marked, calculate and persist it
+    let highestBidId = quotation.isHighestBid ? quotation.id : null;
+    if (!highestBidId) {
+      const allQuotes = await prisma.marketplaceQuotation.findMany({ where: { requestId } });
+      const existingHighest = allQuotes.find(q => q.isHighestBid);
+      if (existingHighest) {
+        highestBidId = existingHighest.id;
+      } else if (allQuotes.length > 0) {
+        const sorted = [...allQuotes].sort((a, b) => {
+          if (a.purchasePrice !== b.purchasePrice) return b.purchasePrice - a.purchasePrice;
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        });
+        highestBidId = sorted[0].id;
+        
+        await prisma.marketplaceQuotation.update({
+          where: { id: highestBidId },
+          data: { isHighestBid: true }
+        });
+      }
+    }
+
+    if (!quotation.isHighestBid && quotation.id !== highestBidId) {
       sendError(res, 400, "BAD_REQUEST", "You can only reject the highest bid.");
       return;
     }
@@ -463,8 +515,8 @@ marketplaceRouter.post(
 
         // Request stays in BIDDING_CLOSED (unassigned state)
       });
-    } catch (err: any) {
-      if (err.message === "NOT_CLOSED") {
+    } catch (err) {
+      if (err instanceof Error && err.message === "NOT_CLOSED") {
         sendError(res, 400, "BAD_REQUEST", "Bidding is not closed or already decided.");
         return;
       }
@@ -526,7 +578,7 @@ marketplaceRouter.post(
 
     await prisma.bulkMarketplaceRequest.update({
       where: { id },
-      data: { status: status as any }
+      data: { status: status as BulkRequestStatus }
     });
 
     sendData(res, 200, { success: true });
@@ -629,7 +681,7 @@ marketplaceRouter.post(
     // Also award points to business and update membership
     if (request.verifiedTotalWeightKg) {
       const basePoints = Math.floor(request.verifiedTotalWeightKg * 2);
-      
+
       const user = await prisma.user.findUnique({
         where: { id: req.user!.id },
         select: {
@@ -665,7 +717,7 @@ marketplaceRouter.post(
           bonuses: bonusesBreakdown
         };
 
-        const updateData: any = {
+        const updateData: Prisma.UserUpdateInput = {
           greenPointsBalance: { increment: totalPoints },
           totalGreenPoints: { increment: totalPoints },
           membershipLevel: newLevel,

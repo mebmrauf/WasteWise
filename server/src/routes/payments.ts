@@ -1,12 +1,12 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { requireAuth } from "../lib/rbac";
-import { PaymentMethod, PaymentStatus, PickupStatus, BulkRequestStatus } from "@prisma/client";
+import { PaymentMethod, PaymentStatus, PickupStatus, BulkRequestStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { processGreenPointsForPickup } from "../lib/paymentRewards";
 import { sendData, sendError } from "../lib/apiResponse";
 import { logger } from "../lib/logger";
-// @ts-ignore
+// @ts-expect-error sslcommerz-lts types are incomplete
 import SSLCommerzPayment from "sslcommerz-lts";
 
 import { calculateSmartPickupAmount, calculateBulkPickupAmount } from "../lib/paymentCalculator";
@@ -28,6 +28,12 @@ const codSchema = z.object({
   pickupId: z.string().optional(),
   bulkRequestId: z.string().optional(),
 });
+
+interface SSLCommerzInitResponse {
+  GatewayPageURL?: string;
+  gatewayPageURL?: string;
+  GatewayPageUrl?: string;
+}
 
 router.post("/initiate", requireAuth, async (req: Request, res: Response) => {
   try {
@@ -74,7 +80,7 @@ router.post("/initiate", requireAuth, async (req: Request, res: Response) => {
     }
 
     // Find the existing PENDING payment
-    const existingPayment = await prisma.payment.findFirst({
+    let existingPayment = await prisma.payment.findFirst({
       where: {
         OR: [
           { pickupId: pickupId || undefined },
@@ -85,7 +91,18 @@ router.post("/initiate", requireAuth, async (req: Request, res: Response) => {
     });
 
     if (!existingPayment) {
-      return res.status(404).json({ error: "NOT_FOUND", message: "Pending payment record not found. Please contact support." });
+      // Self-heal: create the missing payment record
+      existingPayment = await prisma.payment.create({
+        data: {
+          pickupId: pickupId || undefined,
+          bulkRequestId: bulkRequestId || undefined,
+          customerId,
+          payerId,
+          amount,
+          paymentMethod: PaymentMethod.NOT_SELECTED,
+          status: PaymentStatus.PENDING,
+        }
+      });
     }
 
     if (existingPayment.status === "COMPLETED") {
@@ -123,26 +140,28 @@ router.post("/initiate", requireAuth, async (req: Request, res: Response) => {
     };
 
     const sslcz = new SSLCommerzPayment(STORE_ID, STORE_PASS, IS_LIVE);
-    
+
     logger.info({ requestData: data }, "Sending SSLCommerz init request");
 
-    sslcz.init(data).then((apiResponse: any) => {
+    sslcz.init(data).then((apiResponse: SSLCommerzInitResponse) => {
       logger.info({ sslczResponse: apiResponse }, "SSLCommerz init response");
-      let GatewayPageURL = apiResponse.GatewayPageURL || apiResponse.gatewayPageURL || apiResponse.GatewayPageUrl;
-      
+      const GatewayPageURL = apiResponse.GatewayPageURL || apiResponse.gatewayPageURL || apiResponse.GatewayPageUrl;
+
       if (!GatewayPageURL) {
         logger.error({ apiResponse }, "GatewayPageURL missing in SSLCommerz response");
         return sendError(res, 500, "PAYMENT_INIT_FAILED", "Invalid response from payment gateway.");
       }
-      
+
       return sendData(res, 200, { gatewayUrl: GatewayPageURL });
-    }).catch((err: any) => {
+    }).catch((err: unknown) => {
       logger.error({ err }, "SSLCommerz init error");
-      return sendError(res, 500, "INTERNAL_SERVER_ERROR", err.message || "Failed to initialize SSLCommerz payment");
+      const message = err instanceof Error ? err.message : "Failed to initialize SSLCommerz payment";
+      return sendError(res, 500, "INTERNAL_SERVER_ERROR", message);
     });
 
-  } catch (error: any) {
-    res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: error.message });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to initialize payment";
+    res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message });
   }
 });
 
@@ -187,7 +206,7 @@ router.post("/cod", requireAuth, async (req: Request, res: Response) => {
     }
 
     // Find the existing PENDING payment
-    const existingPayment = await prisma.payment.findFirst({
+    let existingPayment = await prisma.payment.findFirst({
       where: {
         OR: [
           { pickupId: pickupId || undefined },
@@ -198,7 +217,18 @@ router.post("/cod", requireAuth, async (req: Request, res: Response) => {
     });
 
     if (!existingPayment) {
-      return res.status(404).json({ error: "NOT_FOUND", message: "Pending payment record not found. Please contact support." });
+      // Self-heal: create the missing payment record
+      existingPayment = await prisma.payment.create({
+        data: {
+          pickupId: pickupId || undefined,
+          bulkRequestId: bulkRequestId || undefined,
+          customerId,
+          payerId,
+          amount,
+          paymentMethod: PaymentMethod.NOT_SELECTED,
+          status: PaymentStatus.PENDING,
+        }
+      });
     }
 
     if (existingPayment.status === "COMPLETED") {
@@ -218,9 +248,17 @@ router.post("/cod", requireAuth, async (req: Request, res: Response) => {
       await processGreenPointsForPickup(pickupId);
     }
 
+    if (bulkRequestId) {
+      await prisma.csrContribution.updateMany({
+        where: { pickupId: bulkRequestId, status: "PENDING" },
+        data: { status: "COMPLETED" }
+      });
+    }
+
     res.json({ message: "COD Payment Recorded", payment });
-  } catch (error: any) {
-    res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: error.message });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to record COD payment";
+    res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message });
   }
 });
 
@@ -236,11 +274,11 @@ async function getRedirectUrl(tran_id: string, status: string): Promise<string> 
 
     const { role, accountType } = payment.payer;
     let basePath = "/dashboard/payments";
-    
+
     if (role === "COLLECTOR") basePath = "/collector/payment-history";
     else if (role === "RECYCLING_COMPANY") basePath = "/recycling/payment-history";
     else if (role === "USER" && accountType === "BUSINESS") basePath = "/business/dashboard/payments";
-    
+
     return `${APP_URL}${basePath}?status=${status}`;
   } catch {
     return `${APP_URL}/dashboard/payments?status=${status}`;
@@ -251,11 +289,11 @@ async function getRedirectUrl(tran_id: string, status: string): Promise<string> 
 router.post("/ssl-success", async (req: Request, res: Response) => {
   const { tran_id, val_id } = req.body;
   logger.info({ body: req.body }, "Received ssl-success webhook");
-  
+
   try {
     const sslcz = new SSLCommerzPayment(STORE_ID, STORE_PASS, IS_LIVE);
     const validationData = await sslcz.validate({ val_id });
-    
+
     logger.info({ validationData }, "SSLCommerz validation response");
 
     if (validationData?.status === "VALID" || validationData?.status === "VALIDATED") {
@@ -268,6 +306,12 @@ router.post("/ssl-success", async (req: Request, res: Response) => {
 
         if (payment.pickupId) {
           await processGreenPointsForPickup(payment.pickupId);
+        }
+        if (payment.bulkRequestId) {
+          await prisma.csrContribution.updateMany({
+            where: { pickupId: payment.bulkRequestId, status: "PENDING" },
+            data: { status: "COMPLETED" }
+          });
         }
       }
       const redirectUrl = await getRedirectUrl(tran_id, "success");
@@ -330,10 +374,16 @@ router.post("/ssl-ipn", async (req: Request, res: Response) => {
         if (payment.pickupId) {
           await processGreenPointsForPickup(payment.pickupId);
         }
+        if (payment.bulkRequestId) {
+          await prisma.csrContribution.updateMany({
+            where: { pickupId: payment.bulkRequestId, status: "PENDING" },
+            data: { status: "COMPLETED" }
+          });
+        }
       }
     }
     res.status(200).send("OK");
-  } catch (err) {
+  } catch {
     res.status(500).send("Error processing IPN");
   }
 });
@@ -344,8 +394,8 @@ router.get("/history", requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
     const userRole = req.user!.role;
-    
-    let whereClause: any = {
+
+    let whereClause: Prisma.PaymentWhereInput = {
       OR: [
         { customerId: userId },
         { payerId: userId }
@@ -368,8 +418,9 @@ router.get("/history", requireAuth, async (req: Request, res: Response) => {
     });
 
     sendData(res, 200, payments);
-  } catch (error: any) {
-    sendError(res, 500, "INTERNAL_SERVER_ERROR", error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to fetch payment history";
+    sendError(res, 500, "INTERNAL_SERVER_ERROR", message);
   }
 });
 
@@ -414,8 +465,9 @@ router.get("/receipt/:id", requireAuth, async (req: Request, res: Response) => {
     }
 
     sendData(res, 200, payment);
-  } catch (error: any) {
-    sendError(res, 500, "INTERNAL_SERVER_ERROR", error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to fetch receipt";
+    sendError(res, 500, "INTERNAL_SERVER_ERROR", message);
   }
 });
 

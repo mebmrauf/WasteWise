@@ -1,4 +1,4 @@
-import { GreenPointsTransactionType, PickupStatus, PaymentStatus, PaymentMethod } from "@prisma/client";
+import { GreenPointsTransactionType, PickupStatus, PaymentStatus, PaymentMethod, WasteCategory } from "@prisma/client";
 import type { PickupRequest, PickupTrackingEvent } from "@prisma/client";
 import { calculateSmartPickupAmount } from "../lib/paymentCalculator";
 import { prisma } from "../lib/prisma";
@@ -242,8 +242,8 @@ async function handleStatusUpdate(socket: Socket, payload: unknown): Promise<voi
     return;
   }
   if (
-    access.pickup.status === PickupStatus.ARRIVED && 
-    status !== PickupStatus.ARRIVED && 
+    access.pickup.status === PickupStatus.ARRIVED &&
+    status !== PickupStatus.ARRIVED &&
     status !== PickupStatus.EN_ROUTE
   ) {
     emitPickupError(
@@ -266,7 +266,7 @@ async function handleStatusUpdate(socket: Socket, payload: unknown): Promise<voi
     status: updatedPickup.status,
     createdAt: trackingEvent.createdAt,
   });
-  
+
   void createNotification({
     userId: updatedPickup.requesterId,
     type: "PICKUP_STATUS_UPDATE",
@@ -303,7 +303,7 @@ async function handleSubmitWeights(socket: Socket, payload: unknown): Promise<vo
     });
     for (const [category, exactWeightKg] of Object.entries(weights)) {
       await tx.pickupRequestItem.updateMany({
-        where: { pickupRequestId, category: category as any },
+        where: { pickupRequestId, category: category as WasteCategory },
         data: { exactWeightKg },
       });
     }
@@ -316,7 +316,7 @@ async function handleSubmitWeights(socket: Socket, payload: unknown): Promise<vo
     status: updatedPickup.status,
     createdAt: trackingEvent.createdAt,
   });
-  
+
   void createNotification({
     userId: updatedPickup.requesterId,
     type: "PICKUP_STATUS_UPDATE",
@@ -410,7 +410,7 @@ async function handleRejectWeights(socket: Socket, payload: unknown): Promise<vo
     status: updatedPickup.status,
     createdAt: trackingEvent.createdAt,
   });
-  
+
   if (updatedPickup.assignedCollectorId) {
     void createNotification({
       userId: updatedPickup.assignedCollectorId,

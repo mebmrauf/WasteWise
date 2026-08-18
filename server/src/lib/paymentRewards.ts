@@ -1,6 +1,6 @@
 import { prisma } from "./prisma";
 import { calculateGreenPointsForPickup, calculateMembershipLevel } from "./rewards";
-import { GreenPointsTransactionType } from "@prisma/client";
+import { GreenPointsTransactionType, Prisma, TransactionCategory } from "@prisma/client";
 import { createNotification } from "./notifications";
 
 export async function processGreenPointsForPickup(pickupRequestId: string) {
@@ -11,7 +11,7 @@ export async function processGreenPointsForPickup(pickupRequestId: string) {
   const items = await prisma.pickupRequestItem.findMany({
     where: { pickupRequestId },
   });
-  
+
   const validItems = items
     .filter(item => item.exactWeightKg !== null)
     .map(item => ({ category: item.category, exactWeightKg: item.exactWeightKg! }));
@@ -61,8 +61,8 @@ export async function processGreenPointsForPickup(pickupRequestId: string) {
         pickupRequestId,
         points: basePoints,
         basePoints,
-        rewardReason: userToUpdate.accountType === "BUSINESS" 
-          ? (rewardReason as any) 
+        rewardReason: userToUpdate.accountType === "BUSINESS"
+          ? (rewardReason as unknown as Prisma.InputJsonValue)
           : { materials: rewardReason.materials, bonuses: [] },
         type: GreenPointsTransactionType.EARNED,
         category: "PICKUP",
@@ -71,7 +71,7 @@ export async function processGreenPointsForPickup(pickupRequestId: string) {
     });
 
     for (const bonus of rewardReason.bonuses) {
-      let category = "BONUS";
+      let category: TransactionCategory = "BONUS";
       if (userToUpdate.accountType === "BUSINESS" && bonus.name.includes("Member Bonus")) {
         category = "LOYALTY";
       }
@@ -83,7 +83,7 @@ export async function processGreenPointsForPickup(pickupRequestId: string) {
           points: bonus.points,
           bonusPoints: bonus.points,
           type: GreenPointsTransactionType.EARNED,
-          category: category as any,
+          category,
           description: bonus.name,
         }
       });
@@ -177,7 +177,7 @@ export async function processGreenPointsForPickup(pickupRequestId: string) {
       }
     }
 
-    const hasLoyaltyBonus = rewardReason.bonuses.some((b: any) => b.name.includes("Member Bonus"));
+    const hasLoyaltyBonus = rewardReason.bonuses.some((b) => b.name.includes("Member Bonus"));
 
     return {
       referralRewardsProcessed,
@@ -187,7 +187,7 @@ export async function processGreenPointsForPickup(pickupRequestId: string) {
       membershipChanged: newMembership !== oldMembership,
       newMembership,
       hasLoyaltyBonus,
-      loyaltyBonusPoints: hasLoyaltyBonus ? rewardReason.bonuses.find((b: any) => b.name.includes("Member Bonus"))?.points : 0,
+      loyaltyBonusPoints: hasLoyaltyBonus ? rewardReason.bonuses.find((b) => b.name.includes("Member Bonus"))?.points : 0,
     };
   });
 

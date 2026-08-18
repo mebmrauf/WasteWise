@@ -45,23 +45,23 @@ export const registerSchema = z
       });
     }
   });
-type RegisterInput = z.infer<typeof registerSchema>;
+export type RegisterInput = z.infer<typeof registerSchema>;
 
 export const loginSchema = z.object({
   identifier: z.string().trim().min(1, "Email or phone is required"),
   password: z.string().min(1, "Password is required"),
 });
-type LoginInput = z.infer<typeof loginSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
 
 export const verifyEmailSchema = z.object({
   code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code from your email"),
 });
-type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 
 export const forgotPasswordSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
 });
-type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
 export const resetPasswordSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
@@ -71,4 +71,4 @@ export const resetPasswordSchema = z.object({
     .min(8, "Password must be at least 8 characters")
     .max(72, "Password must be at most 72 characters"),
 });
-type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

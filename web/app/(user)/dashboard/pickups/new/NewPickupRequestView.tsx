@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Truck, Package, Clock, MapPin, Home, Navigation, Search } from "lucide-react";
+import { ArrowRight, Truck, Package, Clock, MapPin, Home, Navigation, Search, Camera } from "lucide-react";
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/AddressAutocomplete";
 import { Icon } from "@/components/Icon";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { WastePhotoUpload } from "@/components/WastePhotoUpload";
 
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Input } from "@/components/Input";
@@ -83,6 +84,8 @@ export function NewPickupRequestView() {
   const [estimatedTotalWeight, setEstimatedTotalWeight] = React.useState<number | "">("");
   const [categoryWeights, setCategoryWeights] = React.useState<Record<string, string>>({});
   const [date, setDate] = React.useState("");
+  const [photoUrls, setPhotoUrls] = React.useState<string[]>([]);
+  const [wasteDescription, setWasteDescription] = React.useState("");
 
 
   const [localCollectors, setLocalCollectors] = React.useState<CollectorDirectoryEntry[]>([]);
@@ -343,7 +346,9 @@ export function NewPickupRequestView() {
           preferredCollectorId: selectedCollectorId,
           isExclusiveToPreferred
         } : {}),
-        estimatedTotalWeight: computedTotalWeight
+        estimatedTotalWeight: computedTotalWeight,
+        photoUrls,
+        wasteDescription: wasteDescription.trim() || undefined,
       };
 
       await createPickupRequest(payload);
@@ -450,6 +455,35 @@ export function NewPickupRequestView() {
                 </div>
               </div>
             </div>
+          </Card>
+
+          {/* Section 3: Photos & description */}
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
+            <div className="flex items-center gap-5 mb-8">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner">
+                <Icon icon={Camera} size="lg" />
+              </div>
+              <div>
+                <h2 className="font-heading text-h3 text-neutral-900">Photos & details (optional)</h2>
+                <p className="mt-1 text-body-sm text-neutral-500">Add photos and a short description of the item(s).</p>
+              </div>
+            </div>
+            <WastePhotoUpload value={photoUrls} onChange={setPhotoUrls} disabled={isSubmitting} />
+            <div className="mt-6">
+              <label className="text-label text-neutral-800 mb-2 block">Description</label>
+              <textarea
+                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-body text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 transition-colors"
+                rows={3}
+                placeholder="e.g. an old office chair with a torn seat cushion..."
+                value={wasteDescription}
+                onChange={(e) => setWasteDescription(e.target.value)}
+                disabled={isSubmitting}
+                maxLength={1000}
+              />
+            </div>
+            <p className="mt-4 text-body-sm text-neutral-500">
+              *Your uploaded photos and description could be used to analyze the waste more accurately.*
+            </p>
           </Card>
         </div>
 

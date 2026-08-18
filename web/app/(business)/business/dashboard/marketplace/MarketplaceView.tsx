@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { Card } from "@/components/Card";
 import { Icon } from "@/components/Icon";
 import { WasteCategorySelector, type WasteCategory } from "@/components/WasteCategorySelector";
+import { WastePhotoUpload } from "@/components/WastePhotoUpload";
 import { SummaryPanel, SummaryRow } from "@/components/SummaryPanel";
 import { cn } from "@/lib/utils";
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/AddressAutocomplete";
@@ -96,6 +97,7 @@ export function MarketplaceView() {
   const [date, setDate] = React.useState("");
 
   const [additionalNotes, setAdditionalNotes] = React.useState("");
+  const [images, setImages] = React.useState<string[]>([]);
   
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
   const [profileError, setProfileError] = React.useState<string | null>(null);
@@ -373,7 +375,7 @@ export function MarketplaceView() {
         placeId: resolvedPlaceId || undefined,
         preferredPickupDate: new Date(`${date}T12:00:00.000Z`).toISOString(),
         additionalNotes: additionalNotes || undefined,
-        images: [],
+        images,
       });
       setSuccessMsg("Your bulk request was successfully posted to the marketplace!");
       setCategories([]);
@@ -383,6 +385,7 @@ export function MarketplaceView() {
       setCustomAddressQuery("");
       setSelectedCustomPlace(null);
       setAdditionalNotes("");
+      setImages([]);
       
       await loadRequests();
       setActiveTab("list");
@@ -580,22 +583,33 @@ export function MarketplaceView() {
                   </div>
                 </Card>
 
-                {/* Section 3: Upload Images */}
+                {/* Section 3: Photos & details */}
                 <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
                   <div className="flex items-center gap-5 mb-8">
                     <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner">
                       <Icon icon={Camera} size="lg" />
                     </div>
                     <div>
-                      <h2 className="font-heading text-h3 text-neutral-900">Images</h2>
-                      <p className="mt-1 text-body-sm text-neutral-500">Help recycling companies estimate better by providing photos.</p>
+                      <h2 className="font-heading text-h3 text-neutral-900">Photos & details (optional)</h2>
+                      <p className="mt-1 text-body-sm text-neutral-500">Add photos and a short description of the item(s).</p>
                     </div>
                   </div>
-                  <div className="border-2 border-dashed border-neutral-200 rounded-xl p-8 flex flex-col items-center justify-center text-center bg-neutral-50/50 cursor-pointer hover:bg-neutral-50 hover:border-primary-300 transition-colors">
-                    <Camera className="w-8 h-8 text-neutral-400 mb-2" />
-                    <p className="text-body font-medium text-neutral-700 mb-1">Upload photos of the waste</p>
-                    <p className="text-caption text-neutral-400">Drag and drop, or click to browse</p>
+                  <WastePhotoUpload value={images} onChange={setImages} disabled={isSubmitting} />
+                  <div className="mt-6">
+                    <label className="text-label text-neutral-800 mb-2 block">Description</label>
+                    <textarea
+                      className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-body text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 transition-colors"
+                      rows={3}
+                      placeholder="e.g. mixed plastic containers and packaging from an office cleanout..."
+                      value={additionalNotes}
+                      onChange={(e) => setAdditionalNotes(e.target.value)}
+                      disabled={isSubmitting}
+                      maxLength={1000}
+                    />
                   </div>
+                  <p className="mt-4 text-body-sm text-neutral-500">
+                    We will use your uploaded photos and description to analyze the waste more accurately.
+                  </p>
                 </Card>
               </div>
 
@@ -742,18 +756,6 @@ export function MarketplaceView() {
                       />
                     )}
                   </div>
-                  
-                  <div className="mt-6 pt-6 border-t border-neutral-100">
-                    <label className="text-label text-neutral-800 mb-2 block">Additional Notes (Optional)</label>
-                    <textarea 
-                      className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-body text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 transition-colors"
-                      rows={4}
-                      placeholder="Any special instructions for pickup..."
-                      value={additionalNotes}
-                      onChange={(e) => setAdditionalNotes(e.target.value)}
-                      disabled={isSubmitting}
-                    />
-                  </div>
                 </Card>
 
                 {/* Summary Panel */}
@@ -824,7 +826,7 @@ export function MarketplaceView() {
 function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketplaceRequest; onClose: () => void; onAccept: () => void }) {
   const [quotations, setQuotations] = React.useState<MarketplaceQuotation[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [processingId, setProcessingId] = React.useState<string | null>(null);
+  const [processingState, setProcessingState] = React.useState<{ id: string; action: 'accept' | 'reject' } | null>(null);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
   const { isClosed } = useBiddingStatus(request);
@@ -856,7 +858,7 @@ function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketpl
 
   const handleAccept = async (quoteId: string) => {
     try {
-      setProcessingId(quoteId);
+      setProcessingState({ id: quoteId, action: 'accept' });
       setErrorMsg(null);
       await acceptQuotation(request.id, quoteId);
       onAccept();
@@ -866,13 +868,13 @@ function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketpl
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to accept quotation");
     } finally {
-      setProcessingId(null);
+      setProcessingState(null);
     }
   };
 
   const handleReject = async (quoteId: string) => {
     try {
-      setProcessingId(quoteId);
+      setProcessingState({ id: quoteId, action: 'reject' });
       setErrorMsg(null);
       await rejectHighestQuotation(request.id, quoteId);
       onAccept();
@@ -882,7 +884,7 @@ function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketpl
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to reject quotation");
     } finally {
-      setProcessingId(null);
+      setProcessingState(null);
     }
   };
 
@@ -983,17 +985,19 @@ function ReviewBidsModal({ request, onClose, onAccept }: { request: BulkMarketpl
                         <div className="flex gap-4">
                           <Button 
                             variant="secondary"
-                            onClick={() => handleReject(quote.id)} 
-                            disabled={processingId !== null}
+                            onClick={() => { if (!processingState) handleReject(quote.id); }} 
+                            disabled={processingState?.id === quote.id && processingState.action === 'reject'}
+                            className={processingState !== null && !(processingState.id === quote.id && processingState.action === 'reject') ? "pointer-events-none" : ""}
                           >
-                            {processingId === quote.id ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            {processingState?.id === quote.id && processingState.action === 'reject' ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                             Reject
                           </Button>
                           <Button 
-                            onClick={() => handleAccept(quote.id)} 
-                            disabled={processingId !== null}
+                            onClick={() => { if (!processingState) handleAccept(quote.id); }} 
+                            disabled={processingState?.id === quote.id && processingState.action === 'accept'}
+                            className={processingState !== null && !(processingState.id === quote.id && processingState.action === 'accept') ? "pointer-events-none" : ""}
                           >
-                            {processingId === quote.id ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            {processingState?.id === quote.id && processingState.action === 'accept' ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                             Accept
                           </Button>
                         </div>

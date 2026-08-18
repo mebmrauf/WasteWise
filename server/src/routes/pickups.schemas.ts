@@ -33,6 +33,8 @@ export const createPickupRequestSchema = z
     isExclusiveToPreferred: z.boolean().default(false),
     isBulk: z.boolean().default(false),
     estimatedTotalWeight: z.number().positive().optional(),
+    photoUrls: z.array(z.string()).max(4, "You can attach at most 4 photos").default([]),
+    wasteDescription: z.string().trim().max(1000).optional(),
   })
   .strict()
   .superRefine((data, ctx) => {
@@ -52,21 +54,21 @@ export const createPickupRequestSchema = z
       });
     }
   });
-type CreatePickupRequestInput = z.infer<typeof createPickupRequestSchema>;
+export type CreatePickupRequestInput = z.infer<typeof createPickupRequestSchema>;
 
 const pickupIdSchema = z.string().trim().min(1, "pickupRequestId is required");
 
 export const joinPickupRoomSchema = z.object({
   pickupRequestId: pickupIdSchema,
 });
-type JoinPickupRoomInput = z.infer<typeof joinPickupRoomSchema>;
+export type JoinPickupRoomInput = z.infer<typeof joinPickupRoomSchema>;
 
 export const locationUpdateSchema = z.object({
   pickupRequestId: pickupIdSchema,
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
 });
-type LocationUpdateInput = z.infer<typeof locationUpdateSchema>;
+export type LocationUpdateInput = z.infer<typeof locationUpdateSchema>;
 
 const STATUS_UPDATE_TARGETS = [
   PickupStatus.EN_ROUTE,
@@ -80,26 +82,26 @@ export const statusUpdateSchema = z.object({
     STATUS_UPDATE_TARGETS as unknown as [PickupStatus, ...PickupStatus[]],
   ),
 });
-type StatusUpdateInput = z.infer<typeof statusUpdateSchema>;
+export type StatusUpdateInput = z.infer<typeof statusUpdateSchema>;
 
 export const submitWeightsSchema = z.object({
   pickupRequestId: pickupIdSchema,
   weights: z.record(z.string(), z.number().positive()),
 });
-type SubmitWeightsInput = z.infer<typeof submitWeightsSchema>;
+export type SubmitWeightsInput = z.infer<typeof submitWeightsSchema>;
 
 export const acceptWeightsSchema = z.object({
   pickupRequestId: pickupIdSchema,
 });
-type AcceptWeightsInput = z.infer<typeof acceptWeightsSchema>;
+export type AcceptWeightsInput = z.infer<typeof acceptWeightsSchema>;
 
 export const rejectWeightsSchema = z.object({
   pickupRequestId: pickupIdSchema,
 });
-type RejectWeightsInput = z.infer<typeof rejectWeightsSchema>;
+export type RejectWeightsInput = z.infer<typeof rejectWeightsSchema>;
 
 export const ratePickupSchema = z.object({
   score: z.number().int().min(1).max(5),
   comment: z.string().trim().max(500).optional(),
 });
-type RatePickupInput = z.infer<typeof ratePickupSchema>;
+export type RatePickupInput = z.infer<typeof ratePickupSchema>;

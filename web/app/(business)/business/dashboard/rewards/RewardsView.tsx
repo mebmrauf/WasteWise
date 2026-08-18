@@ -54,6 +54,7 @@ interface UnifiedTransaction {
   amountTaka?: number;
   pickupId?: string;
   selectedCause?: string;
+  status?: string;
 }
 
 
@@ -287,6 +288,7 @@ export function RewardsView() {
         amountTaka: tx.donationAmount,
         pickupId: tx.pickupId,
         selectedCause: tx.selectedCause,
+        status: tx.status,
       });
     });
 
@@ -628,6 +630,14 @@ export function RewardsView() {
                                           </StatusPill>
                                         </>
                                       )}
+                                      {tx.category === "CSR" && (
+                                        <>
+                                          <span className="text-neutral-300">•</span>
+                                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${tx.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                            {tx.status || 'PENDING'}
+                                          </span>
+                                        </>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
@@ -733,6 +743,7 @@ export function RewardsView() {
                                   {tx.pickupId && <div><span className="text-neutral-500 block mb-1 text-xs uppercase tracking-wider font-semibold">Related Pickup</span><span className="font-mono text-neutral-900">{tx.pickupId}</span></div>}
                                   <div><span className="text-neutral-500 block mb-1 text-xs uppercase tracking-wider font-semibold">Cause</span><span className="font-medium text-neutral-900">{tx.selectedCause}</span></div>
                                   <div><span className="text-neutral-500 block mb-1 text-xs uppercase tracking-wider font-semibold">Amount</span><span className="font-medium text-emerald-600">৳{tx.amountTaka?.toLocaleString()}</span></div>
+                                  <div><span className="text-neutral-500 block mb-1 text-xs uppercase tracking-wider font-semibold">Status</span><span className="font-medium text-neutral-900">{tx.status || 'PENDING'}</span></div>
                                   <div className="sm:col-span-2 pt-2">
                                     <Button 
                                       variant="secondary" 
