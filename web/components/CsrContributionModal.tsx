@@ -97,8 +97,11 @@ export function CsrContributionModal({ isOpen, onClose, onConfirm, paymentAmount
           
           {!isConfirming ? (
             <>
-              <p className="text-neutral-600 mb-6">
+              <p className="text-neutral-600 mb-2">
                 Your pickup has been completed successfully. Would you like to contribute a portion of this payment to a social or environmental cause?
+              </p>
+              <p className="text-sm text-amber-600 bg-amber-50 p-3 rounded-xl border border-amber-100 mb-6 font-medium">
+                Note: Your CSR contribution will remain pending until the Recycling Company completes the payment for this pickup.
               </p>
               
               <div className="mb-6 p-4 bg-neutral-50 rounded-xl border border-neutral-100 flex justify-between items-center">

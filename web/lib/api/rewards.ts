@@ -72,6 +72,7 @@ export function getRewardsHistory(): Promise<{
     donationPercentage: number | null;
     selectedCause: string;
     paymentAmount: number;
+    status: string;
     createdAt: string;
   }[];
 }> {
@@ -85,6 +86,7 @@ export function getRewardsHistory(): Promise<{
       donationPercentage: number | null;
       selectedCause: string;
       paymentAmount: number;
+      status: string;
       createdAt: string;
     }[];
   }>("/rewards/history", { method: "GET" });

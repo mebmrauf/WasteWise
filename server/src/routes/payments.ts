@@ -218,6 +218,13 @@ router.post("/cod", requireAuth, async (req: Request, res: Response) => {
       await processGreenPointsForPickup(pickupId);
     }
 
+    if (bulkRequestId) {
+      await prisma.csrContribution.updateMany({
+        where: { pickupId: bulkRequestId, status: "PENDING" },
+        data: { status: "COMPLETED" }
+      });
+    }
+
     res.json({ message: "COD Payment Recorded", payment });
   } catch (error: any) {
     res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: error.message });
@@ -268,6 +275,12 @@ router.post("/ssl-success", async (req: Request, res: Response) => {
 
         if (payment.pickupId) {
           await processGreenPointsForPickup(payment.pickupId);
+        }
+        if (payment.bulkRequestId) {
+          await prisma.csrContribution.updateMany({
+            where: { pickupId: payment.bulkRequestId, status: "PENDING" },
+            data: { status: "COMPLETED" }
+          });
         }
       }
       const redirectUrl = await getRedirectUrl(tran_id, "success");
@@ -329,6 +342,12 @@ router.post("/ssl-ipn", async (req: Request, res: Response) => {
 
         if (payment.pickupId) {
           await processGreenPointsForPickup(payment.pickupId);
+        }
+        if (payment.bulkRequestId) {
+          await prisma.csrContribution.updateMany({
+            where: { pickupId: payment.bulkRequestId, status: "PENDING" },
+            data: { status: "COMPLETED" }
+          });
         }
       }
     }
