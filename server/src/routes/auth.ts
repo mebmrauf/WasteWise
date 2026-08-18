@@ -454,6 +454,13 @@ async function findOrCreateOAuthUser(
     include: { user: true },
   });
   if (existingAccount) {
+    if (!existingAccount.user.avatarUrl && profile.avatarUrl) {
+      const updatedUser = await prisma.user.update({
+        where: { id: existingAccount.userId },
+        data: { avatarUrl: profile.avatarUrl },
+      });
+      return { user: updatedUser };
+    }
     return { user: existingAccount.user };
   }
 
@@ -470,6 +477,15 @@ async function findOrCreateOAuthUser(
         userId: existingUserByEmail.id,
       },
     });
+
+    if (!existingUserByEmail.avatarUrl && profile.avatarUrl) {
+      const updatedUser = await prisma.user.update({
+        where: { id: existingUserByEmail.id },
+        data: { avatarUrl: profile.avatarUrl },
+      });
+      return { user: updatedUser };
+    }
+
     return { user: existingUserByEmail };
   }
 
@@ -497,6 +513,7 @@ async function findOrCreateOAuthUser(
       passwordHash: null,
       role,
       accountType,
+      avatarUrl: profile.avatarUrl,
       isEmailVerified: true, // provider already verified this email address
       oauthAccounts: {
         create: { provider, providerAccountId: profile.providerAccountId },

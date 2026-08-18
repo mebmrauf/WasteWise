@@ -99,6 +99,9 @@ const AVATAR_TRANSFORM = "c_fill,g_face,w_256,h_256,q_auto,f_auto";
 
 export function resolveAvatarUrl(avatarUrl: string | null): string | null {
   if (!avatarUrl) return null;
+  if (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://")) {
+    return avatarUrl;
+  }
   return `https://res.cloudinary.com/${publicEnv.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${AVATAR_TRANSFORM}/${avatarUrl}`;
 }
 

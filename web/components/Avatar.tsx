@@ -56,6 +56,7 @@ export function Avatar({ src, name, size = "md", accent = "user", className }: A
         src={src as string}
         alt={name}
         onError={() => setImageFailed(true)}
+        referrerPolicy="no-referrer"
         className={cn("rounded-full object-cover", sizeClasses[size], className)}
       />
     );
