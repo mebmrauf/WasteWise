@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion, HTMLMotionProps } from "framer-motion";
+import { motion, useReducedMotion, HTMLMotionProps, Variants } from "framer-motion";
 import { ReactNode } from "react";
 
 interface Props extends HTMLMotionProps<"div"> {
@@ -14,7 +14,7 @@ interface Props extends HTMLMotionProps<"div"> {
 export function ScrollAnimation({ children, className, delay = 0, type = "fade-up", staggerChildren = false, ...rest }: Props) {
   const shouldReduceMotion = useReducedMotion();
 
-  const baseVariants = {
+  const baseVariants: Variants = {
     hidden: { 
       opacity: 0, 
       y: shouldReduceMotion ? 0 : type === "fade-up" ? 30 : type === "slide-up" ? 50 : 0 
@@ -48,7 +48,7 @@ export function ScrollAnimation({ children, className, delay = 0, type = "fade-u
 export function ScrollAnimationChild({ children, className, type = "fade-up", ...rest }: Props) {
   const shouldReduceMotion = useReducedMotion();
 
-  const childVariants = {
+  const childVariants: Variants = {
     hidden: { 
       opacity: 0, 
       y: shouldReduceMotion ? 0 : type === "fade-up" ? 30 : type === "slide-up" ? 50 : 0 
