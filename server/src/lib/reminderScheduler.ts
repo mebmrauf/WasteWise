@@ -44,6 +44,15 @@ async function runReminderSweep() {
 }
 
 async function evaluateAndNotify(userId: string) {
+  const activePickupCount = await prisma.pickupRequest.count({
+    where: {
+      requesterId: userId,
+      status: { notIn: [PickupStatus.COMPLETED, PickupStatus.CANCELLED] },
+    },
+  });
+
+  if (activePickupCount > 0) return;
+
   const completedPickups = await prisma.pickupRequest.findMany({
     where: { requesterId: userId, status: PickupStatus.COMPLETED },
     select: { updatedAt: true },

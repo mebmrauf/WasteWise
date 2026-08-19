@@ -308,7 +308,7 @@ export function TrackPickupPanel({
                 targetUserId={collector.id}
                 targetUserName={collector.fullName}
                 isActive={status !== "COMPLETED" && status !== "CANCELLED"}
-                className="mt-2 flex-1"
+                className="mt-2"
               />
             )}
           </div>

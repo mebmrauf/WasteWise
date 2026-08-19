@@ -32,7 +32,7 @@ function AnimatedCounter({ value, duration = 2 }: { value: number; duration?: nu
       const controls = animate(0, value, {
         duration,
         ease: "easeOut",
-        onUpdate(v) {
+        onUpdate(v: number) {
           setCount(Math.floor(v));
         },
       });

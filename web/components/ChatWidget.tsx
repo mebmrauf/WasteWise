@@ -89,7 +89,7 @@ export function ChatWidget({ targetUserId, targetUserName, isActive, className }
         <h3 className="font-semibold text-neutral-900">Chat with {targetUserName}</h3>
       </div>
       
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white min-h-0">
         {loading ? (
           <div className="flex h-full items-center justify-center text-sm text-neutral-500">Loading messages...</div>
         ) : messages.length === 0 ? (
