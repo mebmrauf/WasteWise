@@ -283,6 +283,13 @@ pickupsRouter.get(
   requireAuth,
   requireRole("USER"),
   asyncHandler(async (req, res) => {
+    const activePickupCount = await prisma.pickupRequest.count({
+      where: {
+        requesterId: req.user!.id,
+        status: { notIn: [PickupStatus.COMPLETED, PickupStatus.CANCELLED] },
+      },
+    });
+
     const completedPickups = await prisma.pickupRequest.findMany({
       where: { requesterId: req.user!.id, status: PickupStatus.COMPLETED },
       select: { updatedAt: true },
@@ -290,6 +297,11 @@ pickupsRouter.get(
     });
 
     const reminder = computeRecyclingReminder(completedPickups.map((p) => p.updatedAt));
+
+    if (activePickupCount > 0) {
+      reminder.isDue = false;
+      reminder.message = null;
+    }
 
     sendData(res, 200, {
       hasPattern: reminder.hasPattern,
