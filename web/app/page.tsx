@@ -14,11 +14,15 @@ import {
   Route,
   ClipboardList,
   CheckCircle2,
-  FilePlus,
   FileText,
   ThumbsUp,
+  ArrowRight,
 } from "lucide-react";
 import { HowItWorks } from "@/components/HowItWorks";
+import { ScrollAnimation, ScrollAnimationChild } from "@/components/animations/ScrollAnimation";
+import { FeaturesSection } from "@/components/FeaturesSection";
+import { BusinessSection } from "@/components/BusinessSection";
+import { ImpactSection } from "@/components/ImpactSection";
 
 export default async function Home() {
   const cookieStore = await cookies();
@@ -52,275 +56,140 @@ export default async function Home() {
           </div>
         }
         links={[
-          { label: "How It Works", href: "#how-it-works" },
-          { label: "Features", href: "#features" },
+          { label: "Home", href: "#home" },
+          { label: "Solutions", href: "/solutions" },
           { label: "For Businesses", href: "/for-businesses" },
-          { label: "For Partners", href: "/for-partners" },
-          { label: "About", href: "#about" },
-          { label: "Contact", href: "#contact" },
+          { label: "About", href: "/about" },
         ]}
         actions={<NavAuthActions />}
       />
 
       <main className="flex flex-col min-h-screen">
         {/* HERO SECTION */}
-        <section className="relative bg-gradient-to-br from-neutral-50 to-green-50/30 py-24 lg:py-32">
-          <PageContainer className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center px-6 md:px-12 lg:px-16">
-            <div className="flex flex-col max-w-[600px]">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-body-sm font-medium mb-8 w-max border border-green-200/50">
+        <section id="home" className="relative bg-[#F4F5F0] py-8 md:py-12 lg:py-16 overflow-hidden">
+          {/* Subtle Ambient Gradients */}
+          <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-b from-[#114E29]/10 to-transparent rounded-full blur-[100px] -translate-y-1/3 translate-x-1/3 pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-emerald-600/5 to-transparent rounded-full blur-[80px] translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
+          
+          <ScrollAnimation type="fade-up">
+            <PageContainer className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center px-6 md:px-12 lg:px-16 max-w-7xl mx-auto">
+              <div className="flex flex-col max-w-[500px]">
+              {/* Pill Badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/60 backdrop-blur-md text-[#114E29] text-body-sm font-medium mb-8 w-max border border-[#114E29]/10 shadow-sm">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
                 Now available in Dhaka
               </div>
-              <h1 className="text-[40px] md:text-[56px] lg:text-[64px] font-bold text-neutral-900 mb-6 tracking-tight leading-[1.1] max-w-[600px]">
-                Transforming Waste into <span className="text-[#114E29] relative inline-block">Value<span className="absolute bottom-2 left-0 w-full h-3 bg-green-200/30 -z-10 rounded-full"></span></span>
+              
+              {/* Headline */}
+              <h1 className="text-[32px] md:text-[40px] lg:text-[48px] font-extrabold text-[#1A2E22] mb-5 tracking-tight leading-[1.1] max-w-[480px]">
+                Transforming Waste into <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#114E29] to-emerald-600 relative inline-block">Value</span>
               </h1>
-              <p className="text-[18px] md:text-[20px] text-neutral-600 mb-10 leading-8 max-w-[540px]">
+              
+              {/* Description */}
+              <p className="text-[16px] text-[#4B6358] mb-8 leading-[1.6] max-w-[440px]">
                 WasteWise brings the informal scrap collection network online. Post a pickup request, track verified collectors in real-time, and earn Green Points for doing your part.
               </p>
+              
+              {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 mb-12">
-                <Button size="lg" href="/signup" className="bg-[#114E29] hover:bg-green-800 text-white rounded-full px-8 h-[52px] text-[16px] transition-transform hover:-translate-y-0.5 border-none shadow-sm">
+                <Button size="lg" href="/signup" className="bg-[#114E29] hover:bg-[#0A3019] text-white rounded-full px-8 h-[52px] text-[16px] transition-all hover:-translate-y-0.5 border-none shadow-[0_8px_20px_rgb(17,78,41,0.2)]">
                   Request a pickup
                 </Button>
-                <Button size="lg" variant="secondary" href="/signup?role=collector" className="rounded-full px-8 h-[52px] border-neutral-300 text-[16px] transition-transform hover:-translate-y-0.5 bg-white hover:bg-neutral-50 shadow-sm">
+                <Button size="lg" variant="secondary" href="/signup?role=collector" className="rounded-full px-8 h-[52px] border-stone-200 text-[#114E29] text-[16px] transition-all hover:-translate-y-0.5 bg-white hover:bg-stone-50 shadow-sm">
                   Join as a collector
                 </Button>
               </div>
               
               {/* Trust Badges below CTA */}
-              <div className="flex flex-wrap items-center gap-x-8 gap-y-4 pt-6 border-t border-neutral-200/60">
+              <div className="flex flex-wrap items-center gap-x-8 gap-y-4 pt-6 border-t border-[#114E29]/10">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="text-green-600" size={20} />
-                  <span className="text-body-sm font-medium text-neutral-700">Verified Collectors</span>
+                  <ShieldCheck className="text-emerald-600" size={20} />
+                  <span className="text-[13px] font-medium text-[#4B6358]">Verified Collectors</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="text-green-600" size={20} />
-                  <span className="text-body-sm font-medium text-neutral-700">Secure Transactions</span>
+                  <CheckCircle2 className="text-emerald-600" size={20} />
+                  <span className="text-[13px] font-medium text-[#4B6358]">Secure Transactions</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Gift className="text-green-600" size={20} />
-                  <span className="text-body-sm font-medium text-neutral-700">Green Rewards</span>
+                  <Gift className="text-emerald-600" size={20} />
+                  <span className="text-[13px] font-medium text-[#4B6358]">Green Rewards</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <MapPin className="text-green-600" size={20} />
-                  <span className="text-body-sm font-medium text-neutral-700">Real-Time Tracking</span>
+                  <MapPin className="text-emerald-600" size={20} />
+                  <span className="text-[13px] font-medium text-[#4B6358]">Real-Time Tracking</span>
                 </div>
               </div>
             </div>
 
             <div className="relative lg:w-4/5 lg:ml-auto">
-              <div className="relative rounded-[24px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-neutral-200/50 aspect-[4/3] bg-neutral-100 flex items-center justify-center group animate-float">
+              <div className="relative rounded-[24px] overflow-hidden shadow-[0_20px_40px_rgb(17,78,41,0.08)] border border-stone-200/50 aspect-[4/3] bg-stone-100 flex items-center justify-center group animate-float">
                 <Image
                   src="/images/hero.png"
                   alt="WasteWise Smart Logistics"
                   fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+                  className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                   priority
                   sizes="(max-width: 1024px) 100vw, 50vw"
                 />
+                <div className="absolute inset-0 bg-[#114E29]/5 mix-blend-overlay"></div>
               </div>
               {/* Floating badges */}
-              <div className="absolute bottom-4 left-4 bg-white p-4 rounded-[16px] shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-neutral-100 flex items-center gap-4 z-20 animate-fade-in-up">
-                <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-700">
+              <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-md p-4 rounded-[16px] shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white/20 flex items-center gap-4 z-20 animate-fade-in-up">
+                <div className="w-10 h-10 rounded-full bg-[#E8F5E9] flex items-center justify-center text-[#114E29]">
                   <ShieldCheck size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold tracking-wider text-neutral-500 uppercase">Security</p>
-                  <p className="text-[14px] font-bold text-neutral-900">Verified Collectors</p>
+                  <p className="text-[10px] font-bold tracking-wider text-[#4B6358] uppercase">Security</p>
+                  <p className="text-[14px] font-bold text-[#1A2E22]">Verified Collectors</p>
                 </div>
               </div>
             </div>
           </PageContainer>
-        </section>
+        </ScrollAnimation>
+      </section>
 
-        {/* HOW IT WORKS */}
+      {/* HOW IT WORKS */}
         <HowItWorks />
 
-        {/* FEATURES BENTO GRID */}
-        <section id="features" className="py-24 lg:py-32 bg-neutral-50/50">
-          <PageContainer className="px-6 md:px-12 lg:px-16">
-            <div className="mb-16">
-              <h2 className="text-h2 text-neutral-900 mb-4">Built for Trust & Efficiency</h2>
-              <p className="text-body-lg text-neutral-600 max-w-2xl">
-                We've combined modern logistics tech with the existing collector network to create a seamless experience.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-6">
-
-              {/* Large Feature 1 */}
-              <div className="md:col-span-2 bg-white rounded-[20px] p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-neutral-200/60 overflow-hidden relative group hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow duration-300">
-                <div className="relative z-10 w-full md:w-2/3">
-                  <div className="w-14 h-14 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center mb-8">
-                    <Camera size={28} />
-                  </div>
-                  <h3 className="text-h3 text-neutral-900 mb-4">AI Waste Recognition</h3>
-                  <p className="text-body-lg text-neutral-600 leading-relaxed">
-                    Not sure what can be recycled? Just point your camera. Our AI model identifies materials instantly and tells you how to separate them.
-                  </p>
-                </div>
-                <div className="absolute right-0 bottom-0 w-1/2 h-full bg-gradient-to-tl from-purple-50 to-transparent -z-10 group-hover:scale-110 transition-transform duration-700 origin-bottom-right" />
-              </div>
-
-              {/* Small Feature 1 */}
-              <div className="bg-[#114E29] rounded-[20px] p-10 shadow-[0_8px_30px_rgb(0,0,0,0.08)] text-white overflow-hidden relative group transition-transform hover:-translate-y-1 duration-300">
-                <div className="relative z-10">
-                  <div className="w-14 h-14 rounded-xl bg-white/10 text-white flex items-center justify-center mb-8">
-                    <ShieldCheck size={28} />
-                  </div>
-                  <h3 className="text-h4 mb-4">Verified Network</h3>
-                  <p className="text-body text-white/80 leading-relaxed">
-                    Every collector has passed ID and background verification for your safety.
-                  </p>
-                </div>
-                <div className="absolute -top-12 -right-12 w-40 h-40 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors duration-500" />
-              </div>
-
-              {/* Small Feature 2 */}
-              <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-[20px] p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-yellow-200/50 transition-transform hover:-translate-y-1 duration-300">
-                <div className="w-14 h-14 rounded-xl bg-yellow-200 text-yellow-800 flex items-center justify-center mb-8 shadow-sm">
-                  <Gift size={28} />
-                </div>
-                <h3 className="text-h4 text-neutral-900 mb-4">Green Rewards</h3>
-                <p className="text-body text-neutral-700 leading-relaxed">
-                  Earn points for every KG recycled. Redeem points directly for mobile recharge.
-                </p>
-              </div>
-
-              {/* Large Feature 2 */}
-              <div className="md:col-span-2 bg-white rounded-[20px] p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-neutral-200/60 overflow-hidden relative hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow duration-300">
-                <div className="w-14 h-14 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-8">
-                  <MapPin size={28} />
-                </div>
-                <h3 className="text-h3 text-neutral-900 mb-4">Real-Time Tracking</h3>
-                <p className="text-body-lg text-neutral-600 max-w-xl leading-relaxed">
-                  Follow your collector's exact location on a live map so you know exactly when they'll arrive at your door. No more waiting around.
-                </p>
-              </div>
-
-            </div>
-          </PageContainer>
-        </section>
+        <FeaturesSection />
 
         {/* DUAL AUDIENCE SPLIT */}
-        <section id="collectors" className="py-24 lg:py-32 bg-white border-t border-neutral-100">
-          <PageContainer className="px-6 md:px-12 lg:px-16">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
+        <BusinessSection />
 
-              <div>
-                <h2 className="text-h3 text-neutral-900 mb-6">For Households & Businesses</h2>
-                <ul className="space-y-6">
-                  <li className="flex items-start gap-4">
-                    <CheckCircle2 className="text-green-600 shrink-0 mt-1" />
-                    <div>
-                      <h4 className="font-bold text-neutral-900">Convenience at your door</h4>
-                      <p className="text-neutral-600 text-body-sm mt-1">Schedule pickups precisely when you are home.</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-4">
-                    <CheckCircle2 className="text-green-600 shrink-0 mt-1" />
-                    <div>
-                      <h4 className="font-bold text-neutral-900">Fair Weight & Pricing</h4>
-                      <p className="text-neutral-600 text-body-sm mt-1">Pre-estimated weights keep transactions honest and transparent.</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-4">
-                    <CheckCircle2 className="text-green-600 shrink-0 mt-1" />
-                    <div>
-                      <h4 className="font-bold text-neutral-900">Digital Record</h4>
-                      <p className="text-neutral-600 text-body-sm mt-1">Track your total contribution to the environment over time.</p>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="bg-neutral-900 rounded-[20px] p-8 md:p-12 text-white shadow-2xl relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative z-10">
-                  <h2 className="text-h3 text-white mb-6">For Scrap Collectors</h2>
-                  <p className="text-white/70 mb-8 leading-relaxed">
-                    Stop wandering streets hoping for scrap. Turn your daily foot traffic into a formal, structured business.
-                  </p>
-                  <ul className="space-y-6 mb-10">
-                    <li className="flex items-start gap-4">
-                      <Route className="text-green-400 shrink-0 mt-1" />
-                      <div>
-                        <h4 className="font-bold text-white">Route Optimization</h4>
-                        <p className="text-white/60 text-body-sm mt-1">We sequence your daily jobs into one optimized map route.</p>
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-4">
-                      <ClipboardList className="text-green-400 shrink-0 mt-1" />
-                      <div>
-                        <h4 className="font-bold text-white">Income Dashboard</h4>
-                        <p className="text-white/60 text-body-sm mt-1">Build a provable income history to show banks and landlords.</p>
-                      </div>
-                    </li>
-                  </ul>
-                  <Button size="lg" variant="primary" href="/signup?role=collector" className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-neutral-900 h-[52px] px-8 text-[16px] font-bold border-none transition-transform hover:-translate-y-0.5">
-                    Apply to become a collector
-                  </Button>
-                </div>
-              </div>
-
-            </div>
-          </PageContainer>
-        </section>
+        {/* IMPACT STATISTICS */}
+        <div id="impact">
+          <ImpactSection />
+        </div>
       </main>
 
-      {/* ABOUT SECTION */}
-      <section id="about" className="py-24 lg:py-32 bg-green-50/20 border-t border-neutral-100">
-        <PageContainer className="px-6 md:px-12 lg:px-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
-            <div>
-              <p className="font-heading text-[12px] uppercase tracking-wider text-green-700 mb-3 font-semibold">About Us</p>
-              <h2 className="text-[32px] md:text-[40px] font-bold text-neutral-900 mb-6 leading-[1.2]">About WasteWise</h2>
-              <div className="text-[18px] text-neutral-600 space-y-6 leading-8 max-w-[540px]">
-                <p>
-                  <strong className="text-neutral-900 font-bold">WasteWise</strong> is transforming the way Bangladesh manages waste by bringing the entire recycling ecosystem onto one intelligent digital platform. We seamlessly connect <strong className="text-[#114E29] font-semibold">Individuals</strong>, <strong className="text-[#114E29] font-semibold">Businesses</strong>, <strong className="text-[#114E29] font-semibold">Collectors</strong>, and <strong className="text-[#114E29] font-semibold">Recycling Companies</strong> to make waste collection faster, more transparent, and more rewarding.
-                </p>
-                <p>
-                  From <strong className="text-[#114E29] font-semibold">AI-powered waste recognition</strong> and real-time pickup tracking to verified service providers, <strong className="text-[#114E29] font-semibold">Green Rewards</strong>, and a <strong className="text-[#114E29] font-semibold">smart recycling marketplace</strong>, WasteWise simplifies every step of the recycling journey. Our goal is to reduce landfill waste, encourage responsible recycling, and create sustainable economic opportunities for everyone involved.
-                </p>
-                <p className="text-neutral-900 font-semibold">
-                  Together, we're turning waste into value—building a cleaner, greener, and smarter Bangladesh, one pickup at a time.
-                </p>
-              </div>
+      {/* FINAL CTA */}
+      <section className="py-8 md:py-12 lg:py-16 bg-gradient-to-br from-[#EAF0E6] to-[#DFEBE3] border-t border-[#114E29]/10">
+        <PageContainer className="px-6 md:px-12 lg:px-16 max-w-4xl mx-auto text-center">
+          <ScrollAnimation type="fade-up">
+            <h2 className="text-[32px] md:text-[40px] font-bold text-neutral-900 mb-6">Ready to make an impact?</h2>
+            <p className="text-neutral-600 mb-10 text-[18px]">
+              Join the WasteWise ecosystem today and help us build a cleaner, greener Bangladesh.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <Button href="/signup" className="bg-[#114E29] hover:bg-green-800 text-white rounded-full px-8 h-[52px]">
+                Get Started for Free
+              </Button>
             </div>
-            <div id="contact" className="bg-white p-10 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-neutral-100">
-              <h3 className="text-h3 text-neutral-900 mb-8">Get in Touch</h3>
-              <form className="space-y-4">
-                <div>
-                  <label className="block text-body-sm font-medium text-neutral-700 mb-1">Name</label>
-                  <input type="text" className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Your Name" />
-                </div>
-                <div>
-                  <label className="block text-body-sm font-medium text-neutral-700 mb-1">Email</label>
-                  <input type="email" className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="you@example.com" />
-                </div>
-                <div>
-                  <label className="block text-body-sm font-medium text-neutral-700 mb-1">Message</label>
-                  <textarea rows={4} className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="How can we help?"></textarea>
-                </div>
-                <Button className="w-full bg-[#114E29] hover:bg-green-800 text-white rounded-[12px] h-12">
-                  Send Message
-                </Button>
-              </form>
-            </div>
-          </div>
+          </ScrollAnimation>
         </PageContainer>
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-white py-3 md:py-4 border-t border-neutral-200">
-        <PageContainer className="px-6 md:px-12 lg:px-16 max-w-[800px] mx-auto flex flex-col items-center justify-center text-center gap-1 md:gap-1.5">
-          <span className="font-heading text-[18px] font-bold text-neutral-900 tracking-tight leading-none">WasteWise</span>
+      <footer className="bg-white py-6 md:py-8 border-t border-neutral-200">
+        <PageContainer className="px-6 md:px-12 lg:px-16 max-w-[800px] mx-auto flex flex-col items-center justify-center text-center gap-1.5">
+          <span className="font-heading text-[18px] font-bold text-neutral-900 tracking-tight leading-none mb-1">WasteWise</span>
           <p className="text-[13px] text-neutral-500 leading-tight">
             Building a cleaner, greener, and smarter Bangladesh.
           </p>
-          <p className="text-[12px] text-neutral-400 leading-tight">
+          <p className="text-[12px] text-neutral-400 leading-tight mt-1">
             &copy; {new Date().getFullYear()} WasteWise. All rights reserved.
           </p>
         </PageContainer>

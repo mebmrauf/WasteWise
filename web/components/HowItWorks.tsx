@@ -115,7 +115,7 @@ export function HowItWorks() {
   };
 
   return (
-    <section id="how-it-works" className="py-6 md:py-8 relative overflow-hidden" style={{ background: "linear-gradient(180deg, #F8FFFB 0%, #F3FAF6 100%)" }}>
+    <section id="how-it-works" className="py-12 md:py-16 lg:py-20 bg-[#E8EDE9] relative overflow-hidden border-t border-neutral-100">
       {/* Decorative Background Elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute top-[5%] right-[-5%] w-[250px] h-[250px] rounded-full bg-[#114E29] opacity-[0.04] blur-[80px]" />
@@ -156,7 +156,7 @@ export function HowItWorks() {
         </div>
 
         {/* Carousel Container */}
-        <div className="relative min-h-[300px] md:min-h-[260px] max-w-[680px] mx-auto overflow-hidden rounded-[20px] bg-white border border-[#E8F5EE] shadow-[0_8px_24px_rgba(0,0,0,0.05)] flex flex-col w-full">
+        <div className="relative min-h-[300px] md:min-h-[260px] max-w-[680px] mx-auto overflow-hidden rounded-[20px] bg-white border border-[#114E29]/10 shadow-[0_12px_40px_rgb(0,0,0,0.06)] hover:shadow-[0_16px_50px_rgb(17,78,41,0.08)] transition-shadow duration-500 flex flex-col w-full">
           {steps.map((step) => {
             const isActive = step.id === activeStep;
             const isPast = step.id < activeStep;

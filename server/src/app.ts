@@ -24,6 +24,7 @@ import { complaintsRouter } from "./routes/complaints";
 import { csrRouter } from "./routes/csr";
 import { messagesRouter } from "./routes/messages";
 import paymentsRouter from "./routes/payments";
+import { landingRouter } from "./routes/landing";
 
 export function createApp() {
   const app = express();
@@ -71,6 +72,7 @@ export function createApp() {
   app.use("/api/v1/csr", csrRouter);
   app.use("/api/v1/messages", messagesRouter);
   app.use("/api/v1/payments", paymentsRouter);
+  app.use("/api/v1/landing", landingRouter);
 
 
   // 404 fallback — kept last so it never shadows a real route.
