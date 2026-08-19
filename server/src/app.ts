@@ -23,6 +23,7 @@ import { complaintsRouter, COMPLAINT_PHOTO_UPLOAD_DIR } from "./routes/complaint
 import { csrRouter } from "./routes/csr";
 import { messagesRouter } from "./routes/messages";
 import paymentsRouter from "./routes/payments";
+import { landingRouter } from "./routes/landing";
 
 export function createApp() {
   const app = express();
@@ -69,6 +70,7 @@ export function createApp() {
   app.use("/api/v1/csr", csrRouter);
   app.use("/api/v1/messages", messagesRouter);
   app.use("/api/v1/payments", paymentsRouter);
+  app.use("/api/v1/landing", landingRouter);
 
   // Serves uploaded waste-recognition photos back out. Deliberately
   // root-relative (not under /api/v1) since it's static file serving, not a

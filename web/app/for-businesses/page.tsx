@@ -14,41 +14,39 @@ export default function ForBusinessesPage() {
           </a>
         }
         links={[
-          { label: "How It Works", href: "/#how-it-works" },
-          { label: "Features", href: "/#features" },
+          { label: "Home", href: "/" },
+          { label: "Solutions", href: "/solutions" },
           { label: "For Businesses", href: "/for-businesses", active: true },
-          { label: "For Partners", href: "/for-partners" },
-          { label: "About", href: "/#about" },
-          { label: "Contact", href: "/#contact" },
+          { label: "About", href: "/about" },
         ]}
         actions={<NavAuthActions />}
       />
 
       <main className="flex flex-col min-h-screen">
         {/* HERO SECTION */}
-        <section className="relative bg-gradient-to-br from-green-50/50 to-neutral-50 py-24 lg:py-32">
-          <PageContainer className="relative z-10 flex flex-col items-center text-center max-w-4xl mx-auto px-6 md:px-12 lg:px-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-[14px] font-semibold mb-8 shadow-[0_2px_10px_rgb(0,0,0,0.04)] border border-green-200/50">
+        <section className="relative bg-gradient-to-br from-[#EAF3EE] to-[#F0F2EB] py-12 md:py-16 lg:py-20">
+          <PageContainer className="relative z-10 flex flex-col items-center text-center max-w-2xl mx-auto px-6 md:px-12">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-[13px] font-semibold mb-4 shadow-[0_2px_10px_rgb(0,0,0,0.04)] border border-green-200/50">
               Enterprise Solutions
             </div>
-            <h1 className="text-[40px] md:text-[56px] lg:text-[64px] font-bold text-neutral-900 mb-6 tracking-tight leading-[1.1] max-w-[800px]">
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-neutral-900 mb-4 tracking-tight leading-[1.2]">
               Sustainable Waste Management for <span className="text-[#114E29]">Your Business</span>
             </h1>
-            <p className="text-[18px] md:text-[20px] text-neutral-600 mb-10 leading-8 max-w-[600px]">
+            <p className="text-sm lg:text-base text-neutral-600 mb-6 leading-relaxed max-w-xl mx-auto">
               Turn your commercial waste into value. Request bulk pickups, track your environmental impact, and get competitive quotations from verified recycling companies.
             </p>
-            <Button size="lg" href="/signup?accountType=BUSINESS" className="bg-[#114E29] hover:bg-green-800 text-white rounded-full px-8 h-[52px] text-[16px] transition-transform hover:-translate-y-0.5 border-none shadow-sm">
+            <Button size="lg" href="/signup?accountType=BUSINESS" className="bg-[#114E29] hover:bg-green-800 text-white rounded-full px-8 h-[48px] text-[15px] transition-transform hover:-translate-y-0.5 border-none shadow-sm">
               Register as Business
             </Button>
           </PageContainer>
         </section>
 
         {/* FEATURES GRID */}
-        <section className="py-24 lg:py-32 bg-white">
+        <section className="py-12 md:py-16 lg:py-20 bg-[#EBEFEA] border-t border-neutral-100">
           <PageContainer className="px-6 md:px-12 lg:px-16">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {/* Feature 1 */}
-              <div className="bg-neutral-50 rounded-[20px] p-8 border border-neutral-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300">
+              <div className="bg-gradient-to-br from-white to-[#F8FAF9] rounded-[20px] p-8 border border-neutral-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_12px_40px_rgb(17,78,41,0.06)] hover:border-[#114E29]/20 hover:-translate-y-1 transition-all duration-300 group">
                 <div className="w-14 h-14 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-6">
                   <Truck size={28} />
                 </div>
@@ -59,7 +57,7 @@ export default function ForBusinessesPage() {
               </div>
 
               {/* Feature 2 */}
-              <div className="bg-neutral-50 rounded-[20px] p-8 border border-neutral-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300">
+              <div className="bg-gradient-to-br from-white to-[#F8FAF9] rounded-[20px] p-8 border border-neutral-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_12px_40px_rgb(17,78,41,0.06)] hover:border-[#114E29]/20 hover:-translate-y-1 transition-all duration-300 group">
                 <div className="w-14 h-14 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center mb-6">
                   <Receipt size={28} />
                 </div>
@@ -70,7 +68,7 @@ export default function ForBusinessesPage() {
               </div>
 
               {/* Feature 3 */}
-              <div className="bg-neutral-50 rounded-[20px] p-8 border border-neutral-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300">
+              <div className="bg-gradient-to-br from-white to-[#F8FAF9] rounded-[20px] p-8 border border-neutral-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_12px_40px_rgb(17,78,41,0.06)] hover:border-[#114E29]/20 hover:-translate-y-1 transition-all duration-300 group">
                 <div className="w-14 h-14 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center mb-6">
                   <History size={28} />
                 </div>
@@ -81,7 +79,7 @@ export default function ForBusinessesPage() {
               </div>
 
               {/* Feature 4 */}
-              <div className="bg-neutral-50 rounded-[20px] p-8 border border-neutral-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300">
+              <div className="bg-gradient-to-br from-white to-[#F8FAF9] rounded-[20px] p-8 border border-neutral-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_12px_40px_rgb(17,78,41,0.06)] hover:border-[#114E29]/20 hover:-translate-y-1 transition-all duration-300 group">
                 <div className="w-14 h-14 rounded-xl bg-yellow-100 text-yellow-600 flex items-center justify-center mb-6">
                   <Gift size={28} />
                 </div>
@@ -92,7 +90,7 @@ export default function ForBusinessesPage() {
               </div>
 
               {/* Feature 5 */}
-              <div className="bg-neutral-50 rounded-[20px] p-8 border border-neutral-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300">
+              <div className="bg-gradient-to-br from-white to-[#F8FAF9] rounded-[20px] p-8 border border-neutral-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_12px_40px_rgb(17,78,41,0.06)] hover:border-[#114E29]/20 hover:-translate-y-1 transition-all duration-300 group">
                 <div className="w-14 h-14 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-6">
                   <FileText size={28} />
                 </div>
@@ -103,7 +101,7 @@ export default function ForBusinessesPage() {
               </div>
 
               {/* Feature 6 */}
-              <div className="bg-neutral-50 rounded-[20px] p-8 border border-neutral-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300">
+              <div className="bg-gradient-to-br from-white to-[#F8FAF9] rounded-[20px] p-8 border border-neutral-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_12px_40px_rgb(17,78,41,0.06)] hover:border-[#114E29]/20 hover:-translate-y-1 transition-all duration-300 group">
                 <div className="w-14 h-14 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center mb-6">
                   <Award size={28} />
                 </div>
@@ -118,13 +116,13 @@ export default function ForBusinessesPage() {
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-white py-16 border-t border-neutral-100">
-        <PageContainer className="flex flex-col md:flex-row items-center justify-between gap-6 px-6 md:px-12 lg:px-16">
-          <div className="flex flex-col items-center md:items-start gap-2">
-            <span className="font-heading text-xl font-bold text-neutral-900">WasteWise</span>
-            <span className="text-caption text-neutral-500 uppercase tracking-wider">Formalizing Waste Management</span>
-          </div>
-          <p className="text-body-sm text-neutral-500">
+      <footer className="bg-white py-6 md:py-8 border-t border-neutral-200">
+        <PageContainer className="px-6 md:px-12 lg:px-16 max-w-[800px] mx-auto flex flex-col items-center justify-center text-center gap-1.5">
+          <span className="font-heading text-[18px] font-bold text-neutral-900 tracking-tight leading-none mb-1">WasteWise</span>
+          <p className="text-[13px] text-neutral-500 leading-tight uppercase tracking-wider">
+            Formalizing Waste Management
+          </p>
+          <p className="text-[12px] text-neutral-400 leading-tight mt-1">
             &copy; {new Date().getFullYear()} WasteWise. All rights reserved.
           </p>
         </PageContainer>
