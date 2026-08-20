@@ -47,3 +47,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     return (
       <PageContainer className="flex min-h-[60vh] items-center justify-center py-16">
         <p className="text-body-sm text-neutral-500">Loading…</p>
+      </PageContainer>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  return (
+    <>
+      <DashboardNav accent="user" roleLabel="USER PORTAL" items={dashboardNavItems} />
+      <div className="pb-16 md:pb-0 md:pl-rail lg:pl-sidebar">{children}</div>
+    </>
+  );
+}
