@@ -15,6 +15,7 @@ export const CO2_FACTORS_KG_PER_KG: Record<WasteCategory, number> = {
   METAL: 2.0,
   ORGANIC: 0.25,
   ELECTRONIC: 1.0,
+  OTHER: 1.46,
 };
 
 // Rough relative weight estimate (kg) per LoadSize — used only to split a
