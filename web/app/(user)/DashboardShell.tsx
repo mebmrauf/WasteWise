@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Gift, HandCoins, MapPin, Megaphone, Truck, User, Camera, LayoutDashboard, Users, Package, BadgeCheck, Banknote } from "lucide-react";
+import { ClipboardList, Gift, HandCoins, MapPin, Megaphone, Truck, User, Camera, Leaf, LayoutDashboard, Users, Package, BadgeCheck, Banknote } from "lucide-react";
 import { DashboardNav, type DashboardNavItem } from "@/components/DashboardNav";
 import { PageContainer } from "@/components/PageContainer";
 import { useRequireRole } from "@/lib/auth/AuthContext";
@@ -34,6 +34,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         { label: "Payment History", href: "/dashboard/payments", icon: Banknote },
         { label: "Find a Collector", href: "/dashboard/collectors", icon: BadgeCheck },
         { label: "Waste Recognition", href: "/waste-recognition", icon: Camera },
+        { label: "Sustainability Report", href: "/sustainability", icon: Leaf },
         { label: "Green Rewards", href: "/dashboard/rewards", icon: Gift },
         { label: "Referral Program", href: "/referrals", icon: Users },
         { label: "Complaints", href: "/dashboard/complaints", icon: Megaphone },
@@ -46,18 +47,3 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     return (
       <PageContainer className="flex min-h-[60vh] items-center justify-center py-16">
         <p className="text-body-sm text-neutral-500">Loading…</p>
-      </PageContainer>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
-
-  return (
-    <>
-      <DashboardNav accent="user" roleLabel="USER PORTAL" items={dashboardNavItems} />
-      <div className="pb-16 md:pb-0 md:pl-rail lg:pl-sidebar">{children}</div>
-    </>
-  );
-}
