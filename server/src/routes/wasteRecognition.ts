@@ -1,16 +1,3 @@
-// AI Waste Recognition routes — a user uploads a photo of an item, the
-// backend asks Google Cloud Vision to label it, maps that onto our
-// WasteCategory enum (see lib/wasteLabelMapping.ts), and logs the result to
-// WasteRecognitionLog for the user's own reference and as future raw data
-// for Demand Forecast / Sustainability Reports.
-//
-// Mounted at /api/v1/waste-recognition in app.ts, matching usersRouter's
-// mounting pattern. This is a standalone feature — using it is never
-// required before placing a Smart Pickup Request; see docs/api-contract.md
-// if that note needs to move there later.
-import path from "node:path";
-import fs from "node:fs";
-import { randomBytes } from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import multer, { MulterError } from "multer";
 import { Prisma } from "@prisma/client";
@@ -22,35 +9,15 @@ import { sendData, sendError } from "../lib/apiResponse";
 import { logger } from "../lib/logger";
 import { detectLabels, isVisionConfigured, VisionApiError } from "../lib/visionClient";
 import { classifyLabels, getCategoryDefaults } from "../lib/wasteLabelMapping";
+import { uploadImage, isCloudinaryConfigured } from "../lib/cloudinary";
 
 export const wasteRecognitionRouter = Router();
-
-// ---------------------------------------------------------------------------
-// Photo upload: local-disk multer config, mirroring routes/users.ts's avatar
-// upload setup — see that file's comment block for the same known
-// limitation (Render's filesystem is ephemeral) and the same reasoning for
-// why the client-declared Content-Type is only a cheap pre-filter, not the
-// real validation.
-// ---------------------------------------------------------------------------
-export const WASTE_PHOTO_UPLOAD_DIR = path.resolve(
-  __dirname,
-  "../../uploads/waste-recognition",
-);
-fs.mkdirSync(WASTE_PHOTO_UPLOAD_DIR, { recursive: true });
-
 const PHOTO_MIME_EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
 };
-const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5MB — a bit larger than the 2MB avatar
-// limit since waste photos are taken ad hoc (often not pre-cropped/compressed
-// the way a profile picture editor would).
-
-// Same byte-signature sniffing as routes/users.ts's detectImageSignature —
-// duplicated here rather than imported since users.ts doesn't currently
-// export it. Worth factoring into a shared lib/imageValidation.ts if a third
-// route ends up needing this too.
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 function detectImageSignature(buffer: Buffer): { ext: string } | null {
   if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
     return { ext: "jpg" };
@@ -99,9 +66,6 @@ function runPhotoUpload(req: Request, res: Response): Promise<void> {
   });
 }
 
-// ---------------------------------------------------------------------------
-// POST /api/v1/waste-recognition
-// ---------------------------------------------------------------------------
 wasteRecognitionRouter.post(
   "/",
   requireAuth,
@@ -113,6 +77,16 @@ wasteRecognitionRouter.post(
         503,
         "VISION_NOT_CONFIGURED",
         "Waste recognition is currently unavailable. Please try again later.",
+      );
+      return;
+    }
+
+    if (!isCloudinaryConfigured()) {
+      sendError(
+        res,
+        503,
+        "CLOUDINARY_NOT_CONFIGURED",
+        "Photo upload is currently unavailable. Please try again later.",
       );
       return;
     }
@@ -177,12 +151,17 @@ wasteRecognitionRouter.post(
       }
       throw err;
     }
-
-    // Never trust/persist the client-supplied original filename — same
-    // reasoning as routes/users.ts's avatar upload.
-    const filename = `${req.user!.id}-${randomBytes(8).toString("hex")}.${signature.ext}`;
-    fs.writeFileSync(path.join(WASTE_PHOTO_UPLOAD_DIR, filename), req.file.buffer);
-    const imageUrl = `/uploads/waste-recognition/${filename}`;
+    
+    let imageUrl = "";
+    try {
+      const result = await uploadImage(req.file.buffer, "wastewise/recognitions");
+      imageUrl = result.url;
+    } catch (err) {
+      logger.error({ err }, "Cloudinary waste recognition photo upload failed");
+      // We can either fail here, or proceed with empty imageUrl. Failing is safer.
+      sendError(res, 502, "PHOTO_UPLOAD_FAILED", "Couldn't upload photo. Please try again.");
+      return;
+    }
 
     const log = await prisma.wasteRecognitionLog.create({
       data: {
@@ -200,9 +179,6 @@ wasteRecognitionRouter.post(
   }),
 );
 
-// ---------------------------------------------------------------------------
-// GET /api/v1/waste-recognition — the current user's own scan history.
-// ---------------------------------------------------------------------------
 wasteRecognitionRouter.get(
   "/",
   requireAuth,
@@ -216,12 +192,6 @@ wasteRecognitionRouter.get(
   }),
 );
 
-// ---------------------------------------------------------------------------
-// PATCH /api/v1/waste-recognition/:id/correct — user manually corrects a
-// scan's category (e.g. "this was actually plastic, not glass"). Vision's
-// label detection can't reliably distinguish visually similar materials
-// (clear plastic vs. glass); this lets a user fix it after the fact.
-// ---------------------------------------------------------------------------
 wasteRecognitionRouter.patch(
   "/:id/correct",
   requireAuth,

@@ -10,8 +10,10 @@
 // semantics), this uses a plain file input + Card layout, since there's no
 // existing generic "upload any photo" component to reuse yet.
 import * as React from "react";
+import { Camera, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { Icon } from "@/components/Icon";
 import { Divider } from "@/components/Divider";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { PageContainer } from "@/components/PageContainer";
@@ -49,7 +51,7 @@ const CATEGORY_LABELS: Record<WasteScan["detectedCategory"], string> = {
 };
 
 export function WasteRecognitionView() {
-  const { user, isLoading } = useRequireRole(["USER"]);
+  const { user, isLoading } = useRequireRole(["USER"], { allowedAccountTypes: ["HOUSEHOLD"] });
 
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [isScanning, setIsScanning] = React.useState(false);
@@ -166,73 +168,129 @@ export function WasteRecognitionView() {
 
   return (
     <PageContainer className="py-8 lg:py-12">
-      <h1 className="text-h1 text-neutral-900">Waste recognition</h1>
-      <p className="mt-2 text-body-lg text-neutral-500">
-        Not sure if something can be recycled? Snap a photo and we&apos;ll identify it.
-      </p>
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 p-8 mb-8 rounded-2xl shadow-sm">
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Waste Recognition</h1>
+        <p className="mt-2 text-neutral-600">
+          Not sure if something can be recycled? Snap a photo and we&apos;ll identify it.
+        </p>
+      </Card>
 
-      <Card className="mt-8 max-w-form">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="hidden"
-          onChange={handleInputChange}
-        />
-
-        {!previewUrl && (
-          <div className="flex flex-col items-center gap-4 py-8 text-center">
-            <p className="text-body-sm text-neutral-500">
-              Upload a photo of an item to check what it is and whether it can be recycled.
-            </p>
-            <Button onClick={() => fileInputRef.current?.click()}>Choose a photo</Button>
-          </div>
-        )}
-
-        {previewUrl && (
-          <div className="flex flex-col gap-4">
-            {/* eslint-disable-next-line @next/next/no-img-element -- local
-                blob: preview URL, not a remote image next/image can optimize */}
-            <img
-              src={previewUrl}
-              alt="Selected waste item"
-              className="max-h-80 w-full rounded-lg border border-neutral-200 object-contain"
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+        {/* Left Column: Image Upload & Scanning */}
+        <div className="lg:col-span-1">
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all min-h-[400px] flex flex-col justify-center">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleInputChange}
             />
 
-            {isScanning && (
-              <p className="text-body-sm text-neutral-500">Analyzing photo…</p>
+            {!previewUrl && (
+              <div 
+                className="w-full flex flex-col items-center justify-center gap-5 py-16 px-4 text-center border-2 border-dashed border-primary-200 rounded-[2rem] bg-primary-50/30 hover:bg-primary-50/60 transition-all cursor-pointer group"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-primary-100 text-primary-600 mb-2 shadow-sm group-hover:scale-110 transition-transform">
+                  <Icon icon={Camera} size="xl" aria-hidden />
+                </div>
+                <div>
+                  <p className="font-heading text-h3 text-neutral-900">Scan an Item</p>
+                  <p className="mt-2 text-body text-neutral-500 max-w-xs mx-auto">
+                    Upload or snap a photo of any item to instantly check if it can be recycled.
+                  </p>
+                </div>
+                <Button className="px-8 mt-2 bg-primary-600 hover:bg-primary-700 rounded-full shadow-md hover:shadow-lg transition-all" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>
+                  Choose a photo
+                </Button>
+              </div>
             )}
 
-            {scanError && <ErrorBanner>{scanError}</ErrorBanner>}
-
-            {result && (
-              <>
-                <Divider label="Result" className="my-2" />
-                <div className="flex flex-col gap-2">
-                  <p className="text-body-lg text-neutral-900">
-                    {CATEGORY_LABELS[result.detectedCategory]} —{" "}
-                    {result.isRecyclable ? "Recyclable" : "Not recyclable"}
-                  </p>
-                  {result.preparationTip && (
-                    <p className="text-body-sm text-neutral-500">{result.preparationTip}</p>
+            {previewUrl && (
+              <div className="w-full flex flex-col gap-6">
+                <div className="relative overflow-hidden rounded-[2rem] border border-neutral-200 bg-neutral-100/50 shadow-inner group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={previewUrl}
+                    alt="Selected waste item"
+                    className="max-h-[500px] w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  
+                  {isScanning && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
+                      <div className="absolute left-0 top-0 h-1.5 w-full bg-primary-500 shadow-[0_0_20px_rgba(16,185,129,1)] animate-[scan_2s_ease-in-out_infinite]" />
+                      <div className="relative flex flex-col items-center gap-4">
+                        <div className="h-16 w-16 rounded-full bg-primary-500/20 flex items-center justify-center animate-pulse">
+                          <Icon icon={Camera} size="xl" className="text-primary-300" />
+                        </div>
+                        <p className="text-h4 font-heading text-white animate-pulse tracking-wide">Analyzing with AI…</p>
+                      </div>
+                    </div>
                   )}
                 </div>
 
+                {scanError && <ErrorBanner>{scanError}</ErrorBanner>}
+
+                {!isScanning && (
+                  <Button variant="secondary" className="rounded-full self-center border-neutral-300 hover:bg-neutral-100 px-8" onClick={handleTryAnother}>
+                    <Icon icon={Camera} size="sm" className="mr-2" /> Try another photo
+                  </Button>
+                )}
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Right Column: Results & History */}
+        <div className="lg:col-span-1 flex flex-col gap-8">
+          {result && (
+            <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all bg-gradient-to-br from-white to-neutral-50">
+              <div className="flex flex-col gap-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-caption font-semibold text-primary-600 uppercase tracking-wider mb-1">AI Analysis Complete</p>
+                    <h2 className="text-2xl font-bold text-neutral-900">{CATEGORY_LABELS[result.detectedCategory]}</h2>
+                  </div>
+                  <div className={
+                    result.isRecyclable 
+                      ? "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-body-sm shadow-sm border bg-green-100 text-green-700 border-green-200 flex-shrink-0" 
+                      : "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-body-sm shadow-sm border bg-red-100 text-red-700 border-red-200 flex-shrink-0"
+                  }>
+                    {result.isRecyclable ? (
+                      <><CheckCircle className="w-5 h-5" /> Recyclable</>
+                    ) : (
+                      <><XCircle className="w-5 h-5" /> Not recyclable</>
+                    )}
+                  </div>
+                </div>
+
+                {result.preparationTip && (
+                  <div className="bg-white rounded-2xl p-4 shadow-sm border border-neutral-100">
+                    <p className="text-body-sm text-neutral-600 leading-relaxed">
+                      <span className="font-semibold text-neutral-900">Pro Tip: </span>
+                      {result.preparationTip}
+                    </p>
+                  </div>
+                )}
+
+                <Divider className="my-2" />
+
                 {!isCorrecting ? (
-                  <div className="flex items-center gap-3">
-                    <span className="text-caption text-neutral-500">Was this correct?</span>
-                    <Button variant="ghost" size="sm" onClick={() => setIsCorrecting(true)}>
-                      No, fix it
+                  <div className="flex items-center justify-between">
+                    <span className="text-body-sm text-neutral-500">Does this result look incorrect?</span>
+                    <Button variant="ghost" size="sm" className="text-primary-600 hover:text-primary-700 hover:bg-primary-50" onClick={() => setIsCorrecting(true)}>
+                      Suggest a fix
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-2">
-                    <label className="text-caption text-neutral-500" htmlFor="category-correction">
-                      What is it actually?
+                  <div className="flex flex-col gap-3 bg-neutral-50 p-4 rounded-2xl border border-neutral-200">
+                    <label className="text-body-sm font-medium text-neutral-900" htmlFor="category-correction">
+                      Help us learn: what is it actually?
                     </label>
                     <select
                       id="category-correction"
-                      className="rounded-md border border-neutral-200 px-3 py-2 text-body-sm"
+                      className="rounded-xl border border-neutral-300 px-4 py-3 text-body-sm bg-white shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all outline-none"
                       disabled={correctionSaving}
                       defaultValue=""
                       onChange={(e) => {
@@ -251,59 +309,66 @@ export function WasteRecognitionView() {
                       ))}
                     </select>
                     {correctionSaving && (
-                      <span className="text-caption text-neutral-500">Saving…</span>
+                      <span className="text-caption text-primary-600 animate-pulse">Saving your correction…</span>
                     )}
                     {correctionError && <ErrorBanner>{correctionError}</ErrorBanner>}
-                    <Button variant="ghost" size="sm" onClick={() => setIsCorrecting(false)}>
-                      Cancel
-                    </Button>
+                    <div className="flex justify-end mt-2">
+                      <Button variant="ghost" size="sm" className="text-neutral-500 hover:text-neutral-700" onClick={() => setIsCorrecting(false)}>
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
                 )}
-              </>
+              </div>
+            </Card>
+          )}
+
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all flex-1">
+            <h2 className="text-xl font-bold text-neutral-900 mb-6">Recent Scans</h2>
+
+            {historyError && <ErrorBanner className="mb-4">{historyError}</ErrorBanner>}
+
+            {!history && !historyError && (
+              <div className="flex flex-col items-center justify-center py-12 text-neutral-400">
+                 <div className="h-8 w-8 border-4 border-neutral-200 border-t-primary-500 rounded-full animate-spin mb-4" />
+                 <p className="text-body-sm">Loading your scan history…</p>
+              </div>
             )}
 
-            {!isScanning && (
-              <Button variant="ghost" onClick={handleTryAnother}>
-                Try another photo
-              </Button>
+            {history && history.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-center bg-neutral-50/50 rounded-2xl border border-dashed border-neutral-200">
+                <Icon icon={Camera} size="lg" className="text-neutral-300 mb-3" />
+                <p className="text-body-sm text-neutral-500 max-w-[200px]">
+                  No scans yet. Upload your first photo to get started!
+                </p>
+              </div>
             )}
-          </div>
-        )}
-      </Card>
 
-      <Card className="mt-8 max-w-form">
-        <h2 className="text-h3 text-neutral-900">Recent scans</h2>
-
-        {historyError && <ErrorBanner className="mt-4">{historyError}</ErrorBanner>}
-
-        {!history && !historyError && (
-          <p className="mt-4 text-body-sm text-neutral-500">Loading your scan history…</p>
-        )}
-
-        {history && history.length === 0 && (
-          <p className="mt-4 text-body-sm text-neutral-500">
-            No scans yet — try uploading a photo above.
-          </p>
-        )}
-
-        {history && history.length > 0 && (
-          <ul className="mt-4 flex flex-col gap-3">
-            {history.map((scan) => (
-              <li
-                key={scan.id}
-                className="flex items-center justify-between border-b border-neutral-100 pb-3 last:border-0"
-              >
-                <span className="text-body-sm text-neutral-900">
-                  {CATEGORY_LABELS[scan.detectedCategory]}
-                </span>
-                <span className="text-caption text-neutral-500">
-                  {scan.isRecyclable ? "Recyclable" : "Not recyclable"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+            {history && history.length > 0 && (
+              <ul className="flex flex-col gap-3">
+                {history.map((scan) => (
+                  <li
+                    key={scan.id}
+                    className="flex items-center justify-between border border-neutral-100 bg-white/50 hover:bg-white p-4 rounded-2xl shadow-sm transition-all hover:shadow-md"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-50 text-primary-600 shadow-inner">
+                         <Icon icon={Camera} size="sm" />
+                      </div>
+                      <span className="font-medium text-body text-neutral-900">
+                        {CATEGORY_LABELS[scan.detectedCategory]}
+                      </span>
+                    </div>
+                    <span className={scan.isRecyclable ? "text-caption font-bold text-green-700 bg-green-100 px-3 py-1.5 rounded-full" : "text-caption font-bold text-neutral-600 bg-neutral-200 px-3 py-1.5 rounded-full"}>
+                      {scan.isRecyclable ? "Recyclable" : "Not recyclable"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </div>
+      </div>
     </PageContainer>
   );
 }

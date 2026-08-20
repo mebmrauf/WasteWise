@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { NavBar } from "@/components/NavBar";
-import { NavAuthActions } from "@/components/NavAuthActions";
+import { NotificationsPanel } from "@/components/NotificationsPanel";
 import { DashboardShell } from "./DashboardShell";
 
 export default function UserLayout({ children }: { children: ReactNode }) {
@@ -8,12 +8,13 @@ export default function UserLayout({ children }: { children: ReactNode }) {
     <>
       <NavBar
         brand={
-          <a href="/" className="font-heading text-h4 text-neutral-900">
+          <a href="/" className="font-brand text-2xl font-bold tracking-wide text-primary-700 md:hidden">
             WasteWise
           </a>
         }
         accent="user"
-        actions={<NavAuthActions />}
+        actions={<NotificationsPanel />}
+        edgeToEdge
       />
       <main>
         <DashboardShell>{children}</DashboardShell>

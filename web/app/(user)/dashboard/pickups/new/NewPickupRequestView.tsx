@@ -1,33 +1,35 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowRight, Truck, Package, Clock, MapPin, Home, Navigation, Search, Camera } from "lucide-react";
 import { AddressAutocomplete, type AddressSuggestion } from "@/components/AddressAutocomplete";
+import { Icon } from "@/components/Icon";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
-import { CategoryQuantityRow } from "@/components/CategoryQuantityRow";
+import { WastePhotoUpload } from "@/components/WastePhotoUpload";
+
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Input } from "@/components/Input";
 import { PageContainer } from "@/components/PageContainer";
 import { PillRadioGroup } from "@/components/PillRadioGroup";
-import { type SelectOption } from "@/components/Select";
+import { Select } from "@/components/Select";
 import { StepProgress } from "@/components/StepProgress";
+import { getVerifiedCollectors, type CollectorDirectoryEntry } from "@/lib/api/collectors";
 import { SummaryPanel, SummaryRow } from "@/components/SummaryPanel";
-import { TimeSlotPicker, type TimeSlot } from "@/components/TimeSlotPicker";
-import { WasteCategoryQuantityPicker } from "@/components/WasteCategoryQuantityPicker";
+import { DatePicker } from "@/components/DatePicker";
+
 import { WasteCategorySelector, type WasteCategory } from "@/components/WasteCategorySelector";
 import { AuthApiError } from "@/lib/api/auth";
-import { fetchAddressSuggestions, fetchPlaceDetails, PlacesConfigError } from "@/lib/api/places";
+import { fetchAddressSuggestions, fetchPlaceDetails, PlacesConfigError, fetchReverseGeocode, type PlaceDetails } from "@/lib/api/places";
 import { getMyProfile, type UserProfile } from "@/lib/api/users";
+import { cn } from "@/lib/utils";
 import {
   createPickupRequest,
-  LOAD_SIZE_KG_RANGES,
-  LOAD_SIZE_LABELS,
-  formatKgRange,
   type LoadSize,
 } from "@/lib/api/pickups";
 
-const STEP_LABELS = ["Category", "Quantity & time", "Confirm"];
+// Flattened form: all steps are now displayed simultaneously.
 
 const submitPickupErrorMessages: Record<string, string> = {
   VALIDATION_ERROR:
@@ -44,25 +46,7 @@ function resolveSubmitPickupErrorMessage(err: unknown): string {
   return "Something went wrong posting your request. Please try again.";
 }
 
-interface TimeWindow extends TimeSlot {
-  startHour: number;
-  endHour: number;
-}
 
-const TIME_WINDOWS: TimeWindow[] = [
-  { id: "08:00-10:00", label: "08:00 - 10:00", startHour: 8, endHour: 10 },
-  { id: "10:00-12:00", label: "10:00 - 12:00", startHour: 10, endHour: 12 },
-  { id: "14:00-16:00", label: "14:00 - 16:00", startHour: 14, endHour: 16 },
-  { id: "16:00-18:00", label: "16:00 - 18:00", startHour: 16, endHour: 18 },
-];
-
-const LOAD_SIZE_OPTIONS: SelectOption[] = [
-  { value: "", label: "Select an estimated quantity…", disabled: true },
-  ...(Object.keys(LOAD_SIZE_KG_RANGES) as LoadSize[]).map((size) => ({
-    value: size,
-    label: `${LOAD_SIZE_LABELS[size]} (${formatKgRange(size)})`,
-  })),
-];
 
 const ADDRESS_DEBOUNCE_MS = 300;
 const ADDRESS_MIN_QUERY_LENGTH = 3;
@@ -71,45 +55,57 @@ function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function buildTimeSlotIso(dateStr: string, hour: number): string {
+function buildTimeSlotIso(dateStr: string): string {
   const [year, month, day] = dateStr.split("-").map(Number);
-  return new Date(year, month - 1, day, hour, 0, 0, 0).toISOString();
+  return new Date(year, month - 1, day, 12, 0, 0, 0).toISOString();
 }
 
-function formatWindowSummary(dateStr: string, window: TimeWindow): string {
+function formatWindowSummary(dateStr: string): string {
   const [year, month, day] = dateStr.split("-").map(Number);
-  const dateLabel = new Date(year, month - 1, day).toLocaleDateString(undefined, {
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
     weekday: "short",
     month: "short",
     day: "numeric",
   });
-  return `${dateLabel} · ${window.label}`;
 }
 
 export function NewPickupRequestView() {
   const router = useRouter();
-  const [step, setStep] = React.useState(0);
-  const stepHeadingRef = React.useRef<HTMLHeadingElement | null>(null);
-  const isInitialStepRender = React.useRef(true);
+  const searchParams = useSearchParams();
+  const preferredCollectorId = searchParams.get("preferredCollectorId");
+  const preferredCollectorName = searchParams.get("collectorName");
+
   const [validationMessage, setValidationMessage] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const [isExclusiveToPreferred, setIsExclusiveToPreferred] = React.useState(true);
 
   const [categories, setCategories] = React.useState<WasteCategory[]>([]);
-  const [quantities, setQuantities] = React.useState<Partial<Record<WasteCategory, LoadSize>>>({});
+  const [estimatedTotalWeight, setEstimatedTotalWeight] = React.useState<number | "">("");
+  const [categoryWeights, setCategoryWeights] = React.useState<Record<string, string>>({});
   const [date, setDate] = React.useState("");
-  const [timeWindowId, setTimeWindowId] = React.useState<string | null>(null);
+  const [photoUrls, setPhotoUrls] = React.useState<string[]>([]);
+  const [wasteDescription, setWasteDescription] = React.useState("");
+
+
+  const [localCollectors, setLocalCollectors] = React.useState<CollectorDirectoryEntry[]>([]);
+  const [selectedCollectorId, setSelectedCollectorId] = React.useState<string>(preferredCollectorId || "");
 
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
   const [profileError, setProfileError] = React.useState<string | null>(null);
 
-  const [addressMode, setAddressMode] = React.useState<"saved" | "custom">("saved");
+  const [addressMode, setAddressMode] = React.useState<"saved" | "custom" | "current">("saved");
   const [addressModeTouched, setAddressModeTouched] = React.useState(false);
   const [customAddressQuery, setCustomAddressQuery] = React.useState("");
   const [customAddressSuggestions, setCustomAddressSuggestions] = React.useState<AddressSuggestion[]>([]);
   const [isLoadingAddressSuggestions, setIsLoadingAddressSuggestions] = React.useState(false);
   const [addressSuggestionsError, setAddressSuggestionsError] = React.useState<string | null>(null);
   const [selectedCustomPlace, setSelectedCustomPlace] = React.useState<AddressSuggestion | null>(null);
+  const [selectedCustomPlaceDetails, setSelectedCustomPlaceDetails] = React.useState<PlaceDetails | null>(null);
+
+  const [currentLocationPlace, setCurrentLocationPlace] = React.useState<PlaceDetails | null>(null);
+  const [isLoadingCurrentLocation, setIsLoadingCurrentLocation] = React.useState(false);
+  const [currentLocationError, setCurrentLocationError] = React.useState<string | null>(null);
 
   const addressSessionTokenRef = React.useRef<string | null>(null);
   const addressDebounceTimerRef = React.useRef<number | null>(null);
@@ -147,13 +143,37 @@ export function NewPickupRequestView() {
     };
   }, []);
 
-  React.useEffect(() => {
-    if (isInitialStepRender.current) {
-      isInitialStepRender.current = false;
-      return;
+  const resolvedLocation = React.useMemo<PlaceDetails | null>(() => {
+    if (
+      addressMode === "saved" &&
+      profile?.placeId &&
+      profile.formattedAddress &&
+      profile.latitude !== null &&
+      profile.longitude !== null
+    ) {
+      return {
+        placeId: profile.placeId,
+        formattedAddress: profile.formattedAddress,
+        latitude: profile.latitude,
+        longitude: profile.longitude,
+      };
     }
-    stepHeadingRef.current?.focus();
-  }, [step]);
+    if (addressMode === "current" && currentLocationPlace) return currentLocationPlace;
+    if (addressMode === "custom" && selectedCustomPlaceDetails) return selectedCustomPlaceDetails;
+    return null;
+  }, [addressMode, profile, currentLocationPlace, selectedCustomPlaceDetails]);
+
+  React.useEffect(() => {
+    if (resolvedLocation) {
+      getVerifiedCollectors({ lat: resolvedLocation.latitude, lng: resolvedLocation.longitude })
+        .then(setLocalCollectors)
+        .catch(console.error);
+    } else {
+      setLocalCollectors([]);
+    }
+  }, [resolvedLocation]);
+
+
 
   function ensureAddressSessionToken(): string {
     if (!addressSessionTokenRef.current) {
@@ -186,12 +206,46 @@ export function NewPickupRequestView() {
 
   function handleAddressModeChange(id: string) {
     setAddressModeTouched(true);
-    setAddressMode(id as "saved" | "custom");
+    setAddressMode(id as "saved" | "custom" | "current");
   }
+
+  const handleDetectLocation = React.useCallback(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setCurrentLocationError("Geolocation isn't supported by this browser.");
+      return;
+    }
+    setIsLoadingCurrentLocation(true);
+    setCurrentLocationError(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        fetchReverseGeocode(position.coords.latitude, position.coords.longitude)
+          .then((place) => {
+            setCurrentLocationPlace(place);
+            setIsLoadingCurrentLocation(false);
+          })
+          .catch((err: unknown) => {
+            setCurrentLocationError(err instanceof Error ? err.message : "Couldn't detect your address.");
+            setIsLoadingCurrentLocation(false);
+          });
+      },
+      (err) => {
+        setCurrentLocationError(`Couldn't get your location (${err.message}). Make sure permissions are granted.`);
+        setIsLoadingCurrentLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  }, []);
+
+  React.useEffect(() => {
+    if (addressMode === "current" && !currentLocationPlace && !isLoadingCurrentLocation && !currentLocationError) {
+      handleDetectLocation();
+    }
+  }, [addressMode, currentLocationPlace, isLoadingCurrentLocation, currentLocationError, handleDetectLocation]);
 
   function handleCustomAddressQueryChange(nextQuery: string) {
     setCustomAddressQuery(nextQuery);
     setSelectedCustomPlace(null); // any manual edit invalidates a previously-picked suggestion
+    setSelectedCustomPlaceDetails(null);
 
     if (addressDebounceTimerRef.current !== null) window.clearTimeout(addressDebounceTimerRef.current);
 
@@ -218,112 +272,86 @@ export function NewPickupRequestView() {
     setCustomAddressSuggestions([]);
     setIsLoadingAddressSuggestions(false);
     setAddressSuggestionsError(null);
+    setSelectedCustomPlaceDetails(null);
+    fetchPlaceDetails(suggestion.placeId)
+      .then(setSelectedCustomPlaceDetails)
+      .catch(() => setAddressSuggestionsError("Couldn't resolve that address. Try selecting it again."));
   }
 
-  const selectedWindow = TIME_WINDOWS.find((window) => window.id === timeWindowId) ?? null;
-  const timeSlotStart = date && selectedWindow ? buildTimeSlotIso(date, selectedWindow.startHour) : null;
-  const isSlotInPast = timeSlotStart !== null && new Date(timeSlotStart) < new Date();
+  const pickupDateIso = date ? buildTimeSlotIso(date) : null;
+  const isSlotInPast = pickupDateIso !== null && new Date(pickupDateIso) < new Date(new Date().setHours(0,0,0,0));
 
-  const resolvedPlaceId = addressMode === "saved" ? profile?.placeId ?? null : selectedCustomPlace?.placeId ?? null;
-  const resolvedAddressLabel =
-    addressMode === "saved" ? profile?.formattedAddress ?? null : selectedCustomPlace?.description ?? null;
+  const resolvedPlaceId = resolvedLocation?.placeId ?? null;
+  const resolvedAddressLabel = resolvedLocation?.formattedAddress ?? null;
 
-  const hasQuantityForEveryCategory =
-    categories.length > 0 && categories.every((category) => quantities[category] !== undefined);
+  const computedTotalWeight = React.useMemo(() => {
+    let total = 0;
+    for (const cat of categories) {
+      const weight = parseFloat(categoryWeights[cat] || "0");
+      if (!isNaN(weight)) total += weight;
+    }
+    return total;
+  }, [categories, categoryWeights]);
 
-  const isLastStep = step === STEP_LABELS.length - 1;
   const canSubmit =
-    isLastStep &&
     !isSubmitting &&
-    hasQuantityForEveryCategory &&
+    categories.length > 0 &&
+    computedTotalWeight > 0 &&
     date !== "" &&
-    selectedWindow !== null &&
     !isSlotInPast &&
     resolvedPlaceId !== null;
 
-  function handleQuantityChange(category: WasteCategory, loadSize: LoadSize) {
-    setQuantities((prev) => ({ ...prev, [category]: loadSize }));
-  }
-
   function handleCategoriesChange(nextCategories: WasteCategory[]) {
     setCategories(nextCategories);
-    setQuantities((prev) => {
-      const nextSet = new Set(nextCategories);
-      const next: Partial<Record<WasteCategory, LoadSize>> = {};
-      for (const category of Object.keys(prev) as WasteCategory[]) {
-        if (nextSet.has(category)) next[category] = prev[category];
+    setCategoryWeights(prev => {
+      const next = { ...prev };
+      for (const key of Object.keys(next)) {
+        if (!nextCategories.includes(key as WasteCategory)) {
+          delete next[key];
+        }
       }
       return next;
     });
   }
 
-  function handleNext() {
-    if (step === 0) {
-      if (categories.length === 0) {
-        setValidationMessage("Select at least one category to continue.");
-        return;
-      }
-    }
-    if (step === 1) {
-      if (!hasQuantityForEveryCategory) {
-        setValidationMessage("Choose an estimated quantity for every selected category.");
-        return;
-      }
-      if (!date) {
-        setValidationMessage("Choose a pickup date.");
-        return;
-      }
-      if (!selectedWindow) {
-        setValidationMessage("Choose a time slot.");
-        return;
-      }
-      if (isSlotInPast) {
-        setValidationMessage("That time slot has already passed — pick a later date or slot.");
-        return;
-      }
-    }
-    setValidationMessage(null);
-    setStep((current) => Math.min(current + 1, STEP_LABELS.length - 1));
-  }
 
-  function handleBack() {
-    setValidationMessage(null);
-    setStep((current) => Math.max(current - 1, 0));
-  }
 
   async function handleSubmitPickupRequest() {
-    if (!date || !selectedWindow || !resolvedPlaceId || !hasQuantityForEveryCategory) return;
+    if (!date || !resolvedPlaceId || categories.length === 0 || computedTotalWeight === 0) return;
+
+    if (computedTotalWeight >= 50) {
+      setSubmitError("This request qualifies as a Bulk Waste Pickup. Please use the Bulk Waste Pickup feature instead.");
+      return;
+    }
+    if (computedTotalWeight < 1) {
+      setSubmitError("Please enter a valid weight of at least 1 kg.");
+      return;
+    }
 
     setSubmitError(null);
     setIsSubmitting(true);
     try {
-      let formattedAddress: string | undefined;
-      let latitude: number | undefined;
-      let longitude: number | undefined;
-
-      if (addressMode === "saved" && profile && profile.formattedAddress && profile.latitude !== null && profile.longitude !== null) {
-        formattedAddress = profile.formattedAddress;
-        latitude = profile.latitude;
-        longitude = profile.longitude;
-      } else if (addressMode === "custom" && selectedCustomPlace) {
-        const details = await fetchPlaceDetails(selectedCustomPlace.placeId);
-        formattedAddress = details.formattedAddress;
-        latitude = details.latitude;
-        longitude = details.longitude;
-      }
-
-      await createPickupRequest({
+      const payload = {
         items: categories.map((category) => ({
           category,
-          loadSize: quantities[category] as LoadSize,
+          loadSize: "SMALL" as LoadSize, // Keeping enum for backward compatibility, although not really used for calculation anymore
+          exactWeightKg: categoryWeights[category] ? parseFloat(categoryWeights[category]) : undefined,
         })),
-        timeSlotStart: buildTimeSlotIso(date, selectedWindow.startHour),
-        timeSlotEnd: buildTimeSlotIso(date, selectedWindow.endHour),
+        pickupDate: buildTimeSlotIso(date),
         placeId: resolvedPlaceId,
-        formattedAddress,
-        latitude,
-        longitude,
-      });
+        formattedAddress: resolvedLocation?.formattedAddress,
+        latitude: resolvedLocation?.latitude,
+        longitude: resolvedLocation?.longitude,
+        ...(selectedCollectorId ? {
+          preferredCollectorId: selectedCollectorId,
+          isExclusiveToPreferred
+        } : {}),
+        estimatedTotalWeight: computedTotalWeight,
+        photoUrls,
+        wasteDescription: wasteDescription.trim() || undefined,
+      };
+
+      await createPickupRequest(payload);
       router.push("/dashboard/pickups");
     } catch (err) {
       setSubmitError(resolveSubmitPickupErrorMessage(err));
@@ -333,176 +361,361 @@ export function NewPickupRequestView() {
 
   return (
     <PageContainer className="py-8 lg:py-12">
-      <h1 className="text-h1 text-neutral-900">Schedule a pickup</h1>
-      <p className="mt-2 text-body-lg text-neutral-500">
-        Tell us what you&apos;re recycling and when — we&apos;ll match you with a nearby collector.
-      </p>
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-emerald-100 p-8 mb-8 rounded-2xl shadow-sm">
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Schedule a pickup</h1>
+        <p className="mt-2 text-neutral-600">
+          Tell us what you&apos;re recycling and when — we&apos;ll match you with a nearby collector.
+        </p>
+      </Card>
 
       {profileError && <ErrorBanner className="mt-4 max-w-form">{profileError}</ErrorBanner>}
 
-      <StepProgress steps={STEP_LABELS} currentIndex={step} aria-label="Pickup request progress" className="mt-8" />
 
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
-        <div>
-          <Card>
-            {step === 0 && (
-              <>
-                <h2
-                  ref={stepHeadingRef}
-                  tabIndex={-1}
-                  className="text-h3 text-neutral-900 rounded-sm focus:outline-none focus:shadow-focus"
-                >
-                  What are you recycling?
-                </h2>
-                <p className="mt-1 text-body-sm text-neutral-500">
-                  Select every category that applies to this pickup.
-                </p>
-                <WasteCategorySelector
-                  value={categories}
-                  onChange={handleCategoriesChange}
-                  aria-label="What are you recycling?"
-                  className="mt-5"
-                />
-              </>
-            )}
 
-            {step === 1 && (
-              <>
-                <h2
-                  ref={stepHeadingRef}
-                  tabIndex={-1}
-                  className="text-h3 text-neutral-900 rounded-sm focus:outline-none focus:shadow-focus"
-                >
-                  Quantity & time
-                </h2>
-                <p className="mt-1 text-body-sm text-neutral-500">
-                  Estimate how much you have of each category, and pick a pickup window.
-                </p>
-                <div className="mt-5 flex flex-col gap-5">
-                  <div>
-                    <p className="text-label text-neutral-800">Estimated quantity</p>
-                    <WasteCategoryQuantityPicker
-                      categories={categories}
-                      value={quantities}
-                      onChange={handleQuantityChange}
-                      loadSizeOptions={LOAD_SIZE_OPTIONS}
-                      className="mt-2"
-                    />
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] animate-slide-up">
+        <div className="flex flex-col gap-6">
+          
+          {/* Section 1: Categories */}
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
+            <div className="flex items-center gap-5 mb-8">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner">
+                <Icon icon={Package} size="lg" />
+              </div>
+              <div>
+                <h2 className="font-heading text-h3 text-neutral-900">What are you selling?</h2>
+                <p className="mt-1 text-body-sm text-neutral-500">Select every category that applies to this pickup.</p>
+              </div>
+            </div>
+            <WasteCategorySelector
+              value={categories}
+              onChange={handleCategoriesChange}
+              aria-label="What are you selling?"
+              className="mt-5"
+            />
+          </Card>
+
+          {/* Section 2: Quantity & Time */}
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
+            <div className="flex items-center gap-5 mb-8">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner">
+                <Icon icon={Clock} size="lg" />
+              </div>
+              <div>
+                <h2 className="font-heading text-h3 text-neutral-900">Quantity & time</h2>
+                <p className="mt-1 text-body-sm text-neutral-500">Estimate how much you have of each category, and pick a pickup window.</p>
+              </div>
+            </div>
+            <div className="mt-8 flex flex-col gap-6">
+              <div className="flex flex-col gap-3">
+                <div className="flex justify-between items-end mb-2">
+                  <p className="text-body font-semibold text-neutral-900">Estimated Weight</p>
+                  {computedTotalWeight > 0 && (
+                    <span className="text-body-sm font-semibold text-primary-600 bg-primary-50 px-3 py-1 rounded-full">
+                      Total: {computedTotalWeight} kg
+                    </span>
+                  )}
+                </div>
+
+                {categories.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 p-6 text-center">
+                    <p className="text-body-sm text-neutral-500">Select materials above to enter their weights.</p>
                   </div>
-                  <Input
+                ) : (
+                  <div className="flex flex-col gap-3 rounded-xl border border-neutral-100 bg-neutral-50/50 p-4">
+                    {categories.map((cat) => (
+                      <div key={cat} className="flex items-center justify-between gap-4">
+                        <label className="text-body-sm font-medium text-neutral-700 capitalize">
+                          {cat.toLowerCase().replace(/_/g, " ")} Weight (kg)
+                        </label>
+                        <Input
+                          type="number"
+                          min="0.1"
+                          step="0.1"
+                          placeholder="e.g. 5"
+                          value={categoryWeights[cat] || ""}
+                          onChange={(e) => setCategoryWeights(prev => ({ ...prev, [cat]: e.target.value }))}
+                          className="bg-white w-32"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="h-px w-full bg-neutral-100" />
+
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-neutral-50/50 border border-neutral-100 rounded-xl p-5">
+                  <DatePicker
                     label="Pickup date"
-                    type="date"
                     min={todayIsoDate()}
                     value={date}
                     onChange={(event) => setDate(event.target.value)}
                   />
-                  <div>
-                    <p className="text-label text-neutral-800">Time slot</p>
-                    <TimeSlotPicker
-                      slots={TIME_WINDOWS}
-                      value={timeWindowId}
-                      onChange={setTimeWindowId}
-                      aria-label="Time slot"
-                      className="mt-2"
-                    />
-                  </div>
                 </div>
-              </>
-            )}
+              </div>
+            </div>
+          </Card>
 
-            {step === 2 && (
-              <>
-                <h2
-                  ref={stepHeadingRef}
-                  tabIndex={-1}
-                  className="text-h3 text-neutral-900 rounded-sm focus:outline-none focus:shadow-focus"
-                >
-                  Pickup address
-                </h2>
-                <p className="mt-1 text-body-sm text-neutral-500">Where should the collector pick this up?</p>
+          {/* Section 3: Photos & description */}
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
+            <div className="flex items-center gap-5 mb-8">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner">
+                <Icon icon={Camera} size="lg" />
+              </div>
+              <div>
+                <h2 className="font-heading text-h3 text-neutral-900">Photos & details (optional)</h2>
+                <p className="mt-1 text-body-sm text-neutral-500">Add photos and a short description of the item(s).</p>
+              </div>
+            </div>
+            <WastePhotoUpload value={photoUrls} onChange={setPhotoUrls} disabled={isSubmitting} />
+            <div className="mt-6">
+              <label className="text-label text-neutral-800 mb-2 block">Description</label>
+              <textarea
+                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-body text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 transition-colors"
+                rows={3}
+                placeholder="e.g. an old office chair with a torn seat cushion..."
+                value={wasteDescription}
+                onChange={(e) => setWasteDescription(e.target.value)}
+                disabled={isSubmitting}
+                maxLength={1000}
+              />
+            </div>
+            <p className="mt-4 text-body-sm text-neutral-500">
+              *Your uploaded photos and description could be used to analyze the waste more accurately.*
+            </p>
+          </Card>
+        </div>
 
-                <PillRadioGroup
-                  options={[
-                    { id: "saved", label: "Use my saved address", disabled: Boolean(profile) && !profile?.placeId },
-                    { id: "custom", label: "Enter a different address" },
-                  ]}
-                  value={addressMode}
-                  onChange={handleAddressModeChange}
-                  aria-label="Pickup address option"
-                  className="mt-4"
-                />
+        <div className="flex flex-col gap-6 sticky top-24 h-fit">
+          {/* Section 3: Address */}
+          <Card className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner">
+                <Icon icon={MapPin} size="md" />
+              </div>
+              <div>
+                <h2 className="font-heading text-h3 text-neutral-900 leading-tight">Pickup address</h2>
+              </div>
+            </div>
 
-                <div className="mt-4">
-                  {addressMode === "saved" ? (
-                    !profile ? (
-                      <p className="text-body-sm text-neutral-500">Loading your saved address…</p>
-                    ) : profile.placeId ? (
-                      <p className="text-body-sm text-neutral-900">{profile.formattedAddress}</p>
-                    ) : (
-                      <p className="text-body-sm text-neutral-500">
-                        You don&apos;t have a saved address yet — add one from your profile, or enter one below.
-                      </p>
-                    )
+            <div className="flex flex-col gap-3">
+              {/* Option: Saved Address */}
+              <button
+                type="button"
+                disabled={Boolean(profile) && !profile?.placeId}
+                onClick={() => handleAddressModeChange("saved")}
+                className={cn(
+                  "flex items-center gap-4 w-full p-4 rounded-xl border text-left transition-all",
+                  "focus-visible:outline-none focus-visible:shadow-focus",
+                  Boolean(profile) && !profile?.placeId
+                    ? "opacity-50 cursor-not-allowed border-neutral-100 bg-neutral-50"
+                    : addressMode === "saved"
+                    ? "border-primary-500 bg-primary-50/50 shadow-sm"
+                    : "border-neutral-200 bg-white hover:border-primary-300 hover:bg-primary-50/20"
+                )}
+              >
+                <div className={cn(
+                  "flex items-center justify-center w-10 h-10 rounded-full",
+                  addressMode === "saved" ? "bg-primary-100 text-primary-600" : "bg-neutral-100 text-neutral-500"
+                )}>
+                  <Icon icon={Home} size="sm" />
+                </div>
+                <div>
+                  <p className={cn("text-body font-semibold", addressMode === "saved" ? "text-primary-900" : "text-neutral-900")}>
+                    Saved Address
+                  </p>
+                  <p className="text-label text-neutral-500">
+                    Use the address from your profile
+                  </p>
+                </div>
+              </button>
+
+              {/* Option: Current Location */}
+              <button
+                type="button"
+                onClick={() => handleAddressModeChange("current")}
+                className={cn(
+                  "flex items-center gap-4 w-full p-4 rounded-xl border text-left transition-all",
+                  "focus-visible:outline-none focus-visible:shadow-focus",
+                  addressMode === "current"
+                    ? "border-primary-500 bg-primary-50/50 shadow-sm"
+                    : "border-neutral-200 bg-white hover:border-primary-300 hover:bg-primary-50/20"
+                )}
+              >
+                <div className={cn(
+                  "flex items-center justify-center w-10 h-10 rounded-full",
+                  addressMode === "current" ? "bg-primary-100 text-primary-600" : "bg-neutral-100 text-neutral-500"
+                )}>
+                  <Icon icon={Navigation} size="sm" />
+                </div>
+                <div>
+                  <p className={cn("text-body font-semibold", addressMode === "current" ? "text-primary-900" : "text-neutral-900")}>
+                    Current Location
+                  </p>
+                  <p className="text-label text-neutral-500">
+                    Use your device&apos;s GPS
+                  </p>
+                </div>
+              </button>
+
+              {/* Option: Custom Address */}
+              <button
+                type="button"
+                onClick={() => handleAddressModeChange("custom")}
+                className={cn(
+                  "flex items-center gap-4 w-full p-4 rounded-xl border text-left transition-all",
+                  "focus-visible:outline-none focus-visible:shadow-focus",
+                  addressMode === "custom"
+                    ? "border-primary-500 bg-primary-50/50 shadow-sm"
+                    : "border-neutral-200 bg-white hover:border-primary-300 hover:bg-primary-50/20"
+                )}
+              >
+                <div className={cn(
+                  "flex items-center justify-center w-10 h-10 rounded-full",
+                  addressMode === "custom" ? "bg-primary-100 text-primary-600" : "bg-neutral-100 text-neutral-500"
+                )}>
+                  <Icon icon={Search} size="sm" />
+                </div>
+                <div>
+                  <p className={cn("text-body font-semibold", addressMode === "custom" ? "text-primary-900" : "text-neutral-900")}>
+                    Different Address
+                  </p>
+                  <p className="text-label text-neutral-500">
+                    Search for a new location
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-neutral-100">
+              {addressMode === "saved" ? (
+                !profile ? (
+                  <p className="text-body-sm text-neutral-500">Loading your saved address…</p>
+                ) : profile.placeId ? (
+                  <p className="text-body-sm text-neutral-900">{profile.formattedAddress}</p>
+                ) : (
+                  <p className="text-body-sm text-neutral-500">
+                    You don&apos;t have a saved address yet. Add one from your profile, or enter a different one below.
+                  </p>
+                )
+              ) : addressMode === "current" ? (
+                <div className="flex flex-col gap-3">
+                  {currentLocationError && <ErrorBanner>{currentLocationError}</ErrorBanner>}
+                  {!currentLocationPlace ? (
+                    <div className="flex flex-col items-start gap-2">
+                      <p className="text-body-sm text-neutral-500">We&apos;ll use your device&apos;s GPS to find your address.</p>
+                      {isLoadingCurrentLocation && (
+                        <p className="text-body-sm text-neutral-500">Detecting location…</p>
+                      )}
+                    </div>
                   ) : (
-                    <AddressAutocomplete
-                      label="Address"
-                      placeholder="Start typing your address…"
-                      value={customAddressQuery}
-                      onChange={handleCustomAddressQueryChange}
-                      suggestions={customAddressSuggestions}
-                      onSelectSuggestion={handleSelectCustomAddress}
-                      isLoading={isLoadingAddressSuggestions}
-                      error={addressSuggestionsError}
-                    />
+                    <div className="flex flex-col items-start gap-2">
+                      <p className="text-body-sm text-neutral-900">{currentLocationPlace.formattedAddress}</p>
+                    </div>
                   )}
                 </div>
-              </>
-            )}
+              ) : (
+                <AddressAutocomplete
+                  label="Address"
+                  placeholder="Start typing your address…"
+                  value={customAddressQuery}
+                  onChange={handleCustomAddressQueryChange}
+                  suggestions={customAddressSuggestions}
+                  onSelectSuggestion={handleSelectCustomAddress}
+                  isLoading={isLoadingAddressSuggestions}
+                  error={addressSuggestionsError}
+                />
+              )}
+            </div>
+            
+            <div className="mt-6 pt-6 border-t border-neutral-100 flex flex-col gap-4">
+              {preferredCollectorId ? (
+                <div className="p-4 bg-primary-50 rounded-xl border border-primary-100">
+                  <h3 className="font-semibold text-primary-900 mb-1">
+                    Requesting from {preferredCollectorName ?? "this collector"}
+                  </h3>
+                  <p className="text-body-sm text-primary-800 mb-4">
+                    Send it only to this collector, or open it up to every nearby verified collector.
+                  </p>
+                  <PillRadioGroup
+                    aria-label="Request scope"
+                    options={[
+                      { id: "exclusive", label: `Only ${preferredCollectorName ?? "this collector"}` },
+                      { id: "broadcast", label: "Broadcast to everyone" },
+                    ]}
+                    value={isExclusiveToPreferred ? "exclusive" : "broadcast"}
+                    onChange={(id) => setIsExclusiveToPreferred(id === "exclusive")}
+                  />
+                </div>
+              ) : (
+                resolvedLocation && localCollectors.length > 0 && (
+                  <div className="p-4 bg-primary-50 rounded-xl border border-primary-100">
+                    <h3 className="font-semibold text-primary-900 mb-2">Optional: Request a Specific Collector</h3>
+                    <p className="text-body-sm text-primary-800 mb-4">
+                      Choose a highly-rated collector near you to send this request directly to them.
+                    </p>
+                    <Select
+                      label="Preferred Collector"
+                      value={selectedCollectorId}
+                      onChange={(e) => setSelectedCollectorId(e.target.value)}
+                      options={[
+                        { value: "", label: "Broadcast to everyone (Default)" },
+                        ...localCollectors.map(col => ({
+                          value: col.id,
+                          label: `${col.fullName} - ⭐ ${col.averageRating ? col.averageRating.toFixed(1) : "New"}`
+                        }))
+                      ]}
+                    />
+                    {selectedCollectorId && (
+                      <label className="flex items-center gap-2 mt-4 text-body-sm text-neutral-800 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isExclusiveToPreferred}
+                          onChange={(e) => setIsExclusiveToPreferred(e.target.checked)}
+                          className="rounded text-primary-600 focus:ring-primary-500 w-4 h-4"
+                        />
+                        Send this request ONLY to the selected collector.
+                      </label>
+                    )}
+                  </div>
+                )
+              )}
+            </div>
 
             {validationMessage && <ErrorBanner className="mt-4">{validationMessage}</ErrorBanner>}
           </Card>
 
-          <div className="mt-6 flex items-center justify-between">
-            <Button variant="secondary" onClick={handleBack} disabled={step === 0}>
-              Back
-            </Button>
-            {!isLastStep ? (
-              <Button onClick={handleNext}>Next</Button>
-            ) : (
-              <p className="text-body-sm text-neutral-500">Review your request, then post it from the summary.</p>
-            )}
-          </div>
-        </div>
-
-        <SummaryPanel
-          title="Request summary"
-          footer={
+          <SummaryPanel
+            title="Request summary"
+            className="p-6 md:p-8 bg-white rounded-2xl shadow-sm border border-neutral-100 transition-all"
+            footer={
             <div className="flex flex-col gap-3">
               {submitError && <ErrorBanner>{submitError}</ErrorBanner>}
-              <Button fullWidth disabled={!canSubmit} onClick={() => void handleSubmitPickupRequest()}>
+              <Button fullWidth disabled={!canSubmit} onClick={() => void handleSubmitPickupRequest()} className="rounded-full h-12 shadow-md hover:shadow-lg transition-all text-body font-bold">
                 {isSubmitting ? "Posting request…" : "Post pickup request"}
               </Button>
             </div>
           }
         >
           <div>
-            <p className="text-body-sm text-neutral-500">Categories & quantities</p>
+            <p className="text-body-sm text-neutral-500">Categories & estimated weight</p>
             <div className="mt-2 flex flex-col gap-2">
               {categories.length > 0 ? (
-                categories.map((category) => {
-                  const categoryLoadSize = quantities[category];
-                  return (
-                    <CategoryQuantityRow
-                      key={category}
-                      category={category}
-                      quantityLabel={
-                        categoryLoadSize
-                          ? `${LOAD_SIZE_LABELS[categoryLoadSize]} (${formatKgRange(categoryLoadSize)})`
-                          : null
-                      }
-                    />
-                  );
-                })
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    {categories.map((category) => (
+                      <span key={category} className="px-3 py-1 bg-neutral-100 rounded-full text-body-sm font-medium text-neutral-700">
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                  {estimatedTotalWeight !== "" && (
+                    <p className="text-body-sm font-semibold text-neutral-900 mt-2">
+                      Total Weight: {estimatedTotalWeight} kg
+                    </p>
+                  )}
+                </div>
               ) : (
                 <span className="text-body-sm text-neutral-500">Not selected yet</span>
               )}
@@ -510,10 +723,11 @@ export function NewPickupRequestView() {
           </div>
           <SummaryRow
             label="Window"
-            value={date && selectedWindow ? formatWindowSummary(date, selectedWindow) : "Not selected yet"}
+            value={date ? formatWindowSummary(date) : "Not selected yet"}
           />
           <SummaryRow label="Address" value={resolvedAddressLabel ?? "Not selected yet"} />
         </SummaryPanel>
+      </div>
       </div>
     </PageContainer>
   );

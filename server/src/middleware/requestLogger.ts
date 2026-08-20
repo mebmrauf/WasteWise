@@ -10,13 +10,23 @@ export const requestLogger = pinoHttp({
     res.setHeader("x-request-id", id);
     return id;
   },
+  autoLogging: {
+    ignore: (req) => req.url === "/health" || req.url === "/favicon.ico" || req.url === "/",
+  },
   customLogLevel: (_req, res, err) => {
     if (err || res.statusCode >= 500) return "error";
     if (res.statusCode >= 400) return "warn";
     return "info";
   },
-  redact: {
-    paths: ["req.headers.cookie", "req.headers.authorization", 'res.headers["set-cookie"]'],
-    censor: "[REDACTED]",
+  serializers: {
+    req: (req) => ({
+      id: req.id,
+      method: req.method,
+      url: req.url,
+      remoteAddress: req.remoteAddress,
+    }),
+    res: (res) => ({
+      statusCode: res.statusCode,
+    }),
   },
 });

@@ -53,14 +53,19 @@ export function WasteCategorySelector({
             aria-pressed={isSelected}
             onClick={() => toggle(category.value)}
             className={cn(
-              "flex flex-col items-start gap-2 rounded-lg border p-4 text-left transition-colors",
+              "flex flex-col items-start gap-3 rounded-2xl border-2 p-5 text-left transition-all duration-200 hover:scale-[1.03]",
               "focus-visible:outline-none focus-visible:shadow-focus",
               isSelected
-                ? "border-primary-500 bg-primary-50"
-                : "border-neutral-200 bg-neutral-0 hover:border-neutral-300"
+                ? "border-primary-500 bg-primary-50/80 shadow-md"
+                : "border-transparent bg-white shadow-sm hover:border-primary-200 hover:shadow-md"
             )}
           >
-            <Icon icon={category.icon} size="lg" className={isSelected ? "text-primary-700" : "text-neutral-700"} />
+            <div className={cn(
+              "inline-flex h-12 w-12 items-center justify-center rounded-xl transition-colors",
+              isSelected ? "bg-primary-600 text-white" : "bg-neutral-100 text-neutral-600 group-hover:bg-primary-100 group-hover:text-primary-600"
+            )}>
+              <Icon icon={category.icon} size="lg" />
+            </div>
             <span className="flex flex-col gap-1">
               <span className={cn("text-h4", isSelected ? "text-primary-700" : "text-neutral-900")}>
                 {category.label}

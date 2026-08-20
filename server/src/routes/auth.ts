@@ -1,14 +1,16 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomInt } from "node:crypto";
 import { Router } from "express";
 import { Prisma, type User } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { hashPassword, verifyPassword } from "../lib/passwords";
+import { sha256Hex } from "../lib/hash";
 import {
   issueTokenPair,
   rotateRefreshToken,
   revokeRefreshToken,
   RefreshTokenError,
 } from "../lib/authTokens";
+import { calculateMembershipLevel, getMembershipBadge } from "../lib/rewards";
 import {
   setAuthCookies,
   clearAuthCookies,
@@ -22,7 +24,14 @@ import { sendData, sendError } from "../lib/apiResponse";
 import { authRateLimiter, secureCookieOptions } from "../middleware/security";
 import { env } from "../lib/env";
 import { logger } from "../lib/logger";
-import { registerSchema, loginSchema } from "./auth.schemas";
+import {
+  registerSchema,
+  loginSchema,
+  verifyEmailSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from "./auth.schemas";
+import { sendEmail, buildVerificationCodeEmail, buildPasswordResetCodeEmail } from "../lib/mailer";
 import {
   buildGoogleAuthorizationUrl,
   exchangeGoogleCode,
@@ -46,6 +55,10 @@ function loginErrorRedirect(reason: string): string {
 }
 
 function toPublicUser(user: User) {
+  const lifetimePoints = Math.max(user.totalGreenPoints ?? 0, user.greenPointsBalance ?? 0);
+  const computedMembershipLevel = calculateMembershipLevel(lifetimePoints, user.accountType);
+  const computedMembershipBadge = getMembershipBadge(computedMembershipLevel);
+
   return {
     id: user.id,
     email: user.email,
@@ -54,8 +67,38 @@ function toPublicUser(user: User) {
     role: user.role,
     accountType: user.accountType,
     isEmailVerified: user.isEmailVerified,
+    hasPassword: Boolean(user.passwordHash),
+    avatarUrl: user.avatarUrl,
+    membershipLevel: computedMembershipLevel,
+    membershipBadge: computedMembershipBadge,
+    totalGreenPoints: user.totalGreenPoints,
+    giftClaimed: user.giftClaimed,
+    selectedGift: user.selectedGift,
+    nextGiftEligibleDate: user.nextGiftEligibleDate,
+    discountCouponClaimed: user.discountCouponClaimed,
+    nextDiscountEligibleDate: user.nextDiscountEligibleDate,
     createdAt: user.createdAt,
   };
+}
+
+const EMAIL_VERIFICATION_CODE_TTL_MS = 30 * 60 * 1000;
+
+async function issueEmailVerificationCode(userId: string, email: string, fullName: string): Promise<void> {
+  const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
+  await prisma.emailVerificationCode.create({
+    data: {
+      userId,
+      code: sha256Hex(code),
+      expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_CODE_TTL_MS),
+    },
+  });
+
+  try {
+    const { subject, html, text } = buildVerificationCodeEmail(fullName, code);
+    await sendEmail({ to: email, subject, html, text });
+  } catch (err) {
+    logger.error({ err, userId }, "Failed to send email verification code");
+  }
 }
 
 authRouter.post(
@@ -67,14 +110,56 @@ authRouter.post(
       sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    const { email, phone, password, fullName, role, accountType } = parsed.data;
+    const { email, phone, password, fullName, role, accountType, referralCode } = parsed.data;
 
     const passwordHash = await hashPassword(password);
+
+    let referredById: string | undefined = undefined;
+    if (referralCode) {
+      const referrer = await prisma.user.findUnique({
+        where: { referralCode },
+      });
+      if (!referrer) {
+        sendError(res, 400, "INVALID_REFERRAL_CODE", "The referral code is invalid.");
+        return;
+      }
+      referredById = referrer.id;
+    }
 
     let user: User;
     try {
       user = await prisma.user.create({
-        data: { email, phone, passwordHash, fullName, role, accountType },
+        data: { 
+          email, 
+          phone, 
+          passwordHash, 
+          fullName, 
+          role, 
+          accountType,
+          referredById,
+          collectorProfile: role === "COLLECTOR" ? {
+            create: {
+              vehicleType: "BICYCLE_VAN",
+              vehicleNumber: "",
+              licenseNumber: "",
+              serviceArea: "",
+              verificationStatus: "PENDING",
+            }
+          } : undefined,
+          recyclingCompanyProfile: role === "RECYCLING_COMPANY" ? {
+            create: {
+              companyName: fullName,
+              district: "Dhaka",
+              verificationStatus: "PENDING",
+            }
+          } : undefined,
+          businessProfile: role === "USER" && accountType === "BUSINESS" ? {
+            create: {
+              businessName: fullName,
+              verificationStatus: "PENDING",
+            }
+          } : undefined
+        },
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -89,9 +174,90 @@ authRouter.post(
       throw err;
     }
 
+    if (user.email) {
+      await issueEmailVerificationCode(user.id, user.email, user.fullName);
+    }
+
     const tokens = await issueTokenPair(user);
     setAuthCookies(res, tokens);
     sendData(res, 201, { user: toPublicUser(user) });
+  }),
+);
+
+authRouter.post(
+  "/verify-email",
+  requireAuth,
+  authRateLimiter,
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const dbUser = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!dbUser) {
+      sendError(res, 401, "UNAUTHENTICATED", "Sign in to continue.");
+      return;
+    }
+    if (dbUser.isEmailVerified) {
+      sendData(res, 200, { user: toPublicUser(dbUser) });
+      return;
+    }
+
+    const parsed = verifyEmailSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
+      return;
+    }
+
+    const matchingCode = await prisma.emailVerificationCode.findFirst({
+      where: {
+        userId: dbUser.id,
+        code: sha256Hex(parsed.data.code),
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!matchingCode) {
+      sendError(res, 400, "INVALID_CODE", "That code is invalid or has expired.");
+      return;
+    }
+
+    const [, updatedUser] = await prisma.$transaction([
+      prisma.emailVerificationCode.update({
+        where: { id: matchingCode.id },
+        data: { consumedAt: new Date() },
+      }),
+      prisma.user.update({
+        where: { id: dbUser.id },
+        data: { isEmailVerified: true, emailVerificationReminderSentAt: null },
+      }),
+    ]);
+
+    sendData(res, 200, { user: toPublicUser(updatedUser) });
+  }),
+);
+
+authRouter.post(
+  "/resend-verification-email",
+  requireAuth,
+  authRateLimiter,
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const dbUser = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!dbUser) {
+      sendError(res, 401, "UNAUTHENTICATED", "Sign in to continue.");
+      return;
+    }
+    if (dbUser.isEmailVerified) {
+      sendError(res, 400, "ALREADY_VERIFIED", "Your email is already verified.");
+      return;
+    }
+    if (!dbUser.email) {
+      sendError(res, 400, "NO_EMAIL", "There is no email address on this account.");
+      return;
+    }
+
+    await issueEmailVerificationCode(dbUser.id, dbUser.email, dbUser.fullName);
+    sendData(res, 200, { success: true });
   }),
 );
 
@@ -134,6 +300,94 @@ authRouter.post(
     const tokens = await issueTokenPair(user);
     setAuthCookies(res, tokens);
     sendData(res, 200, { user: toPublicUser(user) });
+  }),
+);
+
+const PASSWORD_RESET_CODE_TTL_MS = 15 * 60 * 1000;
+
+authRouter.post(
+  "/forgot-password",
+  authRateLimiter,
+  asyncHandler(async (req, res) => {
+    const parsed = forgotPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
+      return;
+    }
+
+    const dbUser = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+    if (dbUser) {
+      const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
+      await prisma.passwordResetCode.create({
+        data: {
+          userId: dbUser.id,
+          code: sha256Hex(code),
+          expiresAt: new Date(Date.now() + PASSWORD_RESET_CODE_TTL_MS),
+        },
+      });
+
+      const { subject, html, text } = buildPasswordResetCodeEmail(dbUser.fullName, code);
+      void sendEmail({ to: dbUser.email, subject, html, text }).catch((err) => {
+        logger.error({ err, userId: dbUser.id }, "Failed to send password reset code");
+      });
+    }
+
+    // Always respond the same way whether or not the email matched an
+    // account — otherwise this endpoint becomes an email-enumeration oracle.
+    sendData(res, 200, { success: true });
+  }),
+);
+
+authRouter.post(
+  "/reset-password",
+  authRateLimiter,
+  asyncHandler(async (req, res) => {
+    const parsed = resetPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
+      return;
+    }
+    const { email, code, newPassword } = parsed.data;
+
+    const dbUser = await prisma.user.findUnique({ where: { email } });
+    const matchingCode = dbUser
+      ? await prisma.passwordResetCode.findFirst({
+          where: {
+            userId: dbUser.id,
+            code: sha256Hex(code),
+            consumedAt: null,
+            expiresAt: { gt: new Date() },
+          },
+          orderBy: { createdAt: "desc" },
+        })
+      : null;
+
+    if (!dbUser || !matchingCode) {
+      sendError(res, 400, "INVALID_CODE", "That code is invalid or has expired.");
+      return;
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+
+    await prisma.$transaction([
+      prisma.passwordResetCode.update({
+        where: { id: matchingCode.id },
+        data: { consumedAt: new Date() },
+      }),
+      // Resetting a password is a "this account may have been at risk"
+      // signal — sign every other session out rather than leaving old
+      // refresh tokens usable.
+      prisma.refreshToken.updateMany({
+        where: { userId: dbUser.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+      prisma.user.update({
+        where: { id: dbUser.id },
+        data: { passwordHash },
+      }),
+    ]);
+
+    sendData(res, 200, { success: true });
   }),
 );
 
@@ -191,6 +445,7 @@ authRouter.get(
 async function findOrCreateOAuthUser(
   provider: "GOOGLE" | "FACEBOOK",
   profile: OAuthProfile,
+  roleChoice?: string
 ): Promise<{ user: User } | { error: string }> {
   const existingAccount = await prisma.oAuthAccount.findUnique({
     where: {
@@ -199,6 +454,13 @@ async function findOrCreateOAuthUser(
     include: { user: true },
   });
   if (existingAccount) {
+    if (!existingAccount.user.avatarUrl && profile.avatarUrl) {
+      const updatedUser = await prisma.user.update({
+        where: { id: existingAccount.userId },
+        data: { avatarUrl: profile.avatarUrl },
+      });
+      return { user: updatedUser };
+    }
     return { user: existingAccount.user };
   }
 
@@ -215,7 +477,33 @@ async function findOrCreateOAuthUser(
         userId: existingUserByEmail.id,
       },
     });
+
+    if (!existingUserByEmail.avatarUrl && profile.avatarUrl) {
+      const updatedUser = await prisma.user.update({
+        where: { id: existingUserByEmail.id },
+        data: { avatarUrl: profile.avatarUrl },
+      });
+      return { user: updatedUser };
+    }
+
     return { user: existingUserByEmail };
+  }
+
+  if (!roleChoice) {
+    return { error: "oauth_account_not_found" };
+  }
+
+  let role: "USER" | "COLLECTOR" | "RECYCLING_COMPANY" = "USER";
+  let accountType: "HOUSEHOLD" | "BUSINESS" | null = "HOUSEHOLD";
+
+  if (roleChoice === "BUSINESS") {
+    accountType = "BUSINESS";
+  } else if (roleChoice === "COLLECTOR") {
+    role = "COLLECTOR";
+    accountType = null;
+  } else if (roleChoice === "RECYCLING_COMPANY") {
+    role = "RECYCLING_COMPANY";
+    accountType = null;
   }
 
   const user = await prisma.user.create({
@@ -223,12 +511,33 @@ async function findOrCreateOAuthUser(
       email: profile.email,
       fullName: profile.fullName,
       passwordHash: null,
-      role: "USER",
-      accountType: "HOUSEHOLD",
+      role,
+      accountType,
+      avatarUrl: profile.avatarUrl,
       isEmailVerified: true, // provider already verified this email address
       oauthAccounts: {
         create: { provider, providerAccountId: profile.providerAccountId },
       },
+      collectorProfile: role === "COLLECTOR" ? {
+        create: {
+          vehicleType: "HANDCART",
+          serviceArea: "Dhaka",
+          verificationStatus: "PENDING",
+        }
+      } : undefined,
+      recyclingCompanyProfile: role === "RECYCLING_COMPANY" ? {
+        create: {
+          companyName: profile.fullName,
+          district: "Dhaka",
+          verificationStatus: "PENDING",
+        }
+      } : undefined,
+      businessProfile: role === "USER" && accountType === "BUSINESS" ? {
+        create: {
+          businessName: profile.fullName,
+          verificationStatus: "PENDING",
+        }
+      } : undefined
     },
   });
   return { user };
@@ -237,9 +546,10 @@ async function findOrCreateOAuthUser(
 async function completeOAuthLogin(
   provider: "GOOGLE" | "FACEBOOK",
   profile: OAuthProfile,
+  roleChoice?: string
 ): Promise<{ redirectUrl: string; tokens?: Awaited<ReturnType<typeof issueTokenPair>> }> {
   try {
-    const result = await findOrCreateOAuthUser(provider, profile);
+    const result = await findOrCreateOAuthUser(provider, profile, roleChoice);
     if ("error" in result) {
       return { redirectUrl: loginErrorRedirect(result.error) };
     }
@@ -252,6 +562,7 @@ async function completeOAuthLogin(
 }
 
 authRouter.get("/google", authRateLimiter, (req, res) => {
+  const { roleChoice } = req.query;
   if (!isGoogleOAuthConfigured()) {
     sendError(res, 503, "OAUTH_NOT_CONFIGURED", "Google sign-in is not available right now.");
     return;
@@ -261,6 +572,12 @@ authRouter.get("/google", authRateLimiter, (req, res) => {
     ...secureCookieOptions,
     maxAge: OAUTH_STATE_COOKIE_MAX_AGE_MS,
   });
+  if (roleChoice && typeof roleChoice === "string") {
+    res.cookie("oauth_role_choice", roleChoice, {
+      ...secureCookieOptions,
+      maxAge: 10 * 60 * 1000,
+    });
+  }
   res.redirect(buildGoogleAuthorizationUrl(state));
 });
 
@@ -281,6 +598,9 @@ authRouter.get(
       return;
     }
 
+    const roleChoice = req.cookies?.["oauth_role_choice"];
+    res.clearCookie("oauth_role_choice", secureCookieOptions);
+
     let profile: OAuthProfile;
     try {
       profile = await exchangeGoogleCode(code);
@@ -289,13 +609,14 @@ authRouter.get(
       return;
     }
 
-    const { redirectUrl, tokens } = await completeOAuthLogin("GOOGLE", profile);
+    const { redirectUrl, tokens } = await completeOAuthLogin("GOOGLE", profile, roleChoice);
     if (tokens) setAuthCookies(res, tokens);
     res.redirect(redirectUrl);
   }),
 );
 
 authRouter.get("/facebook", authRateLimiter, (req, res) => {
+  const { roleChoice } = req.query;
   if (!isFacebookOAuthConfigured()) {
     sendError(res, 503, "OAUTH_NOT_CONFIGURED", "Facebook sign-in is not available right now.");
     return;
@@ -305,6 +626,12 @@ authRouter.get("/facebook", authRateLimiter, (req, res) => {
     ...secureCookieOptions,
     maxAge: OAUTH_STATE_COOKIE_MAX_AGE_MS,
   });
+  if (roleChoice && typeof roleChoice === "string") {
+    res.cookie("oauth_role_choice", roleChoice, {
+      ...secureCookieOptions,
+      maxAge: 10 * 60 * 1000,
+    });
+  }
   res.redirect(buildFacebookAuthorizationUrl(state));
 });
 
@@ -325,6 +652,9 @@ authRouter.get(
       return;
     }
 
+    const roleChoice = req.cookies?.["oauth_role_choice"];
+    res.clearCookie("oauth_role_choice", secureCookieOptions);
+
     let profile: OAuthProfile;
     try {
       profile = await exchangeFacebookCode(code);
@@ -333,7 +663,7 @@ authRouter.get(
       return;
     }
 
-    const { redirectUrl, tokens } = await completeOAuthLogin("FACEBOOK", profile);
+    const { redirectUrl, tokens } = await completeOAuthLogin("FACEBOOK", profile, roleChoice);
     if (tokens) setAuthCookies(res, tokens);
     res.redirect(redirectUrl);
   }),

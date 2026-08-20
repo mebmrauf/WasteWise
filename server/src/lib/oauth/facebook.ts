@@ -29,6 +29,12 @@ interface FacebookProfileResponse {
   id: string;
   name?: string;
   email?: string;
+  picture?: {
+    data?: {
+      url?: string;
+      is_silhouette?: boolean;
+    };
+  };
 }
 
 export async function exchangeFacebookCode(code: string): Promise<OAuthProfile> {
@@ -48,7 +54,7 @@ export async function exchangeFacebookCode(code: string): Promise<OAuthProfile> 
 
   const profileUrl = new URL(PROFILE_ENDPOINT);
   profileUrl.search = new URLSearchParams({
-    fields: "id,name,email",
+    fields: "id,name,email,picture.type(large)",
     access_token: tokenBody.access_token,
   }).toString();
 
@@ -58,9 +64,13 @@ export async function exchangeFacebookCode(code: string): Promise<OAuthProfile> 
   }
   const profile = (await profileRes.json()) as FacebookProfileResponse;
 
+  const avatarUrl =
+    profile.picture?.data?.is_silhouette === false ? profile.picture.data.url : undefined;
+
   return {
     providerAccountId: profile.id,
     email: profile.email ?? null,
     fullName: profile.name ?? "Facebook User",
+    avatarUrl,
   };
 }

@@ -38,3 +38,8 @@ playwright-report/
 test-results/
 /blob-report/
 .vitest-cache/
+package-lock.json
+package-lock.json
+remember.txt
+web/AGENTS.md
+CLAUDE.md

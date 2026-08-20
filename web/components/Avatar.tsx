@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import type { RoleAccent } from "@/components/NavBar";
 
-export type AvatarSize = "sm" | "md" | "lg";
+export type AvatarSize = "sm" | "md" | "lg" | "xl" | "2xl";
 
 export interface AvatarProps {
   src?: string | null;
@@ -15,13 +15,16 @@ export interface AvatarProps {
 }
 
 const sizeClasses: Record<AvatarSize, string> = {
-  sm: "h-8 w-8",
-  md: "h-10 w-10",
-  lg: "h-20 w-20",
+  sm: "h-8 w-8 text-caption",
+  md: "h-10 w-10 text-body-sm",
+  lg: "h-20 w-20 text-h4",
+  xl: "h-[150px] w-[150px] text-h3",
+  "2xl": "h-40 w-40 text-display",
 };
 
 const accentFillClasses: Record<RoleAccent, string> = {
   user: "bg-role-user-500",
+  business: "bg-role-business-500",
   collector: "bg-role-collector-500",
   recyclingCompany: "bg-role-recycler-500",
   admin: "bg-role-admin-500",
@@ -53,6 +56,7 @@ export function Avatar({ src, name, size = "md", accent = "user", className }: A
         src={src as string}
         alt={name}
         onError={() => setImageFailed(true)}
+        referrerPolicy="no-referrer"
         className={cn("rounded-full object-cover", sizeClasses[size], className)}
       />
     );

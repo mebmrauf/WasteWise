@@ -33,6 +33,7 @@ interface GoogleUserInfoResponse {
   email_verified?: boolean;
   name?: string;
   given_name?: string;
+  picture?: string;
 }
 
 export async function exchangeGoogleCode(code: string): Promise<OAuthProfile> {
@@ -65,5 +66,6 @@ export async function exchangeGoogleCode(code: string): Promise<OAuthProfile> {
     providerAccountId: profile.sub,
     email: profile.email ?? null,
     fullName: profile.name ?? profile.given_name ?? "Google User",
+    avatarUrl: profile.picture,
   };
 }

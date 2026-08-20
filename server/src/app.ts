@@ -9,17 +9,29 @@ import { logger } from "./lib/logger";
 import { sendError } from "./lib/apiResponse";
 import { authRouter } from "./routes/auth";
 import { usersRouter } from "./routes/users";
-import { wasteRecognitionRouter, WASTE_PHOTO_UPLOAD_DIR } from "./routes/wasteRecognition";
+import { wasteRecognitionRouter } from "./routes/wasteRecognition";
+import { wastePhotosRouter } from "./routes/wastePhotos";
 import { pickupsRouter } from "./routes/pickups";
 import { offersRouter } from "./routes/offers";
+import { routesRouter } from "./routes/routes";
 import { rewardsRouter } from "./routes/rewards";
 import { sustainabilityRouter } from "./routes/sustainability";
+import { referralsRouter } from "./routes/referrals";
+import { notificationsRouter } from "./routes/notifications";
+import { adminRouter } from "./routes/admin";
+import { collectorsRouter } from "./routes/collectors";
+import { marketplaceRouter } from "./routes/marketplace";
+import { complaintsRouter } from "./routes/complaints";
+import { csrRouter } from "./routes/csr";
+import { messagesRouter } from "./routes/messages";
+import paymentsRouter from "./routes/payments";
+import { landingRouter } from "./routes/landing";
 
 export function createApp() {
   const app = express();
 
   if (env.NODE_ENV === "production") {
-    app.set("trust proxy", 1);
+    app.set("trust proxy", true);
   }
 
   app.set("etag", false);
@@ -30,10 +42,12 @@ export function createApp() {
     cors({
       origin: env.CLIENT_ORIGIN,
       credentials: true,
+      maxAge: 86400, // cache preflight OPTIONS requests for 24 hours
     }),
   );
   app.use(generalRateLimiter);
   app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
 
   app.get("/health", (_req, res) => {
@@ -44,20 +58,23 @@ export function createApp() {
 
   app.use("/api/v1/auth", authRouter);
   app.use("/api/v1/users", usersRouter);
-app.use("/api/v1/waste-recognition", wasteRecognitionRouter);
+  app.use("/api/v1/waste-recognition", wasteRecognitionRouter);
+  app.use("/api/v1/waste-photos", wastePhotosRouter);
   app.use("/api/v1/pickups", pickupsRouter);
   app.use("/api/v1/offers", offersRouter);
+  app.use("/api/v1/routes", routesRouter);
   app.use("/api/v1/rewards", rewardsRouter);
   app.use("/api/v1/sustainability", sustainabilityRouter);
-
-  // Serves uploaded waste-recognition photos back out. Deliberately
-  // root-relative (not under /api/v1) since it's static file serving, not a
-  // JSON API route.
-  app.use(
-    "/uploads/waste-recognition",
-    helmet.crossOriginResourcePolicy({ policy: "cross-origin" }),
-    express.static(WASTE_PHOTO_UPLOAD_DIR),
-  );
+  app.use("/api/v1/referrals", referralsRouter);
+  app.use("/api/v1/notifications", notificationsRouter);
+  app.use("/api/v1/admin", adminRouter);
+  app.use("/api/v1/collectors", collectorsRouter);
+  app.use("/api/v1/marketplace", marketplaceRouter);
+  app.use("/api/v1/complaints", complaintsRouter);
+  app.use("/api/v1/csr", csrRouter);
+  app.use("/api/v1/messages", messagesRouter);
+  app.use("/api/v1/payments", paymentsRouter);
+  app.use("/api/v1/landing", landingRouter);
 
   // 404 fallback — kept last so it never shadows a real route.
   app.use((_req, res) => {
@@ -65,10 +82,10 @@ app.use("/api/v1/waste-recognition", wasteRecognitionRouter);
   });
 
   app.use(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     (err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
       logger.error({ err, path: req.path }, "Unhandled error");
-      sendError(res, 500, "INTERNAL_ERROR", "Something went wrong. Please try again.");
+      const message = err instanceof Error ? err.message : `Something went wrong on backend path ${req.path}. Please try again.`;
+      sendError(res, 500, "INTERNAL_ERROR", message);
     },
   );
 

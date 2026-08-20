@@ -4,7 +4,11 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { useAuth } from "@/lib/auth/AuthContext";
 import { Icon } from "@/components/Icon";
+import { Avatar } from "@/components/Avatar";
+import { resolveAvatarUrl } from "@/lib/api/users";
 import type { RoleAccent } from "@/components/NavBar";
 import { cn } from "@/lib/utils";
 
@@ -24,14 +28,16 @@ export interface DashboardNavProps {
 }
 
 const sidebarFillClasses: Record<RoleAccent, string> = {
-  user: "bg-role-user-900",
-  collector: "bg-role-collector-900",
-  recyclingCompany: "bg-role-recycler-900",
-  admin: "bg-role-admin-900",
+  user: "bg-role-user-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
+  business: "bg-role-business-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
+  collector: "bg-role-collector-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
+  recyclingCompany: "bg-role-recycler-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
+  admin: "bg-role-admin-900/90 backdrop-blur-md border-r border-white/10 shadow-xl",
 };
 
 const activePillFillClasses: Record<RoleAccent, string> = {
   user: "bg-role-user-500",
+  business: "bg-role-business-500",
   collector: "bg-role-collector-500",
   recyclingCompany: "bg-role-recycler-500",
   admin: "bg-role-admin-500",
@@ -39,6 +45,7 @@ const activePillFillClasses: Record<RoleAccent, string> = {
 
 const ringOffsetClasses: Record<RoleAccent, string> = {
   user: "focus-visible:ring-offset-role-user-900",
+  business: "focus-visible:ring-offset-role-business-900",
   collector: "focus-visible:ring-offset-role-collector-900",
   recyclingCompany: "focus-visible:ring-offset-role-recycler-900",
   admin: "focus-visible:ring-offset-role-admin-900",
@@ -46,6 +53,7 @@ const ringOffsetClasses: Record<RoleAccent, string> = {
 
 const mobileActiveTextClasses: Record<RoleAccent, string> = {
   user: "text-role-user-500",
+  business: "text-role-business-500",
   collector: "text-role-collector-500",
   recyclingCompany: "text-role-recycler-500",
   admin: "text-role-admin-500",
@@ -82,8 +90,16 @@ function resolveActiveStates(items: DashboardNavItem[], pathname: string | null)
   return result.map((value) => value ?? false);
 }
 
-export function DashboardNav({ items, accent, roleLabel, brand, className }: DashboardNavProps) {
+export function DashboardNav({
+  items,
+  accent,
+  roleLabel,
+  brand,
+  className,
+}: DashboardNavProps) {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
+  const shortName = user?.fullName.trim().split(/\s+/)[0] ?? user?.fullName;
   const activeStates = React.useMemo(() => resolveActiveStates(items, pathname), [items, pathname]);
   const mobileScrollable = items.length > 5;
   const mobileItems = mobileScrollable ? items : items.slice(0, 5);
@@ -94,11 +110,21 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
       <nav
         aria-label="Primary"
         className={cn(
-          "fixed top-16 bottom-0 left-0 hidden w-sidebar shrink-0 flex-col lg:flex",
+          "fixed top-0 bottom-0 left-0 z-50 hidden w-sidebar shrink-0 flex-col overflow-y-auto overflow-x-hidden overscroll-contain lg:flex",
           sidebarFillClasses[accent],
           className
         )}
       >
+        <div className="flex shrink-0 items-start justify-between px-6 py-4 border-b border-white/10">
+          <div className="flex flex-col justify-center">
+            <Link href="/" className="font-brand text-3xl font-bold tracking-wide text-white drop-shadow-md leading-none">
+              WasteWise
+            </Link>
+            <span className="text-[10px] uppercase tracking-wider text-white/60 mt-1 font-medium">
+              Formalizing Waste Management
+            </span>
+          </div>
+        </div>
         <div className="flex flex-col gap-1 px-4 pb-4 pt-6">
           <span className="text-overline text-neutral-0/70">{roleLabel}</span>
         </div>
@@ -109,9 +135,15 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  onClick={(e) => {
+                    if (isActive && pathname === item.href) {
+                      e.preventDefault();
+                      window.location.reload();
+                    }
+                  }}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-4 rounded-md px-4 py-3 text-body-sm font-medium transition-colors",
+                    "group flex items-center gap-4 rounded-md px-4 py-3 text-body-sm font-medium transition-colors",
                     darkSurfaceFocusRing,
                     ringOffsetClasses[accent],
                     isActive
@@ -119,23 +151,58 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
                       : "text-neutral-0/80 hover:text-neutral-0"
                   )}
                 >
-                  <Icon icon={item.icon} size="md" />
+                  <div className={cn("flex items-center justify-center h-8 w-8 rounded-full shrink-0 transition-colors", isActive ? "bg-white/20" : "bg-white/5 group-hover:bg-white/10")}>
+                    <Icon icon={item.icon} size="sm" />
+                  </div>
                   <span>{item.label}</span>
                 </Link>
               </li>
             );
           })}
         </ul>
+        <div className="mt-auto px-4 pb-4">
+          <div className="flex items-center justify-between pt-4 border-t border-white/10">
+            <div className="flex items-center gap-3 overflow-hidden">
+              <Avatar
+                name={user?.fullName || "User"}
+                src={resolveAvatarUrl(user?.avatarUrl ?? null)}
+                size="sm"
+                accent={accent}
+                className="shrink-0 ring-1 ring-white/20"
+              />
+              <span className="truncate text-body-sm font-medium text-white">
+                {user?.fullName || "User"}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                void logout().catch(() => undefined).finally(() => {
+                  window.location.href = "/";
+                });
+              }}
+              className="ml-2 shrink-0 text-neutral-400 transition-colors hover:text-white"
+              title="Log out"
+            >
+              <Icon icon={LogOut} size="sm" />
+            </button>
+          </div>
+        </div>
       </nav>
 
-      {/* Tablet — icon-only collapsed rail (md to just under lg, §6.4) */}
+      {/* Tablet — icon-only collapsed rail (md to just under lg, §6.4). Also
+          used at lg+ when the desktop sidebar is manually collapsed. */}
       <nav
         aria-label="Primary (compact)"
         className={cn(
-          "fixed top-16 bottom-0 left-0 hidden w-rail shrink-0 flex-col items-center lg:hidden md:flex",
+          "fixed top-0 bottom-0 left-0 z-50 hidden w-rail shrink-0 flex-col items-center overflow-y-auto overflow-x-hidden overscroll-contain lg:hidden md:flex",
           sidebarFillClasses[accent]
         )}
       >
+        <div className="flex h-16 w-full shrink-0 items-center justify-center border-b border-white/10">
+          <Link href="/" className="font-brand text-3xl font-bold text-white drop-shadow-md" aria-label="WasteWise Home">
+            W
+          </Link>
+        </div>
         <ul className="flex flex-col items-center gap-1 pt-6">
           {items.map((item, index) => {
             const isActive = activeStates[index];
@@ -145,9 +212,15 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
                   href={item.href}
                   title={item.label}
                   aria-label={item.label}
+                  onClick={(e) => {
+                    if (isActive && pathname === item.href) {
+                      e.preventDefault();
+                      window.location.reload();
+                    }
+                  }}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex h-12 w-12 items-center justify-center rounded-md transition-colors",
+                    "flex h-12 w-12 items-center justify-center rounded-full transition-colors",
                     darkSurfaceFocusRing,
                     ringOffsetClasses[accent],
                     isActive
@@ -170,38 +243,68 @@ export function DashboardNav({ items, accent, roleLabel, brand, className }: Das
             );
           })}
         </ul>
+        <div className="mt-auto pb-4">
+          <button
+            onClick={() => {
+              void logout().catch(() => undefined).finally(() => {
+                window.location.href = "/";
+              });
+            }}
+            className="group relative flex h-12 w-12 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white border border-transparent hover:border-white/5"
+            title="Log out"
+          >
+            <Icon icon={LogOut} size="md" />
+            <span
+              role="tooltip"
+              aria-hidden="true"
+              className="pointer-events-none absolute left-full top-1/2 z-10 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-neutral-800 px-3 py-1 text-caption text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+            >
+              Log out
+            </span>
+          </button>
+        </div>
       </nav>
 
       {/* Mobile — bottom tab bar (below md, §6.4) */}
-      <nav
-        aria-label="Primary (mobile)"
-        className={cn(
-          "fixed inset-x-0 bottom-0 z-10 flex h-16 items-stretch border-t border-neutral-200 bg-neutral-0 md:hidden",
-          mobileScrollable && "overflow-x-auto"
-        )}
-      >
-        <ul className="flex w-full items-stretch">
-          {mobileItems.map((item, index) => {
-            const isActive = activeStates[index];
+      <div className="fixed inset-x-4 bottom-4 z-50 md:hidden">
+        <nav
+          aria-label="Primary (mobile)"
+          className={cn(
+            "flex h-16 items-stretch rounded-2xl glass-panel-dark shadow-lg border border-white/10 overflow-hidden",
+            mobileScrollable && "overflow-x-auto"
+          )}
+        >
+          <ul className="flex w-full items-stretch">
+            {mobileItems.map((item, index) => {
+              const isActive = activeStates[index];
             return (
-              <li key={item.href} className={mobileScrollable ? "min-w-16 shrink-0" : "flex-1"}>
+              <li key={item.href} className={mobileScrollable ? "min-w-[72px] shrink-0" : "flex-1 overflow-hidden"}>
                 <Link
                   href={item.href}
+                  onClick={(e) => {
+                    if (isActive && pathname === item.href) {
+                      e.preventDefault();
+                      window.location.reload();
+                    }
+                  }}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex h-full flex-col items-center justify-center gap-1 text-caption transition-colors",
+                    "flex h-full w-full flex-col items-center justify-center gap-1 text-caption transition-colors overflow-hidden px-1",
                     lightSurfaceFocusRing,
-                    isActive ? mobileActiveTextClasses[accent] : "text-neutral-500"
+                    isActive ? "text-white bg-white/10" : "text-white/60 hover:text-white hover:bg-white/5"
                   )}
                 >
-                  <Icon icon={item.icon} size="md" />
-                  <span>{item.label}</span>
+                  <div className={cn("flex items-center justify-center h-8 w-8 rounded-full shrink-0 transition-colors", isActive ? "bg-white/20" : "bg-transparent")}>
+                    <Icon icon={item.icon} size="sm" className="shrink-0" />
+                  </div>
+                  <span className="w-full truncate text-center text-[10px] leading-tight">{item.label}</span>
                 </Link>
               </li>
             );
           })}
         </ul>
-      </nav>
+        </nav>
+      </div>
     </>
   );
 }

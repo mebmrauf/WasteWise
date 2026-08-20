@@ -22,7 +22,7 @@ function resolveLoginErrorMessage(err: unknown): string {
 }
 
 export function LoginForm() {
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -40,8 +40,28 @@ export function LoginForm() {
 
         setIsSubmitting(true);
         void login({ identifier, password })
-          .then(() => {
-            router.push("/");
+          .then(async (user) => {
+            if (user.role === "ADMIN") {
+              await logout();
+              setErrorMessage("That email/phone or password isn't right. Please try again.");
+              setIsSubmitting(false);
+              return;
+            }
+            const destination =
+              user.role === "COLLECTOR"
+                ? "/collector"
+                : user.role === "RECYCLING_COMPANY"
+                  ? "/recycling/dashboard"
+                  : user.role === "USER" && user.accountType === "BUSINESS"
+                    ? "/business/dashboard"
+                    : "/dashboard";
+
+            if (!user.isEmailVerified) {
+              router.push(`/verify-email?redirect=${encodeURIComponent(destination)}`);
+              return;
+            }
+            router.push(destination);
+            router.refresh();
           })
           .catch((err: unknown) => {
             setErrorMessage(resolveLoginErrorMessage(err));
@@ -58,14 +78,22 @@ export function LoginForm() {
         required
         disabled={isSubmitting}
       />
-      <Input
-        label="Password"
-        name="password"
-        type="password"
-        autoComplete="current-password"
-        required
-        disabled={isSubmitting}
-      />
+      <div className="flex flex-col gap-1">
+        <Input
+          label="Password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          disabled={isSubmitting}
+        />
+        <a
+          href="/forgot-password"
+          className="self-end text-body-sm text-primary-600 hover:text-primary-700"
+        >
+          Forgot password?
+        </a>
+      </div>
 
       <Button type="submit" fullWidth className="mt-2" disabled={isSubmitting}>
         {isSubmitting ? "Logging in…" : "Log in"}

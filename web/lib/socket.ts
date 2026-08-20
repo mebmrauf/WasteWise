@@ -13,15 +13,24 @@ export const PICKUP_LOCATION_EVENT = "pickup:location";
 export const PICKUP_STATUS_EVENT = "pickup:status";
 export const PICKUP_ERROR_EVENT = "pickup:error";
 
-export interface PickupJoinPayload {
+export const PICKUP_SUBMIT_WEIGHTS_EVENT = "pickup:submit-weights";
+export const PICKUP_ACCEPT_WEIGHTS_EVENT = "pickup:accept-weights";
+export const PICKUP_REJECT_WEIGHTS_EVENT = "pickup:reject-weights";
+
+export const NOTIFICATION_RECEIVED_EVENT = "notification:received";
+
+export const CHAT_SEND_MESSAGE_EVENT = "send_message";
+export const CHAT_RECEIVE_MESSAGE_EVENT = "receive_message";
+
+interface PickupJoinPayload {
   pickupRequestId: string;
 }
-export interface PickupLocationUpdatePayload {
+interface PickupLocationUpdatePayload {
   pickupRequestId: string;
   lat: number;
   lng: number;
 }
-export interface PickupStatusUpdatePayload {
+interface PickupStatusUpdatePayload {
   pickupRequestId: string;
   status: PickupStatus;
 }
@@ -40,6 +49,12 @@ export interface PickupStatusPayload {
   pickupRequestId: string;
   status: PickupStatus;
   createdAt: string;
+  /** Present when this pickup is a stop on the collector's active route. */
+  routePlanId?: string;
+  /** 1-indexed position among the route's not-yet-visited stops, including this one. */
+  queuePosition?: number;
+  /** Total not-yet-visited stops on the route. */
+  stopsRemaining?: number;
 }
 export interface PickupErrorPayload {
   event: string;

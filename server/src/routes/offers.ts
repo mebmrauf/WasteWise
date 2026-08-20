@@ -7,6 +7,8 @@ import { asyncHandler } from "../lib/asyncHandler";
 import { sendData, sendError } from "../lib/apiResponse";
 import { prisma } from "../lib/prisma";
 import { logger } from "../lib/logger";
+import { createNotification } from "../lib/notifications";
+import { attachPickupToActiveRouteIfAny } from "../lib/routeService";
 import { emitToRoom } from "../realtime/emitToRoom";
 import { PICKUP_STATUS_EVENT } from "../realtime/pickupEvents";
 import { submitOfferSchema } from "./offers.schemas";
@@ -19,6 +21,7 @@ function toOfferSummary(offer: Offer) {
     pickupRequestId: offer.pickupRequestId,
     collectorId: offer.collectorId,
     bidAmount: offer.bidAmount,
+    bidAmountsPerKg: offer.bidAmountsPerKg as Record<string, number> | null,
     message: offer.message,
     status: offer.status,
     createdAt: offer.createdAt,
@@ -37,7 +40,7 @@ offersRouter.post(
       sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    const { pickupRequestId, bidAmount, message } = parsed.data;
+    const { pickupRequestId, bidAmount, bidAmountsPerKg, message } = parsed.data;
 
     const collectorProfile = await prisma.collectorProfile.findUnique({
       where: { userId: req.user!.id },
@@ -74,6 +77,7 @@ offersRouter.post(
           pickupRequestId,
           collectorId: req.user!.id,
           bidAmount,
+          bidAmountsPerKg,
           message,
         },
       });
@@ -89,6 +93,16 @@ offersRouter.post(
       }
       throw err;
     }
+    
+    // Notify the requester about the new offer
+    void createNotification({
+      userId: pickup.requesterId,
+      type: "OFFER_RECEIVED",
+      title: "New Offer Received",
+      message: `A collector has submitted a new bid on your pickup request.`,
+      relatedPickupRequestId: pickup.id,
+      emailPreference: "emailNotificationsEnabled",
+    });
 
     sendData(res, 201, { offer: toOfferSummary(offer) });
   }),
@@ -136,6 +150,17 @@ offersRouter.post(
         return null;
       }
 
+      // Grab the other pending bidders *before* rejecting them, so we know
+      // who to notify that they didn't get this pickup.
+      const otherPendingOffers = await tx.offer.findMany({
+        where: {
+          pickupRequestId: offer.pickupRequestId,
+          id: { not: offer.id },
+          status: OfferStatus.PENDING,
+        },
+        select: { collectorId: true },
+      });
+
       const acceptedOffer = await tx.offer.update({
         where: { id: offer.id },
         data: { status: OfferStatus.ACCEPTED },
@@ -155,7 +180,7 @@ offersRouter.post(
         where: { id: offer.pickupRequestId },
       });
 
-      return { offer: acceptedOffer, pickup: updatedPickup };
+      return { offer: acceptedOffer, pickup: updatedPickup, rejectedCollectorIds: otherPendingOffers.map((o: { collectorId: string }) => o.collectorId) };
     });
 
     if (!result) {
@@ -179,6 +204,29 @@ offersRouter.post(
         { err, pickupRequestId: offer.pickupRequestId },
         "Skipped real-time broadcast for REST offer accept",
       );
+    }
+    
+    void attachPickupToActiveRouteIfAny(offer.collectorId, offer.pickupRequestId);
+
+    // Notify the collector that their offer was accepted
+    void createNotification({
+      userId: offer.collectorId,
+      type: "PICKUP_STATUS_UPDATE",
+      title: "Offer Accepted!",
+      message: `Your bid for the pickup request has been accepted. You have been assigned the pickup.`,
+      relatedPickupRequestId: offer.pickupRequestId,
+      emailPreference: "emailNotificationsEnabled",
+    });
+
+    // Notify the other bidders that they didn't get this one
+    for (const collectorId of result.rejectedCollectorIds) {
+      void createNotification({
+        userId: collectorId,
+        type: "GENERIC",
+        title: "Offer Not Selected",
+        message: "The household chose another collector for this pickup request.",
+        relatedPickupRequestId: offer.pickupRequestId,
+      });
     }
 
     sendData(res, 200, {

@@ -3,7 +3,12 @@ import type { OfferStatus } from "@/lib/offerStatus";
 import type { VehicleType } from "@/lib/vehicleType";
 import type { WasteCategory } from "@/components/WasteCategorySelector";
 
-export type PickupStatus = "PENDING" | "ASSIGNED" | "EN_ROUTE" | "ARRIVED" | "COMPLETED" | "CANCELLED";
+export type PickupStatus = "PENDING"  | "ASSIGNED"
+  | "EN_ROUTE"
+  | "ARRIVED"
+  | "VERIFYING_WEIGHTS"
+  | "COMPLETED"
+  | "CANCELLED";
 
 export type LoadSize = "SMALL" | "MEDIUM" | "LARGE" | "EXTRA_LARGE";
 
@@ -38,6 +43,7 @@ export interface CollectorLocation {
 }
 
 export interface TrackedCollector {
+  id: string;
   fullName: string;
   phone: string | null;
   vehicleType: VehicleType | null;
@@ -48,6 +54,7 @@ export interface TrackedCollector {
 export interface PickupTracking {
   pickupRequestId: string;
   status: PickupStatus;
+  pickupLocation: { lat: number; lng: number };
   collectorLocation: CollectorLocation | null;
   collector: TrackedCollector | null;
 }
@@ -58,10 +65,11 @@ export function getPickupTracking(pickupRequestId: string): Promise<PickupTracki
   });
 }
 
-export interface PickupRequestItem {
+interface PickupRequestItem {
   id: string;
   category: WasteCategory;
   loadSize: LoadSize;
+  exactWeightKg: number | null;
 }
 
 export interface PickupRequestSummary {
@@ -69,22 +77,41 @@ export interface PickupRequestSummary {
   requesterId: string;
   assignedCollectorId: string | null;
   items: PickupRequestItem[];
-  timeSlotStart: string;
-  timeSlotEnd: string;
+  pickupDate: string;
   status: PickupStatus;
   placeId: string;
   pickupFormattedAddress: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
+  serviceArea: string | null;
+  preferredCollectorId: string | null;
+  isExclusiveToPreferred: boolean;
+  isBulk: boolean;
+  bidAmountsPerKg: Record<string, number> | null;
+  hasRating: boolean;
+  /** The household's own entered weight estimate for the whole pickup — not broken down per item. */
+  estimatedMinKg: number | null;
+  estimatedMaxKg: number | null;
+  hasPayment?: boolean;
   createdAt: string;
   updatedAt: string;
+  requester?: {
+    fullName: string;
+    phone: string | null;
+    avatarUrl: string | null;
+  } | null;
+}
+
+export function formatEstimatedWeightRange(minKg: number | null, maxKg: number | null): string | null {
+  if (minKg == null || maxKg == null) return null;
+  return minKg === maxKg ? `${minKg} kg` : `${minKg}-${maxKg} kg`;
 }
 
 export function listPickups(): Promise<{ pickups: PickupRequestSummary[] }> {
   return authFetch<{ pickups: PickupRequestSummary[] }>("/pickups", { method: "GET" });
 }
 
-export interface WeightRecordSnapshot {
+interface WeightRecordSnapshot {
   estimatedMinKg: number;
   estimatedMaxKg: number;
   exactWeightKg: number | null;
@@ -93,6 +120,8 @@ export interface WeightRecordSnapshot {
 
 export interface PickupRequestDetail extends PickupRequestSummary {
   weightRecord: WeightRecordSnapshot | null;
+  rating?: { score: number; comment: string | null; createdAt: string } | null;
+  pointsEarned?: number | null;
 }
 
 export function getPickupDetail(pickupRequestId: string): Promise<{ pickup: PickupRequestDetail }> {
@@ -101,14 +130,28 @@ export function getPickupDetail(pickupRequestId: string): Promise<{ pickup: Pick
   });
 }
 
+export function ratePickup(pickupRequestId: string, score: number, comment?: string): Promise<{ success: boolean }> {
+  return authFetch<{ success: boolean }>(`/pickups/${encodeURIComponent(pickupRequestId)}/rate`, {
+    method: "POST",
+    body: JSON.stringify({ score, comment }),
+    headers: { "x-csrf-token": readCsrfToken() },
+  });
+}
+
 export interface CreatePickupRequestInput {
   items: { category: WasteCategory; loadSize: LoadSize }[];
-  timeSlotStart: string;
-  timeSlotEnd: string;
+  pickupDate: string;
   placeId: string;
   formattedAddress?: string;
   latitude?: number;
   longitude?: number;
+  serviceArea?: string;
+  preferredCollectorId?: string;
+  isExclusiveToPreferred?: boolean;
+  isBulk?: boolean;
+  estimatedTotalWeight?: number;
+  photoUrls?: string[];
+  wasteDescription?: string;
 }
 
 export function createPickupRequest(input: CreatePickupRequestInput): Promise<{ pickup: PickupRequestDetail }> {
@@ -130,14 +173,34 @@ export function listOpenPickups(): Promise<{ pickups: PickupRequestSummary[] }> 
   return authFetch<{ pickups: PickupRequestSummary[] }>("/pickups/open", { method: "GET" });
 }
 
+// --- Smart Pickup Reminder ---
+
+export interface PickupReminderSummary {
+  hasPattern: boolean;
+  averageIntervalDays: number | null;
+  lastPickupDate: string | null;
+  daysSinceLastPickup: number | null;
+  isDue: boolean;
+  message: string | null;
+}
+
+export function getPickupReminderSummary(): Promise<PickupReminderSummary> {
+  return authFetch<PickupReminderSummary>("/pickups/reminders/summary", { method: "GET" });
+}
+
 export function listAssignedPickups(): Promise<{ pickups: PickupRequestSummary[] }> {
   return authFetch<{ pickups: PickupRequestSummary[] }>("/pickups/assigned", { method: "GET" });
+}
+
+export function listCollectorHistory(): Promise<{ pickups: PickupRequestSummary[] }> {
+  return authFetch<{ pickups: PickupRequestSummary[] }>("/pickups/collector-history", { method: "GET" });
 }
 
 export interface PickupOffer {
   id: string;
   pickupRequestId: string;
   bidAmount: number;
+  bidAmountsPerKg?: Record<string, number> | null;
   message: string | null;
   status: OfferStatus;
   createdAt: string;
@@ -154,5 +217,11 @@ export interface PickupOffer {
 export function getPickupOffers(pickupRequestId: string): Promise<{ offers: PickupOffer[] }> {
   return authFetch<{ offers: PickupOffer[] }>(`/pickups/${encodeURIComponent(pickupRequestId)}/offers`, {
     method: "GET",
+  });
+}
+
+export function ignorePickupRequest(pickupRequestId: string): Promise<{ success: boolean }> {
+  return authFetch<{ success: boolean }>(`/pickups/${encodeURIComponent(pickupRequestId)}/ignore`, {
+    method: "POST",
   });
 }

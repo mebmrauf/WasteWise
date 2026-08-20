@@ -1,15 +1,16 @@
-import { randomUUID, createHash } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { User } from "@prisma/client";
 import { prisma } from "./prisma";
 import { signAccessToken, signRefreshToken, verifyRefreshToken, decodeExpiry } from "./jwt";
+import { sha256Hex } from "./hash";
 
 export interface TokenPair {
   accessToken: string;
   refreshToken: string;
 }
 
-export function hashRefreshToken(rawToken: string): string {
-  return createHash("sha256").update(rawToken).digest("hex");
+function hashRefreshToken(rawToken: string): string {
+  return sha256Hex(rawToken);
 }
 
 export async function issueTokenPair(user: Pick<User, "id" | "role">): Promise<TokenPair> {
@@ -30,7 +31,7 @@ export async function issueTokenPair(user: Pick<User, "id" | "role">): Promise<T
   return { accessToken, refreshToken };
 }
 
-export class RefreshTokenError extends Error {}
+export class RefreshTokenError extends Error { }
 
 export async function rotateRefreshToken(rawToken: string): Promise<TokenPair> {
   let payload;

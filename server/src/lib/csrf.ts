@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
+import { env } from "./env";
 import { sendError } from "./apiResponse";
 import { CSRF_COOKIE } from "./cookies";
 
@@ -21,6 +22,14 @@ export function requireCsrf(req: Request, res: Response, next: NextFunction): vo
     typeof headerToken === "string" &&
     tokensMatch(headerToken, cookieToken)
   ) {
+    next();
+    return;
+  }
+
+  // Fallback to Origin-based CSRF defense for cross-domain deployments
+  // where the frontend cannot read the backend's CSRF cookie via document.cookie.
+  const requestOrigin = req.headers.origin;
+  if (requestOrigin && env.CLIENT_ORIGIN.includes(requestOrigin)) {
     next();
     return;
   }

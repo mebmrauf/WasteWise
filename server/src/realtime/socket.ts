@@ -20,6 +20,10 @@ export function pickupRoomName(pickupRequestId: string): string {
   return `pickup:${pickupRequestId}`;
 }
 
+export function userRoomName(userId: string): string {
+  return `user:${userId}`;
+}
+
 function parseCookieHeader(header: string | undefined): Record<string, string> {
   const cookies: Record<string, string> = {};
   if (!header) return cookies;
@@ -74,13 +78,16 @@ export function createSocketServer(httpServer: HttpServer): Server {
   io.use(authenticateSocket);
 
   io.on("connection", (socket) => {
-    logger.info(
+    logger.debug(
       { userId: socket.data.user.id, role: socket.data.user.role, socketId: socket.id },
       "Socket connected",
     );
+    
+    // Automatically join the personal user room to receive notifications
+    void socket.join(userRoomName(socket.data.user.id));
 
     socket.on("disconnect", (reason) => {
-      logger.info(
+      logger.debug(
         { userId: socket.data.user.id, socketId: socket.id, reason },
         "Socket disconnected",
       );

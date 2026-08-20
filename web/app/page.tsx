@@ -1,259 +1,195 @@
-import type { Metadata } from "next";
+import Image from "next/image";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { Button } from "@/components/Button";
-import { Card } from "@/components/Card";
 import { NavBar } from "@/components/NavBar";
 import { NavAuthActions } from "@/components/NavAuthActions";
 import { PageContainer } from "@/components/PageContainer";
+import {
+  Truck,
+  Camera,
+  MapPin,
+  ShieldCheck,
+  Gift,
+  Route,
+  ClipboardList,
+  CheckCircle2,
+  FileText,
+  ThumbsUp,
+  ArrowRight,
+} from "lucide-react";
+import { HowItWorks } from "@/components/HowItWorks";
+import { ScrollAnimation, ScrollAnimationChild } from "@/components/animations/ScrollAnimation";
+import { FeaturesSection } from "@/components/FeaturesSection";
+import { BusinessSection } from "@/components/BusinessSection";
+import { ImpactSection } from "@/components/ImpactSection";
 
-export const metadata: Metadata = {
-  title: "WasteWise — Formalizing Bangladesh's Recycling Network",
-  description:
-    "WasteWise connects households and businesses with verified informal scrap collectors, plus recycling companies and municipalities — turning ad hoc pickups into tracked, weight-verified, disputable transactions.",
-  openGraph: {
-    title: "WasteWise — Formalizing Bangladesh's Recycling Network",
-    description:
-      "A verified collector directory, weight verification, real-time tracking, and complaint resolution for users — plus route planning, bidding, and an income dashboard for the collectors already doing this work.",
-    type: "website",
-    siteName: "WasteWise",
-  },
-};
+export default async function Home() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("access_token")?.value;
+  if (token) {
+    try {
+      const payloadBase64 = token.split(".")[1];
+      if (payloadBase64) {
+        const payload = JSON.parse(Buffer.from(payloadBase64, "base64").toString());
+        if (payload.role === "COLLECTOR") {
+          redirect("/collector");
+        } else if (payload.role === "ADMIN") {
+          redirect("/admin");
+        } else if (payload.role === "RECYCLING_COMPANY") {
+          redirect("/recycling/dashboard");
+        } else {
+          redirect("/dashboard");
+        }
+      }
+    } catch {
+      // Ignore parse errors, just show the landing page
+    }
+  }
 
-const steps = [
-  {
-    number: "01",
-    title: "Post a pickup request",
-    body: "Pick a waste category, an estimated quantity, and a time slot. WasteWise shows an estimated weight range up front, before anyone shows up.",
-  },
-  {
-    number: "02",
-    title: "Collectors make offers",
-    body: "Nearby verified collectors see your request and bid for the job. You choose who comes — not whoever happens to be walking by.",
-  },
-  {
-    number: "03",
-    title: "Track it, weigh it, keep the record",
-    body: "Follow your collector's live location on the map, confirm the exact weight logged at pickup, and it's saved to your recycling history.",
-  },
-];
-
-const trustFeatures = [
-  {
-    title: "Verified Collector Directory",
-    body: "Browse nearby collectors by distance, rating, and vehicle type. Every listed profile has passed ID/license verification before it appears.",
-  },
-  {
-    title: "Weight Verification & Estimator",
-    body: "See an estimated weight range before pickup, then the exact logged weight at collection — no more guessing what you'll be paid or charged.",
-  },
-  {
-    title: "Real-Time Pickup Tracking",
-    body: "Once an offer is accepted, follow your collector's live location on the map until they arrive at your door.",
-  },
-  {
-    title: "Complaint & Resolution Center",
-    body: "No-show, disputed weight, bad conduct — every pickup has a direct path to resolution, logged against the collector's record.",
-  },
-];
-
-const collectorFeatures = [
-  {
-    title: "Smart Pickup Requests & Offers",
-    body: "See nearby requests by category, quantity, and time slot, then bid on the jobs worth your time — instead of waiting on foot traffic.",
-  },
-  {
-    title: "Route Planner",
-    body: "Once a day's jobs are accepted, WasteWise sequences them into one optimized route — less backtracking, more pickups per shift.",
-  },
-  {
-    title: "Business Dashboard",
-    body: "Schedule, earnings, and ratings in one place — an income history a collector can finally show a bank, a landlord, or a lender.",
-  },
-];
-
-const roleCards = [
-  {
-    role: "User",
-    body: "Post a pickup, pick a verified collector, track it live, and keep a running history of what you've recycled.",
-  },
-  {
-    role: "Collector",
-    body: "Turn foot-traffic scrap collection into a schedule, an optimized route, and a provable income record.",
-  },
-  {
-    role: "Recycling Company",
-    body: "Procure verified bulk waste by district and reserve stock ahead of pickup.",
-    note: "Phase 2",
-  },
-  {
-    role: "Admin / Municipality",
-    body: "Review verification applications, resolve disputes, and see collection activity across the city.",
-  },
-];
-
-export default function Home() {
   return (
     <>
       <NavBar
-        brand={<span className="font-heading text-h4 text-neutral-900">WasteWise</span>}
+        brand={
+          <div className="flex flex-col">
+            <span className="font-heading text-h4 text-neutral-900 leading-none">WasteWise</span>
+          </div>
+        }
         links={[
-          { label: "How it works", href: "#how-it-works" },
-          { label: "Collectors", href: "#collectors" },
+          { label: "Home", href: "#home" },
+          { label: "Solutions", href: "/solutions" },
+          { label: "For Businesses", href: "/for-businesses" },
+          { label: "About", href: "/about" },
         ]}
         actions={<NavAuthActions />}
       />
 
-      <main>
-        {}
-        <section className="bg-primary-50">
-          <PageContainer className="py-16 lg:py-24">
-            <div className="max-w-3xl">
-              <p className="font-heading text-overline text-primary-600">
-                Recycling logistics for Bangladesh
-              </p>
-              <h1 className="mt-3 text-display text-neutral-900">
-                Bangladesh&apos;s scrap collectors already run this network. WasteWise makes it
-                official.
+      <main className="flex flex-col min-h-screen">
+        {/* HERO SECTION */}
+        <section id="home" className="relative bg-[#F4F5F0] py-8 md:py-12 lg:py-16 overflow-hidden">
+          {/* Subtle Ambient Gradients */}
+          <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-b from-[#114E29]/10 to-transparent rounded-full blur-[100px] -translate-y-1/3 translate-x-1/3 pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-emerald-600/5 to-transparent rounded-full blur-[80px] translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
+          
+          <ScrollAnimation type="fade-up">
+            <PageContainer className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center px-6 md:px-12 lg:px-16 max-w-7xl mx-auto">
+              <div className="flex flex-col max-w-[500px]">
+              {/* Pill Badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/60 backdrop-blur-md text-[#114E29] text-body-sm font-medium mb-8 w-max border border-[#114E29]/10 shadow-sm">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                Now available in Dhaka
+              </div>
+              
+              {/* Headline */}
+              <h1 className="text-[32px] md:text-[40px] lg:text-[48px] font-extrabold text-[#1A2E22] mb-5 tracking-tight leading-[1.1] max-w-[480px]">
+                Transforming Waste into <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#114E29] to-emerald-600 relative inline-block">Value</span>
               </h1>
-              <p className="mt-5 text-body-lg text-neutral-600">
-                Prior platforms tried to route around the country&apos;s informal collectors.
-                WasteWise routes through them: a verified profile, a bidding system for pickup
-                requests, route tools, and an income dashboard for collectors — plus the
-                tracking, weight verification, and complaint resolution households and
-                businesses never had with a doorstep pickup.
+              
+              {/* Description */}
+              <p className="text-[16px] text-[#4B6358] mb-8 leading-[1.6] max-w-[440px]">
+                WasteWise brings the informal scrap collection network online. Post a pickup request, track verified collectors in real-time, and earn Green Points for doing your part.
               </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Button size="lg" href="/signup">
+              
+              {/* CTA Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-12">
+                <Button size="lg" href="/signup" className="bg-[#114E29] hover:bg-[#0A3019] text-white rounded-full px-8 h-[52px] text-[16px] transition-all hover:-translate-y-0.5 border-none shadow-[0_8px_20px_rgb(17,78,41,0.2)]">
                   Request a pickup
                 </Button>
-                <Button size="lg" variant="secondary" href="/signup?role=collector">
-                  Sign up as a collector
+                <Button size="lg" variant="secondary" href="/signup?role=collector" className="rounded-full px-8 h-[52px] border-stone-200 text-[#114E29] text-[16px] transition-all hover:-translate-y-0.5 bg-white hover:bg-stone-50 shadow-sm">
+                  Join as a collector
                 </Button>
+              </div>
+              
+              {/* Trust Badges below CTA */}
+              <div className="flex flex-wrap items-center gap-x-8 gap-y-4 pt-6 border-t border-[#114E29]/10">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="text-emerald-600" size={20} />
+                  <span className="text-[13px] font-medium text-[#4B6358]">Verified Collectors</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="text-emerald-600" size={20} />
+                  <span className="text-[13px] font-medium text-[#4B6358]">Secure Transactions</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Gift className="text-emerald-600" size={20} />
+                  <span className="text-[13px] font-medium text-[#4B6358]">Green Rewards</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="text-emerald-600" size={20} />
+                  <span className="text-[13px] font-medium text-[#4B6358]">Real-Time Tracking</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative lg:w-4/5 lg:ml-auto">
+              <div className="relative rounded-[24px] overflow-hidden shadow-[0_20px_40px_rgb(17,78,41,0.08)] border border-stone-200/50 aspect-[4/3] bg-stone-100 flex items-center justify-center group animate-float">
+                <Image
+                  src="/images/hero.png"
+                  alt="WasteWise Smart Logistics"
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                />
+                <div className="absolute inset-0 bg-[#114E29]/5 mix-blend-overlay"></div>
+              </div>
+              {/* Floating badges */}
+              <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-md p-4 rounded-[16px] shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white/20 flex items-center gap-4 z-20 animate-fade-in-up">
+                <div className="w-10 h-10 rounded-full bg-[#E8F5E9] flex items-center justify-center text-[#114E29]">
+                  <ShieldCheck size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold tracking-wider text-[#4B6358] uppercase">Security</p>
+                  <p className="text-[14px] font-bold text-[#1A2E22]">Verified Collectors</p>
+                </div>
               </div>
             </div>
           </PageContainer>
-        </section>
+        </ScrollAnimation>
+      </section>
 
-        {}
-        <section id="how-it-works" className="bg-neutral-0">
-          <PageContainer className="py-16 lg:py-20">
-            <p className="font-heading text-overline text-primary-600">How it works</p>
-            <h2 className="mt-2 text-h2 text-neutral-900">
-              From request to verified pickup, in three steps
-            </h2>
-            <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
-              {steps.map((step) => (
-                <Card key={step.number}>
-                  <p className="font-data text-data-lg text-primary-500">{step.number}</p>
-                  <h3 className="mt-3 text-h4 text-neutral-900">{step.title}</h3>
-                  <p className="mt-2 text-body-sm text-neutral-500">{step.body}</p>
-                </Card>
-              ))}
-            </div>
-          </PageContainer>
-        </section>
+      {/* HOW IT WORKS */}
+        <HowItWorks />
 
-        {}
-        <section className="bg-neutral-50">
-          <PageContainer className="py-16 lg:py-20">
-            <p className="font-heading text-overline text-primary-600">Trust infrastructure</p>
-            <h2 className="mt-2 max-w-2xl text-h2 text-neutral-900">
-              Everything an informal pickup never put in writing
-            </h2>
-            <p className="mt-4 max-w-2xl text-body-lg text-neutral-600">
-              Every collector on WasteWise is verified before they&apos;re listed, and every
-              pickup leaves a record — location, weight, and a way to dispute either one.
-            </p>
-            <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {trustFeatures.map((feature) => (
-                <Card key={feature.title}>
-                  <h3 className="text-h4 text-neutral-900">{feature.title}</h3>
-                  <p className="mt-2 text-body-sm text-neutral-500">{feature.body}</p>
-                </Card>
-              ))}
-            </div>
-          </PageContainer>
-        </section>
+        <FeaturesSection />
 
-        {}
-        <section id="collectors" className="bg-role-collector-50">
-          <PageContainer className="py-16 lg:py-20">
-            <p className="font-heading text-overline text-role-collector-700">For collectors</p>
-            <h2 className="mt-2 max-w-2xl text-h2 text-neutral-900">
-              Formalizing the network, not replacing it
-            </h2>
-            <p className="mt-4 max-w-2xl text-body-lg text-neutral-600">
-              Existing apps tried to disintermediate Bangladesh&apos;s scrap collectors.
-              WasteWise&apos;s bet is the opposite: give the people already doing this work a
-              verified profile, steadier demand, and a provable income record.
-            </p>
-            <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
-              {collectorFeatures.map((feature) => (
-                <Card key={feature.title}>
-                  <h3 className="text-h4 text-neutral-900">{feature.title}</h3>
-                  <p className="mt-2 text-body-sm text-neutral-500">{feature.body}</p>
-                </Card>
-              ))}
-            </div>
-            <div className="mt-8">
-              <Button variant="ghost" href="/signup?role=collector">
-                Sign up as a collector →
-              </Button>
-            </div>
-          </PageContainer>
-        </section>
+        {/* DUAL AUDIENCE SPLIT */}
+        <BusinessSection />
 
-        {}
-        <section className="bg-neutral-0">
-          <PageContainer className="py-16 lg:py-20">
-            <p className="font-heading text-overline text-primary-600">Who it&apos;s for</p>
-            <h2 className="mt-2 text-h2 text-neutral-900">One platform, four roles, one loop</h2>
-            <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {roleCards.map((card) => (
-                <Card key={card.role}>
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-h4 text-neutral-900">{card.role}</h3>
-                    {card.note && (
-                      <span className="text-caption text-neutral-400">{card.note}</span>
-                    )}
-                  </div>
-                  <p className="mt-2 text-body-sm text-neutral-500">{card.body}</p>
-                </Card>
-              ))}
-            </div>
-          </PageContainer>
-        </section>
-
-        {}
-        <section className="bg-neutral-50">
-          <PageContainer className="py-16 text-center lg:py-24">
-            <p className="font-heading text-overline text-primary-600">Get started</p>
-            <h2 className="mt-2 text-h2 text-neutral-900">Put your next pickup in writing</h2>
-            <p className="mx-auto mt-4 max-w-xl text-body-lg text-neutral-600">
-              Whether you&apos;re clearing out recyclables or looking for steadier collection
-              work, WasteWise gives both sides of the pickup something the informal system never
-              had: a record.
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Button size="lg" href="/signup">
-                Sign up
-              </Button>
-              <Button size="lg" variant="secondary" href="/login">
-                Log in
-              </Button>
-            </div>
-          </PageContainer>
-        </section>
+        {/* IMPACT STATISTICS */}
+        <div id="impact">
+          <ImpactSection />
+        </div>
       </main>
 
-      <footer className="border-t border-neutral-200 bg-neutral-0">
-        <PageContainer className="flex flex-col items-start justify-between gap-4 py-8 md:flex-row md:items-center">
-          <div>
-            <p className="font-heading text-h4 text-neutral-900">WasteWise</p>
-            <p className="mt-1 text-body-sm text-neutral-500">
-              Digitizing recycling logistics in Bangladesh.
+      {/* FINAL CTA */}
+      <section className="py-8 md:py-12 lg:py-16 bg-gradient-to-br from-[#EAF0E6] to-[#DFEBE3] border-t border-[#114E29]/10">
+        <PageContainer className="px-6 md:px-12 lg:px-16 max-w-4xl mx-auto text-center">
+          <ScrollAnimation type="fade-up">
+            <h2 className="text-[32px] md:text-[40px] font-bold text-neutral-900 mb-6">Ready to make an impact?</h2>
+            <p className="text-neutral-600 mb-10 text-[18px]">
+              Join the WasteWise ecosystem today and help us build a cleaner, greener Bangladesh.
             </p>
-          </div>
-          <p className="text-caption text-neutral-400">
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <Button href="/signup" className="bg-[#114E29] hover:bg-green-800 text-white rounded-full px-8 h-[52px]">
+                Get Started for Free
+              </Button>
+            </div>
+          </ScrollAnimation>
+        </PageContainer>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="bg-white py-6 md:py-8 border-t border-neutral-200">
+        <PageContainer className="px-6 md:px-12 lg:px-16 max-w-[800px] mx-auto flex flex-col items-center justify-center text-center gap-1.5">
+          <span className="font-heading text-[18px] font-bold text-neutral-900 tracking-tight leading-none mb-1">WasteWise</span>
+          <p className="text-[13px] text-neutral-500 leading-tight">
+            Building a cleaner, greener, and smarter Bangladesh.
+          </p>
+          <p className="text-[12px] text-neutral-400 leading-tight mt-1">
             &copy; {new Date().getFullYear()} WasteWise. All rights reserved.
           </p>
         </PageContainer>

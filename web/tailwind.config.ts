@@ -43,6 +43,7 @@ const config: Config = {
         info: colors.semantic.info,
         // Role accents — one per WasteWise role, see docs/design-system.md §1.4
         "role-user": colors.role.user,
+        "role-business": colors.role.business,
         "role-collector": colors.role.collector,
         "role-recycler": colors.role.recyclingCompany,
         "role-admin": colors.role.admin,
@@ -63,6 +64,7 @@ const config: Config = {
         heading: ["var(--font-heading)", ...fontFamily.heading.slice(1)],
         body: ["var(--font-body)", ...fontFamily.body.slice(1)],
         data: ["var(--font-data)", ...fontFamily.data.slice(1)],
+        brand: ["var(--font-brand)", ...fontFamily.heading.slice(1)],
       },
       fontSize: {
         // Headings & eyebrows — Space Grotesk (see docs/design-system.md §2.2)
@@ -119,6 +121,32 @@ const config: Config = {
       height: {
         map: mapHeight.DEFAULT,
         "map-lg": mapHeight.lg,
+      },
+      animation: {
+        "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "slide-up": "slide-up 0.4s ease-out forwards",
+        "scan": "scan 2s ease-in-out infinite",
+        "float": "float 6s ease-in-out infinite",
+        "fade-in-up": "fade-in-up 0.8s ease-out forwards",
+      },
+      keyframes: {
+        "slide-up": {
+          "0%": { opacity: "0", transform: "translateY(16px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "scan": {
+          "0%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(320px)" },
+          "100%": { transform: "translateY(0)" },
+        },
+        "float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-15px)" },
+        },
+        "fade-in-up": {
+          "0%": { opacity: "0", transform: "translateY(20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
       },
     },
   },

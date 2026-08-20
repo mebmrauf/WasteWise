@@ -1,4 +1,4 @@
-export type VehicleType = "HANDCART" | "BICYCLE_VAN" | "MOTORCYCLE_VAN" | "PICKUP_TRUCK" | "TRUCK" | "OTHER";
+export type VehicleType = "HANDCART" | "BICYCLE_VAN" | "MOTORCYCLE_VAN" | "PICKUP_TRUCK" | "TRUCK";
 
 export const VEHICLE_TYPE_LABELS: Record<VehicleType, string> = {
   HANDCART: "Handcart",
@@ -6,5 +6,4 @@ export const VEHICLE_TYPE_LABELS: Record<VehicleType, string> = {
   MOTORCYCLE_VAN: "Motorcycle van",
   PICKUP_TRUCK: "Pickup truck",
   TRUCK: "Truck",
-  OTHER: "Other vehicle",
 };

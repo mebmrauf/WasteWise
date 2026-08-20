@@ -19,6 +19,13 @@ export const submitOfferSchema = z
       .finite("bidAmount must be a finite number")
       .positive("bidAmount must be greater than 0")
       .max(MAX_BID_AMOUNT_BDT, `bidAmount must be ${MAX_BID_AMOUNT_BDT.toLocaleString("en-US")} or less`),
+    bidAmountsPerKg: z.record(
+      z.string(),
+      z
+        .number({ invalid_type_error: "bid amount must be a number" })
+        .finite("bid amount must be a finite number")
+        .positive("bid amount must be greater than 0")
+    ),
     message: offerMessageSchema,
   })
   .strict();

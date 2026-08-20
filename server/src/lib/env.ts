@@ -10,7 +10,7 @@ const originList = z
       .filter(Boolean),
   );
 
-export const envSchema = z.object({
+const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(4000),
   CLIENT_ORIGIN: originList,
@@ -37,28 +37,35 @@ export const envSchema = z.object({
 
   GOOGLE_MAPS_SERVER_API_KEY: z.string().optional().default(""),
   // --- AI Vision (Waste Recognition, optional — feature disabled if blank) ---
-  GOOGLE_VISION_API_KEY: z.string().optional().default(""),
+  GOOGLE_VISION_API_KEY: z.string().transform(s => s.replace(/^["']|["']$/g, '').trim()).optional().default(""),
+  // --- Gemini (Waste Analysis, optional — feature disabled if blank) ---
+  GEMINI_API_KEY: z.string().transform(s => s.replace(/^["']|["']$/g, '').trim()).optional().default(""),
+  GEMINI_MODEL: z.string().optional().default("gemini-3.6-flash"),
 
   CLOUDINARY_CLOUD_NAME: z.string().optional().default(""),
   CLOUDINARY_API_KEY: z.string().optional().default(""),
   CLOUDINARY_API_SECRET: z.string().optional().default(""),
 
   SMTP_HOST: z.string().optional().default(""),
-  SMTP_PORT: z.coerce.number().int().positive().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(465),
   SMTP_USER: z.string().optional().default(""),
   SMTP_PASS: z.string().optional().default(""),
   EMAIL_USER: z.string().optional().default(""),
   EMAIL_PASS: z.string().optional().default(""),
+  EMAIL_FROM: z.string().optional().default("WasteWise <onboarding@resend.dev>"),
 
   SENTRY_DSN: z.string().optional().default(""),
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
+
+  ADMIN_EMAIL: z.string().email("must be a valid email for the admin user").default("admin@wastewise.com"),
+  ADMIN_PASSWORD: z.string().min(8, "admin password must be at least 8 characters"),
 });
 
 export type Env = z.infer<typeof envSchema>;
 
-export function parseEnv(source: NodeJS.ProcessEnv = process.env): Env {
+function parseEnv(source: NodeJS.ProcessEnv = process.env): Env {
   const result = envSchema.safeParse(source);
   if (!result.success) {
     const issues = result.error.issues

@@ -39,3 +39,26 @@ export function uploadAvatarImage(buffer: Buffer, userId: string): Promise<{ pub
     stream.end(buffer);
   });
 }
+
+export async function deleteAvatarImage(publicId: string): Promise<void> {
+  await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
+}
+
+export function uploadImage(buffer: Buffer, folder: string): Promise<{ url: string }> {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: "image",
+      },
+      (err, result) => {
+        if (err || !result) {
+          reject(err ?? new Error("Cloudinary upload returned no result"));
+          return;
+        }
+        resolve({ url: result.secure_url });
+      },
+    );
+    stream.end(buffer);
+  });
+}

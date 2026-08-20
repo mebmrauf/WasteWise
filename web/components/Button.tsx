@@ -2,8 +2,8 @@ import * as React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive";
-export type ButtonSize = "sm" | "md" | "lg";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive";
+type ButtonSize = "sm" | "md" | "lg";
 
 interface SharedButtonProps {
   variant?: ButtonVariant;
