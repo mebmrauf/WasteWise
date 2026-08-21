@@ -4,7 +4,8 @@ import { logger } from "./logger";
 import { createNotification } from "./notifications";
 import { emitToRoom } from "../realtime/emitToRoom";
 import { PICKUP_STATUS_EVENT } from "../realtime/events";
-import { optimizeRoute, estimateEtaMinutes, type RouteStopCandidate } from "./routeOptimization";
+import { optimizeRoute, type RouteStopCandidate } from "./routeOptimization";
+import { getRoutingMatrix } from "./osrmClient";
 import { distanceKm, MAX_COLLECTOR_MATCH_DISTANCE_KM, type LatLng } from "./geoDistance";
 
 const ROUTE_CANDIDATE_LIMIT = 30;
@@ -120,10 +121,8 @@ export async function getSuggestedRoute(collectorId: string): Promise<SuggestedR
     pickupDate: p.pickupDate,
   }));
 
-  const stops: SuggestedStop[] = optimizeRoute(origin, candidates).map((s) => ({
-    ...s,
-    etaMinutes: estimateEtaMinutes(s.distanceFromPrevKm),
-  }));
+  const matrix = await getRoutingMatrix(origin, candidates.map(c => ({ lat: c.lat, lng: c.lng })));
+  const stops: SuggestedStop[] = optimizeRoute(candidates, matrix);
 
   const nearbyOpenPickupIds = await getNearbyOpenPickupIds(
     collectorId,
@@ -332,7 +331,8 @@ export async function attachPickupToActiveRouteIfAny(collectorId: string, pickup
     },
   ];
 
-  const reordered = optimizeRoute(origin, candidates);
+  const matrix = await getRoutingMatrix(origin, candidates.map(c => ({ lat: c.lat, lng: c.lng })));
+  const reordered = optimizeRoute(candidates, matrix);
   const sequenceOffset = currentStop ? currentStop.sequence : 0;
 
   await prisma.$transaction(
