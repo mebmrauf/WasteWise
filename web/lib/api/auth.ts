@@ -31,6 +31,10 @@ export interface AuthUser {
   nextTreePlantationEligibleDate?: string | null;
   treePlantationClaimed?: boolean;
   sustainabilityCertificateUrl?: string | null;
+  communityName?: string | null;
+  hasJoinedCampaignCommunity?: boolean;
+  campaignCommunityJoinedAt?: string | null;
+  campaignNotificationsEnabled?: boolean;
   createdAt: string;
   formattedAddress?: string;
   recyclingCompanyProfile?: any;

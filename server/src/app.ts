@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import { campaignsRouter } from "./routes/campaigns";
 import { env } from "./lib/env";
 import { helmetMiddleware, generalRateLimiter, noStoreMiddleware } from "./middleware/security";
 import { requestLogger } from "./middleware/requestLogger";
@@ -75,6 +76,7 @@ export function createApp() {
   app.use("/api/v1/messages", messagesRouter);
   app.use("/api/v1/payments", paymentsRouter);
   app.use("/api/v1/landing", landingRouter);
+  app.use("/api/v1/campaigns", campaignsRouter);
 
   // 404 fallback — kept last so it never shadows a real route.
   app.use((_req, res) => {
