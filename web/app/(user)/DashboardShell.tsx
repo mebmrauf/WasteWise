@@ -38,6 +38,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         { label: "Green Rewards", href: "/dashboard/rewards", icon: Gift },
         { label: "Referral Program", href: "/referrals", icon: Users },
         { label: "Complaints", href: "/dashboard/complaints", icon: Megaphone },
+        { label: "Community Campaigns", href: "/campaigns", icon: Users },
       ];
     },
     [onTrackDetail, onOffersDetail]
