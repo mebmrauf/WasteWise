@@ -77,6 +77,10 @@ function toPublicUser(user: User) {
     nextGiftEligibleDate: user.nextGiftEligibleDate,
     discountCouponClaimed: user.discountCouponClaimed,
     nextDiscountEligibleDate: user.nextDiscountEligibleDate,
+    communityName: user.communityName,
+    hasJoinedCampaignCommunity: user.hasJoinedCampaignCommunity,
+    campaignCommunityJoinedAt: user.campaignCommunityJoinedAt,
+    campaignNotificationsEnabled: user.campaignNotificationsEnabled,
     createdAt: user.createdAt,
   };
 }

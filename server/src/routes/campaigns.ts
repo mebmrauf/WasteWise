@@ -20,9 +20,7 @@ const registrationCounts = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Community membership — the "join the campaign page" flag shown as a
-// prompt right after signup. Deliberately just a boolean on User, not a
-// separate join table, since there's nothing else to store about it.
+// Community membership
 // ---------------------------------------------------------------------------
 campaignsRouter.post(
   "/join-community",
@@ -44,6 +42,52 @@ campaignsRouter.post(
 );
 
 // ---------------------------------------------------------------------------
+// IMPORTANT: these literal-path routes (/me/registrations, /videos) must be
+// defined BEFORE any /:id wildcard routes below — Express matches routes in
+// file order, and /:id would otherwise swallow requests to these paths
+// (e.g. treating "videos" as if it were a campaign's id).
+// ---------------------------------------------------------------------------
+campaignsRouter.get(
+  "/me/registrations",
+  requireAuth,
+  asyncHandler(async (req: Request, res: Response) => {
+    const registrations = await prisma.campaignRegistration.findMany({
+      where: { userId: req.user!.id },
+      include: { campaign: true },
+      orderBy: { registeredAt: "desc" },
+    });
+    sendData(res, 200, { registrations });
+  }),
+);
+
+campaignsRouter.get(
+  "/videos",
+  requireAuth,
+  asyncHandler(async (_req: Request, res: Response) => {
+    const videos = await prisma.campaignVideo.findMany({ orderBy: { createdAt: "desc" } });
+    sendData(res, 200, { videos });
+  }),
+);
+
+campaignsRouter.post(
+  "/videos",
+  requireAuth,
+  requireRole("ADMIN"),
+  requireCsrf,
+  asyncHandler(async (req: Request, res: Response) => {
+    const parsed = createCampaignVideoSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
+      return;
+    }
+    const video = await prisma.campaignVideo.create({
+      data: { ...parsed.data, uploadedByAdminId: req.user!.id },
+    });
+    sendData(res, 201, { video });
+  }),
+);
+
+// ---------------------------------------------------------------------------
 // Campaigns — admin creates/edits, everyone can browse
 // ---------------------------------------------------------------------------
 campaignsRouter.post(
@@ -61,8 +105,6 @@ campaignsRouter.post(
       data: { ...parsed.data, createdByAdminId: req.user!.id },
     });
 
-    // Notify opted-in community members — fire and forget, same pattern as
-    // admin.ts's verification/complaint notifications.
     const subscribers = await prisma.user.findMany({
       where: { hasJoinedCampaignCommunity: true, campaignNotificationsEnabled: true },
       select: { id: true },
@@ -77,6 +119,52 @@ campaignsRouter.post(
     }
 
     sendData(res, 201, { campaign });
+  }),
+);
+
+campaignsRouter.get(
+  "/",
+  requireAuth,
+  asyncHandler(async (_req: Request, res: Response) => {
+    const campaigns = await prisma.recyclingCampaign.findMany({
+      orderBy: { eventDate: "asc" },
+      include: { registrations: registrationCounts },
+    });
+    const withCounts = campaigns.map((c) => {
+      const { registrations, ...rest } = c;
+      return {
+        ...rest,
+        attendeeCount: registrations.filter((r) => r.type === "ATTENDEE").length,
+        volunteerCount: registrations.filter((r) => r.type === "VOLUNTEER").length,
+      };
+    });
+    sendData(res, 200, { campaigns: withCounts });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Everything below this line uses /:id — must come AFTER the literal routes above.
+// ---------------------------------------------------------------------------
+campaignsRouter.get(
+  "/:id",
+  requireAuth,
+  asyncHandler(async (req: Request, res: Response) => {
+    const campaign = await prisma.recyclingCampaign.findUnique({
+      where: { id: req.params.id },
+      include: { registrations: registrationCounts, videos: true },
+    });
+    if (!campaign) {
+      sendError(res, 404, "NOT_FOUND", "Campaign not found.");
+      return;
+    }
+    const { registrations, ...rest } = campaign;
+    sendData(res, 200, {
+      campaign: {
+        ...rest,
+        attendeeCount: registrations.filter((r) => r.type === "ATTENDEE").length,
+        volunteerCount: registrations.filter((r) => r.type === "VOLUNTEER").length,
+      },
+    });
   }),
 );
 
@@ -114,49 +202,6 @@ campaignsRouter.delete(
 );
 
 campaignsRouter.get(
-  "/",
-  requireAuth,
-  asyncHandler(async (_req: Request, res: Response) => {
-    const campaigns = await prisma.recyclingCampaign.findMany({
-      orderBy: { eventDate: "asc" },
-      include: { registrations: registrationCounts },
-    });
-    const withCounts = campaigns.map((c) => {
-      const { registrations, ...rest } = c;
-      return {
-        ...rest,
-        attendeeCount: registrations.filter((r) => r.type === "ATTENDEE").length,
-        volunteerCount: registrations.filter((r) => r.type === "VOLUNTEER").length,
-      };
-    });
-    sendData(res, 200, { campaigns: withCounts });
-  }),
-);
-
-campaignsRouter.get(
-  "/:id",
-  requireAuth,
-  asyncHandler(async (req: Request, res: Response) => {
-    const campaign = await prisma.recyclingCampaign.findUnique({
-      where: { id: req.params.id },
-      include: { registrations: registrationCounts, videos: true },
-    });
-    if (!campaign) {
-      sendError(res, 404, "NOT_FOUND", "Campaign not found.");
-      return;
-    }
-    const { registrations, ...rest } = campaign;
-    sendData(res, 200, {
-      campaign: {
-        ...rest,
-        attendeeCount: registrations.filter((r) => r.type === "ATTENDEE").length,
-        volunteerCount: registrations.filter((r) => r.type === "VOLUNTEER").length,
-      },
-    });
-  }),
-);
-
-campaignsRouter.get(
   "/:id/registrations",
   requireAuth,
   requireRole("ADMIN"),
@@ -170,9 +215,6 @@ campaignsRouter.get(
   }),
 );
 
-// ---------------------------------------------------------------------------
-// Registering to attend or volunteer
-// ---------------------------------------------------------------------------
 campaignsRouter.post(
   "/:id/register",
   requireAuth,
@@ -217,48 +259,5 @@ campaignsRouter.delete(
       where: { campaignId: req.params.id, userId: req.user!.id, type: parsed.data.type },
     });
     sendData(res, 200, { success: true });
-  }),
-);
-
-campaignsRouter.get(
-  "/me/registrations",
-  requireAuth,
-  asyncHandler(async (req: Request, res: Response) => {
-    const registrations = await prisma.campaignRegistration.findMany({
-      where: { userId: req.user!.id },
-      include: { campaign: true },
-      orderBy: { registeredAt: "desc" },
-    });
-    sendData(res, 200, { registrations });
-  }),
-);
-
-// ---------------------------------------------------------------------------
-// Videos of past campaigns
-// ---------------------------------------------------------------------------
-campaignsRouter.post(
-  "/videos",
-  requireAuth,
-  requireRole("ADMIN"),
-  requireCsrf,
-  asyncHandler(async (req: Request, res: Response) => {
-    const parsed = createCampaignVideoSchema.safeParse(req.body);
-    if (!parsed.success) {
-      sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid input");
-      return;
-    }
-    const video = await prisma.campaignVideo.create({
-      data: { ...parsed.data, uploadedByAdminId: req.user!.id },
-    });
-    sendData(res, 201, { video });
-  }),
-);
-
-campaignsRouter.get(
-  "/videos",
-  requireAuth,
-  asyncHandler(async (_req: Request, res: Response) => {
-    const videos = await prisma.campaignVideo.findMany({ orderBy: { createdAt: "desc" } });
-    sendData(res, 200, { videos });
   }),
 );
