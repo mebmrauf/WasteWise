@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import { campaignsRouter } from "./routes/campaigns";
 import { env } from "./lib/env";
 import { helmetMiddleware, generalRateLimiter, noStoreMiddleware } from "./middleware/security";
 import { requestLogger } from "./middleware/requestLogger";
@@ -15,6 +16,7 @@ import { pickupsRouter } from "./routes/pickups";
 import { offersRouter } from "./routes/offers";
 import { routesRouter } from "./routes/routes";
 import { rewardsRouter } from "./routes/rewards";
+import { sustainabilityRouter } from "./routes/sustainability";
 import { referralsRouter } from "./routes/referrals";
 import { notificationsRouter } from "./routes/notifications";
 import { adminRouter } from "./routes/admin";
@@ -24,6 +26,7 @@ import { complaintsRouter } from "./routes/complaints";
 import { csrRouter } from "./routes/csr";
 import { messagesRouter } from "./routes/messages";
 import paymentsRouter from "./routes/payments";
+import { landingRouter } from "./routes/landing";
 
 export function createApp() {
   const app = express();
@@ -62,6 +65,7 @@ export function createApp() {
   app.use("/api/v1/offers", offersRouter);
   app.use("/api/v1/routes", routesRouter);
   app.use("/api/v1/rewards", rewardsRouter);
+  app.use("/api/v1/sustainability", sustainabilityRouter);
   app.use("/api/v1/referrals", referralsRouter);
   app.use("/api/v1/notifications", notificationsRouter);
   app.use("/api/v1/admin", adminRouter);
@@ -71,7 +75,8 @@ export function createApp() {
   app.use("/api/v1/csr", csrRouter);
   app.use("/api/v1/messages", messagesRouter);
   app.use("/api/v1/payments", paymentsRouter);
-
+  app.use("/api/v1/landing", landingRouter);
+  app.use("/api/v1/campaigns", campaignsRouter);
 
   // 404 fallback — kept last so it never shadows a real route.
   app.use((_req, res) => {

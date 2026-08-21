@@ -86,6 +86,13 @@ model User {
   paymentsMade                          Payment[]                   @relation("PaymentsMade")
   wasteAnalysisReportsRequested         WasteAnalysisReport[]       @relation("WasteAnalysisRequester")
   wasteAnalysisReportsReviewed          WasteAnalysisReport[]       @relation("WasteAnalysisReviewer")
+  communityName                 String?
+  hasJoinedCampaignCommunity     Boolean               @default(false)
+  campaignCommunityJoinedAt      DateTime?
+  campaignNotificationsEnabled   Boolean               @default(true)
+  campaignsCreated               RecyclingCampaign[]   @relation("CampaignsCreated")
+  campaignRegistrations          CampaignRegistration[]
+  campaignVideosUploaded         CampaignVideo[]        @relation("CampaignVideoUploader")
 }
 
 model OAuthAccount {
@@ -684,6 +691,7 @@ enum NotificationType {
   COMPLAINT_UPDATE
   ROUTE_UPDATE
   GENERIC
+  CAMPAIGN_UPDATE
 }
 
 enum GreenPointsTransactionType {
@@ -794,4 +802,58 @@ enum PaymentStatus {
 enum CsrStatus {
   PENDING
   COMPLETED
+}
+enum CampaignRegistrationType {
+  ATTENDEE
+  VOLUNTEER
+}
+
+model RecyclingCampaign {
+  id               String   @id @default(cuid())
+  title            String
+  description      String?
+  location         String?
+  eventDate        DateTime
+  volunteersNeeded Int?
+  coverImageUrl    String?
+  createdByAdminId String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  createdByAdmin User                   @relation("CampaignsCreated", fields: [createdByAdminId], references: [id])
+  registrations  CampaignRegistration[]
+  videos         CampaignVideo[]
+
+  @@index([eventDate])
+}
+
+model CampaignRegistration {
+  id           String                    @id @default(cuid())
+  campaignId   String
+  userId       String
+  type         CampaignRegistrationType
+  registeredAt DateTime                  @default(now())
+
+  campaign RecyclingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId, type])
+  @@index([campaignId])
+  @@index([userId])
+}
+
+model CampaignVideo {
+  id                String   @id @default(cuid())
+  campaignId        String?
+  title             String
+  description       String?
+  videoUrl          String
+  thumbnailUrl      String?
+  uploadedByAdminId String
+  createdAt         DateTime @default(now())
+
+  campaign        RecyclingCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  uploadedByAdmin User               @relation("CampaignVideoUploader", fields: [uploadedByAdminId], references: [id])
+
+  @@index([campaignId])
 }

@@ -63,6 +63,7 @@ export function toPublicBusinessProfile(profile: any) {
     tradeLicenseNumber: profile.tradeLicenseNumber,
     verificationStatus: profile.verificationStatus,
     askForCsrContribution: profile.askForCsrContribution,
+    
   };
 }
 
@@ -71,6 +72,7 @@ function toPublicProfile(
     collectorProfile?: CollectorProfile | null;
     recyclingCompanyProfile?: any | null;
     businessProfile?: any | null;
+    
   },
 ) {
   return {
@@ -90,6 +92,10 @@ function toPublicProfile(
     emailNotificationsEnabled: user.emailNotificationsEnabled,
     smsNotificationsEnabled: user.smsNotificationsEnabled,
     rewardsEmailNotificationsEnabled: user.rewardsEmailNotificationsEnabled,
+    communityName: user.communityName,
+    hasJoinedCampaignCommunity: user.hasJoinedCampaignCommunity,
+    campaignCommunityJoinedAt: user.campaignCommunityJoinedAt,
+    campaignNotificationsEnabled: user.campaignNotificationsEnabled,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
     collectorProfile: user.collectorProfile ? toPublicCollectorProfile(user.collectorProfile) : null,

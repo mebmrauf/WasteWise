@@ -56,6 +56,7 @@ export function NavBar({ brand, links = [], actions, accent = "user", className,
   const mobileMenuId = React.useId();
   const hasLinks = links.length > 0;
   const [scrolled, setScrolled] = React.useState(false);
+  const [activeSection, setActiveSection] = React.useState<string>("");
 
   React.useEffect(() => {
     // Hysteresis (enter at 24px, exit at 8px) so a 1-2px scroll-anchoring
@@ -69,6 +70,33 @@ export function NavBar({ brand, links = [], actions, accent = "user", className,
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  React.useEffect(() => {
+    const sectionIds = links
+      .map(link => link.href)
+      .filter(href => href.startsWith("#"))
+      .map(href => href.substring(1));
+
+    if (sectionIds.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+
+    sectionIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [links]);
 
   return (
     <header className={cn(
@@ -85,26 +113,40 @@ export function NavBar({ brand, links = [], actions, accent = "user", className,
         {hasLinks && (
           <nav aria-label="Primary" className="hidden md:block">
             <ul className="flex items-center gap-6">
-              {links.map((link) => (
-                <li key={link.href}>
-                  <a
-                    href={link.href}
-                    aria-current={link.active ? "page" : undefined}
-                    className={cn(
-                      "text-[16px] text-neutral-600 transition-all duration-300 relative group py-1",
-                      accentHoverTextClasses[accent],
-                      link.active && [accentActiveTextClasses[accent]]
-                    )}
-                  >
-                    {link.label}
-                    <span className={cn(
-                      "absolute bottom-0 left-0 w-full h-0.5 bg-current transform origin-left transition-transform duration-300",
-                      link.active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100",
-                      accentUnderlineClasses[accent]
-                    )} />
-                  </a>
-                </li>
-              ))}
+              {links.map((link) => {
+                const isHashLink = link.href.startsWith("#");
+                const isActive = link.active || (isHashLink && activeSection === link.href.substring(1));
+                
+                return (
+                  <li key={link.href}>
+                    <a
+                      href={link.href}
+                      aria-current={isActive ? "page" : undefined}
+                      onClick={(e) => {
+                        if (isHashLink) {
+                          e.preventDefault();
+                          const el = document.getElementById(link.href.substring(1));
+                          if (el) {
+                            el.scrollIntoView({ behavior: "smooth" });
+                            setActiveSection(link.href.substring(1));
+                          }
+                        }
+                      }}
+                      className={cn(
+                        "text-[16px] text-neutral-600 transition-all duration-300 relative group py-1",
+                        accentHoverTextClasses[accent],
+                        isActive && ["text-[#166534] font-semibold"]
+                      )}
+                    >
+                      {link.label}
+                      <span className={cn(
+                        "absolute bottom-0 left-0 w-full h-0.5 transform origin-left transition-transform duration-300",
+                        isActive ? "scale-x-100 bg-[#166534]" : "scale-x-0 group-hover:scale-x-100 bg-current",
+                      )} />
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           </nav>
         )}
@@ -130,22 +172,37 @@ export function NavBar({ brand, links = [], actions, accent = "user", className,
       {mobileOpen && hasLinks && (
         <nav id={mobileMenuId} aria-label="Primary" className="border-t border-neutral-200 bg-neutral-0 md:hidden absolute w-full left-0 top-16 shadow-lg">
           <ul className="flex flex-col gap-1 px-4 py-3">
-            {links.map((link) => (
-              <li key={link.href}>
-                <a
-                  href={link.href}
-                  aria-current={link.active ? "page" : undefined}
-                  onClick={() => setMobileOpen(false)}
-                  className={cn(
-                    "block rounded-md px-3 py-2 text-body-sm text-neutral-600 transition-colors",
-                    accentHoverTextClasses[accent],
-                    link.active && ["bg-neutral-50", accentActiveTextClasses[accent]]
-                  )}
-                >
-                  {link.label}
-                </a>
-              </li>
-            ))}
+            {links.map((link) => {
+              const isHashLink = link.href.startsWith("#");
+              const isActive = link.active || (isHashLink && activeSection === link.href.substring(1));
+              
+              return (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    aria-current={isActive ? "page" : undefined}
+                    onClick={(e) => {
+                      if (isHashLink) {
+                        e.preventDefault();
+                        const el = document.getElementById(link.href.substring(1));
+                        if (el) {
+                          el.scrollIntoView({ behavior: "smooth" });
+                          setActiveSection(link.href.substring(1));
+                        }
+                      }
+                      setMobileOpen(false);
+                    }}
+                    className={cn(
+                      "block rounded-md px-3 py-2 text-body-sm text-neutral-600 transition-colors",
+                      accentHoverTextClasses[accent],
+                      isActive && ["bg-green-50 text-[#166534] font-semibold"]
+                    )}
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              );
+            })}
           </ul>
         </nav>
       )}
