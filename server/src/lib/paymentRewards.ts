@@ -94,9 +94,15 @@ export async function processGreenPointsForPickup(pickupRequestId: string) {
     const newMilestones: number[] = [];
 
     const totalVerifiedWeight = validItems.reduce((sum, i) => sum + i.exactWeightKg, 0);
-    if (userToUpdate.referredById && !userToUpdate.referralRewardClaimed && totalVerifiedWeight >= 5) {
-      referralRewardsProcessed = true;
-      referrerId = userToUpdate.referredById;
+    if (userToUpdate.accountType === "HOUSEHOLD" && userToUpdate.referredById && !userToUpdate.referralRewardClaimed && validItems.length > 0) {
+      
+      const existingReferralTx = await tx.greenPointsTransaction.findFirst({
+        where: { userId: pickup.requesterId, category: "REFERRAL" }
+      });
+
+      if (!existingReferralTx) {
+        referralRewardsProcessed = true;
+        referrerId = userToUpdate.referredById;
 
       await tx.user.update({
         where: { id: pickup.requesterId },
@@ -115,7 +121,7 @@ export async function processGreenPointsForPickup(pickupRequestId: string) {
           points: 50,
           type: GreenPointsTransactionType.EARNED,
           category: "REFERRAL",
-          description: "Referral signup reward",
+          description: "Welcome Referral Bonus +50 Points",
         },
       });
 
@@ -137,7 +143,7 @@ export async function processGreenPointsForPickup(pickupRequestId: string) {
           points: 100,
           type: GreenPointsTransactionType.EARNED,
           category: "REFERRAL",
-          description: "Friend referral reward",
+          description: "Referral Bonus - Invited Friend Completed First Pickup +100 Points",
         },
       });
 
@@ -174,6 +180,7 @@ export async function processGreenPointsForPickup(pickupRequestId: string) {
             });
           }
         }
+      }
       }
     }
 
