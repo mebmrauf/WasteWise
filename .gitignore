@@ -42,3 +42,8 @@ package-lock.json
 package-lock.json
 remember.txt
 web/AGENTS.md
+<<<<<<< Updated upstream
+=======
+CLAUDE.md
+/server/scripts
+>>>>>>> Stashed changes
