@@ -3,7 +3,7 @@ import { prisma } from "./prisma";
 import { logger } from "./logger";
 import { detectLabels, isVisionConfigured, type VisionLabel } from "./visionClient";
 import { analyzeWasteWithGemini, isGeminiConfigured } from "./geminiClient";
-const MAX_ANALYSIS_PHOTOS = 3;
+const MAX_ANALYSIS_PHOTOS = 4;
 const REVIEW_CONFIDENCE_THRESHOLD = 0.6;
 
 const PHOTO_MIME_TYPES: Record<string, string> = {

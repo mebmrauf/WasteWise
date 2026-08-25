@@ -30,9 +30,7 @@ export interface GeminiImageInput {
 export interface AnalyzeWasteWithGeminiInput {
   description: string | null;
   images: GeminiImageInput[];
-  /** The platform's closed set of waste categories the item must be matched against. */
   categories: WasteCategory[];
-  /** Best-effort Vision label detection on the first photo, if available. */
   visionLabels: VisionLabel[] | null;
 }
 

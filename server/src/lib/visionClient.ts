@@ -1,11 +1,3 @@
-// Thin wrapper around the Google Cloud Vision REST API (label detection).
-// Deliberately a plain fetch() call against the REST endpoint with an API
-// key (see server.env.example: GOOGLE_VISION_API_KEY) rather than the
-// @google-cloud/vision SDK, which expects a service-account JSON credential
-// file — a heavier setup than this project needs for a single label-
-// detection call. Mirrors the "server-side only, never exposed to the
-// browser" pattern already used for GOOGLE_MAPS_SERVER_API_KEY (see
-// lib/geocoding.ts).
 import { env } from "./env";
 import { logger } from "./logger";
 
@@ -28,14 +20,6 @@ export function isVisionConfigured(): boolean {
   return Boolean(env.GOOGLE_VISION_API_KEY);
 }
 
-/**
- * Sends an image buffer to the Vision API's label detection feature and
- * returns the raw label list, sorted by confidence (highest first, as the
- * API already returns them). Throws VisionApiError on any upstream failure
- * (bad key, quota exceeded, malformed image) — callers should catch this
- * distinctly from validation errors, same pattern as
- * GeocodingResolutionError in lib/geocoding.ts.
- */
 export async function detectLabels(imageBuffer: Buffer): Promise<VisionLabel[]> {
   if (!isVisionConfigured()) {
     throw new VisionApiError("GOOGLE_VISION_API_KEY is not configured", null);

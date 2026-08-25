@@ -56,7 +56,6 @@ async function getNearbyOpenPickupIds(
     .map((p) => p.id);
 }
 
-/** Re-broadcasts live queue position/ETA (not a new Notification row) to every not-yet-visited stop on a route. */
 async function broadcastQueuePositions(routePlanId: string): Promise<void> {
   const queuedStops = await prisma.routeStop.findMany({
     where: { routePlanId, status: RouteStopStatus.QUEUED },
@@ -92,7 +91,6 @@ export type SuggestedRouteResult =
   | { ok: true; origin: LatLng; stops: SuggestedStop[]; nearbyOpenPickupIds: string[] }
   | { ok: false; reason: "no_origin" };
 
-/** Stateless — computed fresh every call, nothing persisted. */
 export async function getSuggestedRoute(collectorId: string): Promise<SuggestedRouteResult> {
   const origin = await resolveCollectorOrigin(collectorId);
   if (!origin) return { ok: false, reason: "no_origin" };
@@ -137,7 +135,6 @@ export type StartRouteResult =
   | { ok: true; routePlanId: string; firstPickupRequestId: string | null }
   | { ok: false; reason: "no_origin" | "already_active" | "no_valid_stops" };
 
-/** Re-validates and re-optimizes server-side — never trusts client-submitted order. */
 export async function startRoute(collectorId: string, pickupRequestIds: string[]): Promise<StartRouteResult> {
   const origin = await resolveCollectorOrigin(collectorId);
   if (!origin) return { ok: false, reason: "no_origin" };
@@ -224,10 +221,6 @@ export async function startRoute(collectorId: string, pickupRequestIds: string[]
   return { ok: true, routePlanId, firstPickupRequestId };
 }
 
-/**
- * Idempotent — no-ops unless `pickupRequestId` is the current stop on an active route.
- * Called both when a route stop's pickup completes naturally and after a skip.
- */
 export async function advanceRouteIfNeeded(pickupRequestId: string): Promise<void> {
   const stop = await prisma.routeStop.findFirst({
     where: {
@@ -293,7 +286,6 @@ export async function advanceRouteIfNeeded(pickupRequestId: string): Promise<voi
   await broadcastQueuePositions(stop.routePlanId);
 }
 
-/** Fire-and-forget from the offer-accept flow — failure here never affects the core assignment. */
 export async function attachPickupToActiveRouteIfAny(collectorId: string, pickupRequestId: string): Promise<void> {
   const routePlan = await prisma.routePlan.findFirst({
     where: { collectorId, status: RoutePlanStatus.ACTIVE },
@@ -361,7 +353,6 @@ export type SkipStopResult =
   | { ok: true }
   | { ok: false; reason: "not_found" | "not_skippable" };
 
-/** Only valid on a QUEUED, not-yet-in-flight stop — the underlying pickup stays ASSIGNED. */
 export async function skipStop(
   collectorId: string,
   routePlanId: string,
