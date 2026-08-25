@@ -130,6 +130,11 @@ authRouter.post(
       referredById = referrer.id;
     }
 
+    let newReferralCode: string | undefined;
+    if (role === "USER" && accountType === "HOUSEHOLD") {
+      newReferralCode = `${fullName.split(' ')[0].replace(/[^A-Za-z]/g, '').substring(0, 4).toUpperCase()}${randomBytes(2).toString('hex').toUpperCase()}`;
+    }
+
     let user: User;
     try {
       user = await prisma.user.create({
@@ -141,6 +146,7 @@ authRouter.post(
           role, 
           accountType,
           referredById,
+          referralCode: newReferralCode,
           collectorProfile: role === "COLLECTOR" ? {
             create: {
               vehicleType: "BICYCLE_VAN",
@@ -510,6 +516,11 @@ async function findOrCreateOAuthUser(
     accountType = null;
   }
 
+  let newReferralCode: string | undefined;
+  if (role === "USER" && accountType === "HOUSEHOLD") {
+    newReferralCode = `${profile.fullName.split(' ')[0].replace(/[^A-Za-z]/g, '').substring(0, 4).toUpperCase()}${randomBytes(2).toString('hex').toUpperCase()}`;
+  }
+
   const user = await prisma.user.create({
     data: {
       email: profile.email,
@@ -519,6 +530,7 @@ async function findOrCreateOAuthUser(
       accountType,
       avatarUrl: profile.avatarUrl,
       isEmailVerified: true, // provider already verified this email address
+      referralCode: newReferralCode,
       oauthAccounts: {
         create: { provider, providerAccountId: profile.providerAccountId },
       },

@@ -21,11 +21,17 @@ referralsRouter.get(
         referralPointsEarned: true,
         milestonesClaimed: true,
         fullName: true,
+        role: true,
+        accountType: true,
       },
     });
 
     if (!user) {
       throw new Error("User not found");
+    }
+
+    if (user.role !== "USER" || user.accountType !== "HOUSEHOLD") {
+      return sendData(res, 403, { error: "Referral program is only available to Individual household accounts." });
     }
 
     if (!user.referralCode) {
@@ -63,7 +69,7 @@ referralsRouter.get(
     const history = referredUsers.map((friend) => {
       // Find the first completed verified pickup (if any)
       const firstVerifiedPickup = friend.pickupRequestsMade.find(
-        (p) => p.status === "COMPLETED" && p.items.reduce((sum, i) => sum + (i.exactWeightKg || 0), 0) >= 5
+        (p) => p.status === "COMPLETED" && p.items.some(i => i.exactWeightKg !== null)
       );
 
       // Determine pickup status
@@ -85,7 +91,7 @@ referralsRouter.get(
         friendName: friend.fullName,
         registrationDate: friend.createdAt,
         firstPickupStatus,
-        rewardStatus: friend.referralRewardClaimed ? "Rewarded" : (firstPickupStatus === "Completed" ? "Pending Approval" : "Waiting"),
+        rewardStatus: friend.referralRewardClaimed ? "Completed" : (firstPickupStatus === "Completed" ? "Pending Approval" : "Waiting"),
         greenPointsEarned: friend.referralRewardClaimed ? "+100" : "0",
       };
     });
