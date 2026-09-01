@@ -9,6 +9,7 @@ import { formatDate } from "@/components/AvailableJobListItem";
 import { Icon } from "@/components/Icon";
 import { Input } from "@/components/Input";
 import { ChatWidget } from "@/components/ChatWidget";
+import { Avatar } from "@/components/Avatar";
 
 import { StatusPill } from "@/components/StatusPill";
 import { StatusTimeline, type PickupTrackingStatus } from "@/components/StatusTimeline";
@@ -22,6 +23,7 @@ import {
   type PickupStatus,
 } from "@/lib/api/pickups";
 import { getActiveRoute } from "@/lib/api/routes";
+import { resolveAvatarUrl } from "@/lib/api/users";
 import { PICKUP_STATUS_TONE, PICKUP_STATUS_LABEL } from "@/lib/pickupStatus";
 import {
   getTrackingSocket,
@@ -403,22 +405,24 @@ function ActiveJobCard({
   if (!isHero) {
     // Compact View for Queue
     return (
-      <div className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {routeBadge ? (
-            <div className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full font-bold text-sm bg-neutral-100 text-neutral-500">
-              {routeBadge.sequence < 10 ? `0${routeBadge.sequence}` : routeBadge.sequence}
-            </div>
-          ) : (
-            <div className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full font-bold text-sm bg-neutral-100 text-neutral-500">
-              -
-            </div>
-          )}
+      <div className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm flex items-start justify-between">
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 mt-0.5">
+            <Avatar 
+              src={resolveAvatarUrl(job.requester?.avatarUrl ?? null)} 
+              name={job.requester?.fullName || "Household"} 
+              size="sm" 
+            />
+          </div>
           
           <div className="flex flex-col">
-            <h3 className="text-sm font-bold text-[#1A1A1A] truncate">{job.pickupFormattedAddress.split(',')[0]}</h3>
-            <div className="flex items-center gap-2 text-xs text-neutral-500 mt-0.5">
-              <span>{job.items.map(i => i.category).join(" · ")}</span>
+            <h3 className="text-sm font-bold text-[#1A1A1A] truncate">{job.requester?.fullName || "Household"}</h3>
+            {job.requester?.phone && (
+              <span className="text-xs font-medium text-neutral-700 mt-0.5">{job.requester.phone}</span>
+            )}
+            <span className="text-xs text-neutral-500 mt-0.5 truncate max-w-[200px] sm:max-w-[300px]">{job.pickupFormattedAddress}</span>
+            <div className="flex items-center gap-2 text-[11px] text-neutral-500 mt-1.5">
+              <span className="font-medium bg-neutral-100 px-1.5 py-0.5 rounded text-neutral-600">{job.items.map(i => i.category).join(" · ")}</span>
               {formatEstimatedWeightRange(job.estimatedMinKg, job.estimatedMaxKg) && (
                 <>
                   <span>•</span>
@@ -450,14 +454,19 @@ function ActiveJobCard({
       {/* Header Info */}
       <div className="p-5 md:p-6 flex flex-col md:flex-row items-start justify-between gap-4 border-b border-neutral-100">
         <div className="flex items-start gap-4">
-          {routeBadge && (
-            <div className="flex shrink-0 mt-1 items-center justify-center w-10 h-10 rounded-full font-bold text-base bg-[#1A1A1A] text-white">
-              {routeBadge.sequence < 10 ? `0${routeBadge.sequence}` : routeBadge.sequence}
-            </div>
-          )}
+          <div className="mt-1 shrink-0">
+            <Avatar 
+              src={resolveAvatarUrl(job.requester?.avatarUrl ?? null)} 
+              name={job.requester?.fullName || "Household"} 
+              size="lg" 
+            />
+          </div>
           <div className="flex flex-col">
-            <h1 className="text-xl font-bold text-[#1A1A1A]">{job.pickupFormattedAddress.split(',')[0]}</h1>
-            <p className="text-sm text-neutral-500 mt-1">{job.pickupFormattedAddress}</p>
+            <h1 className="text-xl font-bold text-[#1A1A1A]">{job.requester?.fullName || "Household"}</h1>
+            {job.requester?.phone && (
+              <p className="text-sm font-medium text-neutral-700 mt-1">{job.requester.phone}</p>
+            )}
+            <p className="text-sm text-neutral-500 mt-0.5">{job.pickupFormattedAddress}</p>
             <div className="flex items-center gap-3 mt-3">
               <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wide ${
                 status === "EN_ROUTE" ? "bg-[#EA580C]/10 text-[#EA580C]" :

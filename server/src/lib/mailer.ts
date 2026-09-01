@@ -27,6 +27,36 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail(opts: SendEmailOptions): Promise<void> {
+  if (env.NODE_ENV === "production") {
+    if (!env.EMAIL_PASS) {
+      logger.warn({ to: opts.to }, "Email not sent — EMAIL_PASS is not configured for Resend HTTPS");
+      return;
+    }
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${env.EMAIL_PASS}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          from: env.EMAIL_FROM,
+          to: [opts.to],
+          subject: opts.subject,
+          html: opts.html,
+          text: opts.text,
+        })
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        logger.error({ error: errorText, to: opts.to }, "Failed to send email via Resend HTTPS API");
+      }
+    } catch (err) {
+      logger.error({ err, to: opts.to }, "Exception while sending email via Resend HTTPS API");
+    }
+    return;
+  }
+
   const client = getTransporter();
   if (!client) {
     logger.warn({ to: opts.to }, "Email not sent — SMTP is not configured");
@@ -42,13 +72,6 @@ export async function sendEmail(opts: SendEmailOptions): Promise<void> {
   });
 }
 
-/**
- * Kept deliberately plain (no images, no tracking pixel, no link-heavy layout,
- * a real plain-text alternative) — this is the profile most mailbox providers'
- * spam filters expect from a one-time transactional code, versus a marketing-
- * styled HTML email. The domain behind EMAIL_FROM still needs SPF/DKIM/DMARC
- * verified in Resend for inbox placement; content alone can't fix that.
- */
 export function buildVerificationCodeEmail(fullName: string, code: string): { subject: string; html: string; text: string } {
   const firstName = fullName.trim().split(" ")[0] || "there";
   const subject = `Your WasteWise verification code is ${code}`;
