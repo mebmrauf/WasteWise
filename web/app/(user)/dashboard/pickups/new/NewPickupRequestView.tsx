@@ -74,6 +74,9 @@ export function NewPickupRequestView() {
   const searchParams = useSearchParams();
   const preferredCollectorId = searchParams.get("preferredCollectorId");
   const preferredCollectorName = searchParams.get("collectorName");
+  const initialRadius = searchParams.get("radiusKm") ? Number(searchParams.get("radiusKm")) : 20;
+
+  const [radiusKm, setRadiusKm] = React.useState<number>(initialRadius);
 
   const [validationMessage, setValidationMessage] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -350,6 +353,7 @@ export function NewPickupRequestView() {
           preferredCollectorId: selectedCollectorId,
           isExclusiveToPreferred
         } : {}),
+        radiusKm,
         estimatedTotalWeight: computedTotalWeight,
         photoUrls,
         wasteDescription: wasteDescription.trim() || undefined,
@@ -651,6 +655,31 @@ export function NewPickupRequestView() {
                     value={isExclusiveToPreferred ? "exclusive" : "broadcast"}
                     onChange={(id) => setIsExclusiveToPreferred(id === "exclusive")}
                   />
+
+                  {!isExclusiveToPreferred && (
+                    <div className="mt-4 pt-4 border-t border-primary-200">
+                      <label className="text-body-sm font-semibold text-primary-900 mb-2 block">
+                        Broadcast Radius ({radiusKm} km)
+                      </label>
+                      <p className="text-caption text-primary-800 mb-2">
+                        We will notify all verified collectors within this range.
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
+                          min={5}
+                          max={50}
+                          step={1}
+                          value={radiusKm}
+                          onChange={(e) => setRadiusKm(Number(e.target.value))}
+                          className="flex-1 accent-primary-600"
+                        />
+                        <span className="w-12 text-right text-body-sm font-medium text-primary-900">
+                          {radiusKm} km
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 resolvedLocation && localCollectors.length > 0 && (
@@ -681,6 +710,31 @@ export function NewPickupRequestView() {
                         />
                         Send this request ONLY to the selected collector.
                       </label>
+                    )}
+                    
+                    {(!selectedCollectorId || !isExclusiveToPreferred) && (
+                      <div className="mt-4 pt-4 border-t border-primary-200">
+                        <label className="text-body-sm font-semibold text-primary-900 mb-2 block">
+                          Broadcast Radius ({radiusKm} km)
+                        </label>
+                        <p className="text-caption text-primary-800 mb-2">
+                          We will notify all verified collectors within this range.
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="range"
+                            min={5}
+                            max={50}
+                            step={1}
+                            value={radiusKm}
+                            onChange={(e) => setRadiusKm(Number(e.target.value))}
+                            className="flex-1 accent-primary-600"
+                          />
+                          <span className="w-12 text-right text-body-sm font-medium text-primary-900">
+                            {radiusKm} km
+                          </span>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )

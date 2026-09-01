@@ -39,7 +39,7 @@ async function getNearbyOpenPickupIds(
       longitude: { not: null },
       OR: [{ isExclusiveToPreferred: { not: true } }, { preferredCollectorId: collectorId }],
     },
-    select: { id: true, latitude: true, longitude: true, requester: { select: { collectorFindRadiusKm: true } } },
+    select: { id: true, latitude: true, longitude: true, radiusKm: true },
     take: 100,
   });
 
@@ -50,7 +50,7 @@ async function getNearbyOpenPickupIds(
 
   return openPickups
     .map((p) => {
-      const userMaxRadius = p.requester?.collectorFindRadiusKm ?? MAX_COLLECTOR_MATCH_DISTANCE_KM;
+      const userMaxRadius = p.radiusKm ?? MAX_COLLECTOR_MATCH_DISTANCE_KM;
       const maxAllowed = Math.min(collectorMaxRadius, userMaxRadius);
       return { id: p.id, distance: distanceKm(origin, { lat: p.latitude as number, lng: p.longitude as number }), maxAllowed };
     })

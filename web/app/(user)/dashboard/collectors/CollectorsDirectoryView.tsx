@@ -266,7 +266,7 @@ export function CollectorsDirectoryView() {
                   <Icon icon={MapPin} size="sm" className="shrink-0" />
                   {collector.distanceKm !== null ? `${collector.distanceKm.toFixed(1)} km away` : "Location not set"}
                 </span>
-                <Link href={`/dashboard/pickups/new?preferredCollectorId=${collector.id}&collectorName=${encodeURIComponent(collector.fullName)}`}>
+                <Link href={`/dashboard/pickups/new?preferredCollectorId=${collector.id}&collectorName=${encodeURIComponent(collector.fullName)}&radiusKm=${radiusKm ?? 20}`}>
                   <Button variant="secondary" size="sm" className="text-green-800">
                     Request
                   </Button>

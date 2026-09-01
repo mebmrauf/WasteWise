@@ -35,6 +35,7 @@ export const createPickupRequestSchema = z
     estimatedTotalWeight: z.number().positive().optional(),
     photoUrls: z.array(z.string()).max(4, "You can attach at most 4 photos").default([]),
     wasteDescription: z.string().trim().max(1000).optional(),
+    radiusKm: z.number().optional(),
   })
   .strict()
   .superRefine((data, ctx) => {

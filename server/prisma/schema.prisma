@@ -230,6 +230,7 @@ model PickupRequest {
   status                  PickupStatus             @default(PENDING)
   latitude                Float?
   longitude               Float?
+  radiusKm                Float?
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   pickupFormattedAddress  String
