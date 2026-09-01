@@ -66,7 +66,7 @@ export function RewardsView() {
   const [totalPoints, setTotalPoints] = React.useState<number>(0);
   const [membershipLevel, setMembershipLevel] = React.useState<"BRONZE" | "SILVER" | "GOLD" | "PLATINUM">("BRONZE");
   const [membershipBadge, setMembershipBadge] = React.useState<string>("Bronze Badge");
-  
+
   const [lastDiscountClaimDate, setLastDiscountClaimDate] = React.useState<string | null>(null);
   const [nextDiscountEligibleDate, setNextDiscountEligibleDate] = React.useState<string | null>(null);
   const [discountCouponClaimed, setDiscountCouponClaimed] = React.useState(false);
@@ -76,7 +76,7 @@ export function RewardsView() {
   const [giftClaimDate, setGiftClaimDate] = React.useState<string | null>(null);
   const [nextGiftEligibleDate, setNextGiftEligibleDate] = React.useState<string | null>(null);
   const [giftClaimed, setGiftClaimed] = React.useState(false);
-  
+
   const [isGiftModalOpen, setIsGiftModalOpen] = React.useState(false);
 
   const [accountType, setAccountType] = React.useState<"HOUSEHOLD" | "BUSINESS" | null>(null);
@@ -97,14 +97,14 @@ export function RewardsView() {
         setTotalPoints(balanceResult.totalGreenPoints);
         setMembershipLevel(balanceResult.membershipLevel);
         setMembershipBadge(balanceResult.membershipBadge);
-        
+
         setAccountType(balanceResult.accountType);
         setEnvironmentalImpact(balanceResult.environmentalImpact);
 
         setLastDiscountClaimDate(balanceResult.lastDiscountClaimDate);
         setNextDiscountEligibleDate(balanceResult.nextDiscountEligibleDate);
         setDiscountCouponClaimed(balanceResult.discountCouponClaimed);
-        
+
         setSelectedGift(balanceResult.selectedGift);
         setGiftClaimDate(balanceResult.giftClaimDate);
         setNextGiftEligibleDate(balanceResult.nextGiftEligibleDate);
@@ -132,13 +132,13 @@ export function RewardsView() {
     setBalance(result.greenPointsBalance);
     setMembershipLevel(result.membershipLevel);
     setMembershipBadge(result.membershipBadge);
-    
+
     getRewardsHistory()
       .then((historyResult) => {
         setGreenPointsTransactions(historyResult.greenPointsTransactions);
         setMobileRechargeTransactions(historyResult.mobileRechargeTransactions);
       })
-      .catch(() => {});
+      .catch(() => { });
   }
 
   const isBusiness = false;
@@ -200,7 +200,7 @@ export function RewardsView() {
 
   const unifiedTransactions = React.useMemo(() => {
     const list: UnifiedTransaction[] = [];
-    
+
     greenPointsTransactions.forEach((tx) => {
       let category = tx.category as TransactionCategory;
       if (!category || category === "OTHER") {
@@ -215,7 +215,7 @@ export function RewardsView() {
         else if (tx.type === "EARNED") category = "BONUS";
         else category = "OTHER";
       }
-      
+
       list.push({
         id: `gp-${tx.id}`,
         originalId: tx.id,
@@ -260,23 +260,23 @@ export function RewardsView() {
 
   const groupedTransactions = React.useMemo(() => {
     const filtered = unifiedTransactions.filter(tx => filterTab === "ALL" || tx.category === filterTab);
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     const groups: { label: string; items: UnifiedTransaction[] }[] = [
       { label: "Today", items: [] },
       { label: "Yesterday", items: [] },
       { label: "Earlier", items: [] },
     ];
-    
+
     filtered.forEach(tx => {
       const txDate = new Date(tx.createdAt);
       txDate.setHours(0, 0, 0, 0);
-      
+
       if (txDate.getTime() === today.getTime()) {
         groups[0].items.push(tx);
       } else if (txDate.getTime() === yesterday.getTime()) {
@@ -285,7 +285,7 @@ export function RewardsView() {
         groups[2].items.push(tx);
       }
     });
-    
+
     return groups.filter(g => g.items.length > 0);
   }, [unifiedTransactions, filterTab]);
 
@@ -301,13 +301,13 @@ export function RewardsView() {
   return (
     <PageContainer className="py-8 lg:py-12">
       <div className="mb-6">
-        <MembershipNotification 
-          level={membershipLevel} 
+        <MembershipNotification
+          level={membershipLevel}
           goldEligible={membershipLevel === "GOLD" && isEligibleForDiscount}
           goldNextDate={membershipLevel === "GOLD" && !isEligibleForDiscount ? nextDiscountEligibleDate : null}
           platinumEligible={membershipLevel === "PLATINUM" && isEligibleForGift}
           platinumNextDate={membershipLevel === "PLATINUM" && !isEligibleForGift ? nextGiftEligibleDate : null}
-          
+
         />
       </div>
 
@@ -326,7 +326,7 @@ export function RewardsView() {
 
       {loadState === "ready" && (
         <div className="mt-8 flex flex-col gap-8">
-          
+
           {/* Membership Card */}
           <Card className="overflow-hidden animate-slide-up">
             <div className="p-6 md:p-8 bg-gradient-to-br from-neutral-50 to-neutral-100 border-b border-neutral-200">
@@ -356,7 +356,7 @@ export function RewardsView() {
                   </ul>
                 </div>
               </div>
-              
+
               <div className="mt-8">
                 {membershipLevel !== "PLATINUM" ? (
                   <>
@@ -374,7 +374,7 @@ export function RewardsView() {
                 )}
               </div>
             </div>
-            
+
             {/* Environmental Impact (BUSINESS ONLY) */}
             {isBusiness && environmentalImpact && (
               <div className="p-6 md:p-8 bg-emerald-50 border-t border-emerald-100">
@@ -430,7 +430,7 @@ export function RewardsView() {
                     <p className="text-neutral-500 text-sm mt-1 max-w-md">
                       As a Platinum Business member, you are eligible to claim a Tree Plantation in your organization's name every 6 months.
                     </p>
-                    
+
                     {giftClaimDate && (
                       <div className="mt-4 p-4 rounded-xl border border-neutral-100 bg-neutral-50 inline-block">
                         <p className="text-sm font-semibold text-neutral-900 mb-2">Claim Status</p>
@@ -451,8 +451,8 @@ export function RewardsView() {
                     )}
                   </div>
                   <div>
-                    <Button 
-                      onClick={() => setIsGiftModalOpen(true)} 
+                    <Button
+                      onClick={() => setIsGiftModalOpen(true)}
                       disabled={!isEligibleForGift}
                       className="whitespace-nowrap"
                     >
@@ -479,7 +479,7 @@ export function RewardsView() {
                     <p className="text-neutral-500 text-sm mt-1 max-w-md">
                       As a {membershipLevel === "PLATINUM" ? "Platinum" : "Gold"} member, you are eligible to claim a 5% OFF coupon for the Eco Shop every 6 months.
                     </p>
-                    
+
                     {lastDiscountClaimDate && (
                       <div className="mt-4 p-4 rounded-xl border border-neutral-100 bg-neutral-50 inline-block">
                         <p className="text-sm font-semibold text-neutral-900 mb-2">Coupon Status</p>
@@ -500,8 +500,8 @@ export function RewardsView() {
                     )}
                   </div>
                   <div>
-                    <Button 
-                      onClick={handleClaimDiscount} 
+                    <Button
+                      onClick={handleClaimDiscount}
                       disabled={!isEligibleForDiscount || isClaimingDiscount}
                       className="whitespace-nowrap"
                     >
@@ -528,7 +528,7 @@ export function RewardsView() {
                     <p className="text-neutral-500 text-sm mt-1 max-w-md">
                       As a Platinum member, you are eligible to claim one exclusive eco-friendly gift every 6 months.
                     </p>
-                    
+
                     {selectedGift && (
                       <div className="mt-4 p-4 rounded-xl border border-neutral-100 bg-neutral-50 inline-block">
                         <p className="text-sm font-semibold text-neutral-900 mb-2">Gift Status</p>
@@ -549,8 +549,8 @@ export function RewardsView() {
                     )}
                   </div>
                   <div>
-                    <Button 
-                      onClick={() => setIsGiftModalOpen(true)} 
+                    <Button
+                      onClick={() => setIsGiftModalOpen(true)}
                       disabled={!isEligibleForGift}
                       className="whitespace-nowrap"
                     >
@@ -571,7 +571,7 @@ export function RewardsView() {
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-600 to-primary-900 p-8 shadow-xl text-center animate-slide-up">
             <div className="absolute -top-24 -left-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
             <div className="absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
-            
+
             <div className="relative z-10 flex flex-col items-center gap-4">
               <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white/20 backdrop-blur-md shadow-inner">
                 <Icon icon={Gift} size="xl" className="text-white" aria-hidden />
@@ -629,19 +629,19 @@ export function RewardsView() {
                   {(["ALL", "PICKUP", "REFERRAL", "LOYALTY", "REDEMPTION", "BONUS"] as const)
                     .filter(tab => !(isBusiness && (tab === "REFERRAL" || tab === "REDEMPTION")))
                     .map(tab => (
-                    <button
-                      key={tab}
-                      onClick={() => setFilterTab(tab)}
-                      className={cn(
-                        "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
-                        filterTab === tab
-                          ? "bg-primary-600 text-white"
-                          : "bg-white text-neutral-600 hover:bg-neutral-100 border border-neutral-200"
-                      )}
-                    >
-                      {tab.charAt(0) + tab.slice(1).toLowerCase()}
-                    </button>
-                  ))}
+                      <button
+                        key={tab}
+                        onClick={() => setFilterTab(tab)}
+                        className={cn(
+                          "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
+                          filterTab === tab
+                            ? "bg-primary-600 text-white"
+                            : "bg-white text-neutral-600 hover:bg-neutral-100 border border-neutral-200"
+                        )}
+                      >
+                        {tab.charAt(0) + tab.slice(1).toLowerCase()}
+                      </button>
+                    ))}
                 </div>
 
                 <div className="flex flex-col gap-8">
@@ -655,8 +655,8 @@ export function RewardsView() {
                           const isPickup = tx.category === "PICKUP" && tx.rewardReason;
 
                           return (
-                            <Card 
-                              key={tx.id} 
+                            <Card
+                              key={tx.id}
                               className={cn(
                                 "flex flex-col p-4 md:p-5 rounded-2xl transition-all border-neutral-100 bg-white/60 backdrop-blur-sm",
                                 isPickup && "cursor-pointer hover:shadow-md"
@@ -743,15 +743,15 @@ export function RewardsView() {
         </div>
       )}
 
-      <PlatinumGiftModal 
-        isOpen={isGiftModalOpen} 
-        onClose={() => setIsGiftModalOpen(false)} 
+      <PlatinumGiftModal
+        isOpen={isGiftModalOpen}
+        onClose={() => setIsGiftModalOpen(false)}
         onClaimed={(gift, date, nextDate) => {
           setSelectedGift(gift);
           setGiftClaimDate(date);
           setNextGiftEligibleDate(nextDate);
           setGiftClaimed(true);
-        }} 
+        }}
       />
     </PageContainer>
   );

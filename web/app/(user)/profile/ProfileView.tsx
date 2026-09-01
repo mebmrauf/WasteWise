@@ -24,7 +24,6 @@ import {
   resolveAvatarUrl,
   type UpdateProfileInput,
 } from "@/lib/api/users";
-
 const profileErrorMessages: Record<string, string> = {
   VALIDATION_ERROR: "Please check that value and try again.",
   PHONE_IN_USE: "That phone number is already linked to another account.",
@@ -67,7 +66,6 @@ export function ProfileView() {
 
   const [fullName, setFullName] = React.useState(user?.fullName ?? "");
   const [phone, setPhone] = React.useState(user?.phone ?? "");
-
   React.useEffect(() => {
     if (user) {
       setFullName(user.fullName);
@@ -77,7 +75,6 @@ export function ProfileView() {
 
   const [extras, setExtras] = React.useState<ProfileExtras | null>(null);
   const [extrasError, setExtrasError] = React.useState<string | null>(null);
-
   React.useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -110,6 +107,7 @@ export function ProfileView() {
 
   const [fullNameSave, setFullNameSave] = React.useState<FieldSaveState>(idleSaveState);
   const [phoneSave, setPhoneSave] = React.useState<FieldSaveState>(idleSaveState);
+  const [detailsSave, setDetailsSave] = React.useState<FieldSaveState>(idleSaveState);
 
   const [isEditingAddress, setIsEditingAddress] = React.useState(false);
   const [addressQuery, setAddressQuery] = React.useState("");

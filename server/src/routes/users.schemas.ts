@@ -16,6 +16,7 @@ export const updateProfileSchema = z
     rewardsEmailNotificationsEnabled: z.boolean().optional(),
     communityName: z.string().trim().max(120).nullable().optional(),
     campaignNotificationsEnabled: z.boolean().optional(),
+    collectorFindRadiusKm: z.number().min(5).max(50).optional(),
   })
   .strict();
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

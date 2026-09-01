@@ -62,20 +62,20 @@ function getMonthsAndDaysRemaining(targetDateStr: string): string {
   const now = new Date();
   const target = new Date(targetDateStr);
   if (target <= now) return "Ready to claim!";
-  
+
   let months = target.getMonth() - now.getMonth() + (12 * (target.getFullYear() - now.getFullYear()));
   let days = target.getDate() - now.getDate();
-  
+
   if (days < 0) {
     months--;
     const previousMonth = new Date(target.getFullYear(), target.getMonth(), 0);
     days += previousMonth.getDate();
   }
-  
+
   const parts = [];
   if (months > 0) parts.push(`${months} month${months > 1 ? 's' : ''}`);
   if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`);
-  
+
   return parts.length > 0 ? parts.join(' ') : "Less than a day";
 }
 
@@ -88,7 +88,7 @@ export function RewardsView() {
   const [totalPoints, setTotalPoints] = React.useState<number>(0);
   const [membershipLevel, setMembershipLevel] = React.useState<"BRONZE" | "SILVER" | "GOLD" | "PLATINUM">("BRONZE");
   const [membershipBadge, setMembershipBadge] = React.useState<string>("Bronze Badge");
-  
+
   const [accountType, setAccountType] = React.useState<"HOUSEHOLD" | "BUSINESS" | null>(null);
   const [environmentalImpact, setEnvironmentalImpact] = React.useState<any>(null);
 
@@ -114,7 +114,7 @@ export function RewardsView() {
         setTotalPoints(balanceResult.totalGreenPoints);
         setMembershipLevel(balanceResult.membershipLevel);
         setMembershipBadge(balanceResult.membershipBadge);
-        
+
         setAccountType(balanceResult.accountType);
         setEnvironmentalImpact(balanceResult.environmentalImpact);
 
@@ -146,14 +146,14 @@ export function RewardsView() {
     setBalance(result.greenPointsBalance);
     setMembershipLevel(result.membershipLevel);
     setMembershipBadge(result.membershipBadge);
-    
+
     getRewardsHistory()
       .then((historyResult) => {
         setGreenPointsTransactions(historyResult.greenPointsTransactions);
         setMobileRechargeTransactions(historyResult.mobileRechargeTransactions);
         setCsrContributions(historyResult.csrContributions || []);
       })
-      .catch(() => {});
+      .catch(() => { });
   }
 
   const isBusiness = true;
@@ -213,14 +213,14 @@ export function RewardsView() {
     if (!window.confirm("WasteWise will plant one tree in your Business's name. Do you want to continue?")) {
       return;
     }
-    
+
     setIsClaimingTree(true);
     try {
       const result = await claimTreePlantation();
       setLastTreePlantationClaimDate(result.lastTreePlantationClaimDate);
       setNextTreePlantationEligibleDate(result.nextTreePlantationEligibleDate);
       setTreePlantationClaimed(result.treePlantationClaimed);
-      
+
       alert("Tree plantation reward claimed successfully! WasteWise will plant one tree in your Business's name.");
       fetchAll();
     } catch (err: any) {
@@ -232,7 +232,7 @@ export function RewardsView() {
 
   const unifiedTransactions = React.useMemo(() => {
     const list: UnifiedTransaction[] = [];
-    
+
     greenPointsTransactions.forEach((tx) => {
       let category = tx.category as TransactionCategory;
       if (!category || category === "OTHER") {
@@ -247,7 +247,7 @@ export function RewardsView() {
         else if (tx.type === "EARNED") category = "BONUS";
         else category = "OTHER";
       }
-      
+
       list.push({
         id: `gp-${tx.id}`,
         originalId: tx.id,
@@ -312,23 +312,23 @@ export function RewardsView() {
 
   const groupedTransactions = React.useMemo(() => {
     const filtered = unifiedTransactions.filter(tx => filterTab === "ALL" || tx.category === filterTab);
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     const groups: { label: string; items: UnifiedTransaction[] }[] = [
       { label: "Today", items: [] },
       { label: "Yesterday", items: [] },
       { label: "Earlier", items: [] },
     ];
-    
+
     filtered.forEach(tx => {
       const txDate = new Date(tx.createdAt);
       txDate.setHours(0, 0, 0, 0);
-      
+
       if (txDate.getTime() === today.getTime()) {
         groups[0].items.push(tx);
       } else if (txDate.getTime() === yesterday.getTime()) {
@@ -337,7 +337,7 @@ export function RewardsView() {
         groups[2].items.push(tx);
       }
     });
-    
+
     return groups.filter(g => g.items.length > 0);
   }, [unifiedTransactions, filterTab]);
 
@@ -353,8 +353,8 @@ export function RewardsView() {
   return (
     <PageContainer className="py-8 lg:py-12">
       <div className="mb-6">
-        <BusinessMembershipNotification 
-          level={membershipLevel} 
+        <BusinessMembershipNotification
+          level={membershipLevel}
         />
       </div>
 
@@ -373,7 +373,7 @@ export function RewardsView() {
 
       {loadState === "ready" && (
         <div className="mt-8 flex flex-col gap-8">
-          
+
           {/* Membership Card */}
           <Card className="overflow-hidden animate-slide-up">
             <div className="p-6 md:p-8 bg-gradient-to-br from-neutral-50 to-neutral-100 border-b border-neutral-200">
@@ -403,7 +403,7 @@ export function RewardsView() {
                   </ul>
                 </div>
               </div>
-              
+
               <div className="mt-8">
                 {membershipLevel !== "PLATINUM" ? (
                   <>
@@ -421,7 +421,7 @@ export function RewardsView() {
                 )}
               </div>
             </div>
-            
+
             {/* Environmental Impact (BUSINESS ONLY) */}
             {isBusiness && environmentalImpact && (
               <div className="p-6 md:p-8 bg-emerald-50 border-t border-emerald-100">
@@ -484,8 +484,8 @@ export function RewardsView() {
                         🌳 Claim Tree Plantation
                       </Button>
                     ) : (
-                      <Button 
-                        onClick={handleClaimTreePlantation} 
+                      <Button
+                        onClick={handleClaimTreePlantation}
                         disabled={!isEligibleForTreePlantation || isClaimingTree}
                         className={cn(
                           "whitespace-nowrap w-full",
@@ -495,7 +495,7 @@ export function RewardsView() {
                         {isClaimingTree ? "Claiming..." : (isEligibleForTreePlantation ? "🌳 Claim Tree Plantation" : "Claimed")}
                       </Button>
                     )}
-                    
+
                     {membershipLevel !== "PLATINUM" && (
                       <div className="text-xs text-neutral-500 text-right mt-2 flex flex-col gap-1 w-full">
                         <span>Available for Platinum Business Members.</span>
@@ -521,7 +521,7 @@ export function RewardsView() {
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-600 to-primary-900 p-8 shadow-xl text-center animate-slide-up">
             <div className="absolute -top-24 -left-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
             <div className="absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
-            
+
             <div className="relative z-10 flex flex-col items-center gap-4">
               <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white/20 backdrop-blur-md shadow-inner">
                 <Icon icon={Gift} size="xl" className="text-white" aria-hidden />
@@ -579,19 +579,19 @@ export function RewardsView() {
                   {(["ALL", "PICKUP", "REFERRAL", "LOYALTY", "REDEMPTION", "BONUS", "CSR"] as const)
                     .filter(tab => !(isBusiness && (tab === "REFERRAL" || tab === "REDEMPTION")) && !(!isBusiness && tab === "CSR"))
                     .map(tab => (
-                    <button
-                      key={tab}
-                      onClick={() => setFilterTab(tab as TransactionCategory)}
-                      className={cn(
-                        "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
-                        filterTab === tab
-                          ? "bg-primary-600 text-white"
-                          : "bg-white text-neutral-600 hover:bg-neutral-100 border border-neutral-200"
-                      )}
-                    >
-                      {tab === "CSR" ? "CSR" : tab.charAt(0) + tab.slice(1).toLowerCase()}
-                    </button>
-                  ))}
+                      <button
+                        key={tab}
+                        onClick={() => setFilterTab(tab as TransactionCategory)}
+                        className={cn(
+                          "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
+                          filterTab === tab
+                            ? "bg-primary-600 text-white"
+                            : "bg-white text-neutral-600 hover:bg-neutral-100 border border-neutral-200"
+                        )}
+                      >
+                        {tab === "CSR" ? "CSR" : tab.charAt(0) + tab.slice(1).toLowerCase()}
+                      </button>
+                    ))}
                 </div>
 
                 <div className="flex flex-col gap-8">
@@ -605,8 +605,8 @@ export function RewardsView() {
                           const isPickup = tx.category === "PICKUP" && tx.rewardReason;
 
                           return (
-                            <Card 
-                              key={tx.id} 
+                            <Card
+                              key={tx.id}
                               className={cn(
                                 "flex flex-col p-4 md:p-5 rounded-2xl transition-all border-neutral-100 bg-white/60 backdrop-blur-sm",
                                 isPickup && !isBusiness && "cursor-pointer hover:shadow-md"
@@ -685,11 +685,11 @@ export function RewardsView() {
                                           <span>+{tx.totalPoints ?? tx.rewardReason?.totalPoints ?? tx.points} GP</span>
                                         </div>
                                       </div>
-                                      
+
                                       {/* Find if any LOYALTY or BONUS transaction occurred at the same time */}
                                       {(() => {
                                         const sameTimeTx = greenPointsTransactions.filter(
-                                          (t) => (t.category === "LOYALTY" || t.category === "BONUS") && t.id !== tx.originalId && 
+                                          (t) => (t.category === "LOYALTY" || t.category === "BONUS") && t.id !== tx.originalId &&
                                             Math.abs(new Date(t.createdAt).getTime() - new Date(tx.createdAt).getTime()) < 2000
                                         );
                                         return sameTimeTx.length > 0 ? (
@@ -733,8 +733,8 @@ export function RewardsView() {
                                           </div>
                                         </div>
                                       )}
-                                      </>
-                                    ) : null}
+                                    </>
+                                  ) : null}
                                 </div>
                               )}
                               {tx.category === "CSR" && (
@@ -745,9 +745,9 @@ export function RewardsView() {
                                   <div><span className="text-neutral-500 block mb-1 text-xs uppercase tracking-wider font-semibold">Amount</span><span className="font-medium text-emerald-600">৳{tx.amountTaka?.toLocaleString()}</span></div>
                                   <div><span className="text-neutral-500 block mb-1 text-xs uppercase tracking-wider font-semibold">Status</span><span className="font-medium text-neutral-900">{tx.status || 'PENDING'}</span></div>
                                   <div className="sm:col-span-2 pt-2">
-                                    <Button 
-                                      variant="secondary" 
-                                      size="sm" 
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
                                       onClick={() => window.open(`${publicEnv.NEXT_PUBLIC_API_URL}/csr/receipt/${tx.originalId}`, '_blank')}
                                       className="w-full sm:w-auto"
                                     >

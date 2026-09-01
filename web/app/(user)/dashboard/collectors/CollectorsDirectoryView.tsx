@@ -26,9 +26,12 @@ const SORT_OPTIONS: { value: CollectorSort; label: string }[] = [
   { value: "rating", label: "Top rated" },
 ];
 
+
 export function CollectorsDirectoryView() {
   const [savedAddress, setSavedAddress] = React.useState<SavedAddress | null>(null);
   const [location, setLocation] = React.useState<ResolvedLocation | null>(null);
+  const [radiusKm, setRadiusKm] = React.useState<number | undefined>();
+  const [sliderRadiusKm, setSliderRadiusKm] = React.useState<number>(20);
   const [isLoadingProfile, setIsLoadingProfile] = React.useState(true);
 
   const [vehicleType, setVehicleType] = React.useState<VehicleType | "ALL">("ALL");
@@ -37,6 +40,15 @@ export function CollectorsDirectoryView() {
 
   const [collectors, setCollectors] = React.useState<CollectorDirectoryEntry[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (sliderRadiusKm !== radiusKm) {
+        setRadiusKm(sliderRadiusKm);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [sliderRadiusKm, radiusKm]);
 
   React.useEffect(() => {
     let active = true;
@@ -52,6 +64,9 @@ export function CollectorsDirectoryView() {
           setSavedAddress(address);
           setLocation({ label: address.formattedAddress, latitude: address.latitude, longitude: address.longitude });
         }
+        const initialRadius = user.collectorFindRadiusKm ?? 20;
+        setRadiusKm(initialRadius);
+        setSliderRadiusKm(initialRadius);
         setIsLoadingProfile(false);
       })
       .catch((err) => {
@@ -77,6 +92,7 @@ export function CollectorsDirectoryView() {
       lng: location.longitude,
       vehicleType: vehicleType !== "ALL" ? vehicleType : undefined,
       minRating: minRating ? Number(minRating) : undefined,
+      radiusKm,
       sort,
     })
       .then((data) => {
@@ -93,7 +109,7 @@ export function CollectorsDirectoryView() {
     return () => {
       active = false;
     };
-  }, [location, vehicleType, minRating, sort]);
+  }, [location, vehicleType, minRating, radiusKm, sort]);
 
   const vehicleOptions = [
     { value: "ALL", label: "All Vehicles" },
@@ -108,28 +124,60 @@ export function CollectorsDirectoryView() {
       <div className="mb-8">
         <h1 className="text-display text-neutral-900 mb-2 font-bold tracking-tight">Find a Collector</h1>
         <p className="text-body-lg text-neutral-600">
-          Browse verified independent collectors operating within 20 km of your location.
+          Browse verified independent collectors operating within {radiusKm ?? 20} km of your location.
         </p>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white p-2 rounded-xl border border-neutral-200 shadow-sm mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <LocationPickerPill savedAddress={savedAddress} value={location} onChange={setLocation} className="w-full sm:w-[280px] shrink-0" />
-        <div className="flex flex-wrap gap-2">
-          <FilterPillSelect
-            label="Vehicle"
-            value={vehicleType}
-            onChange={(v) => setVehicleType(v as VehicleType | "ALL")}
-            active={vehicleType !== "ALL"}
-            options={vehicleOptions}
-          />
-          <FilterPillSelect
-            label="Sort"
-            value={sort}
-            onChange={(v) => setSort(v as CollectorSort)}
-            active
-            options={SORT_OPTIONS}
-          />
+      <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm mb-8 flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <LocationPickerPill savedAddress={savedAddress} value={location} onChange={setLocation} className="w-full sm:w-[280px] shrink-0" />
+          <div className="flex flex-wrap gap-2">
+            <FilterPillSelect
+              label="Vehicle"
+              value={vehicleType}
+              onChange={(v) => setVehicleType(v as VehicleType | "ALL")}
+              active={vehicleType !== "ALL"}
+              options={vehicleOptions}
+            />
+            <FilterPillSelect
+              label="Sort"
+              value={sort}
+              onChange={(v) => setSort(v as CollectorSort)}
+              active
+              options={SORT_OPTIONS}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 pt-4 border-t border-neutral-100">
+          <div className="flex items-center gap-3 flex-1 max-w-md">
+            <label htmlFor="directory-radius" className="text-label text-neutral-800 whitespace-nowrap">
+              Search radius
+            </label>
+            <input
+              id="directory-radius"
+              type="range"
+              min={5}
+              max={50}
+              step={1}
+              value={sliderRadiusKm}
+              onChange={(event) => setSliderRadiusKm(Number(event.target.value))}
+              className="flex-1 accent-primary-600"
+            />
+            <span className="w-16 text-right text-body-sm font-medium text-neutral-800">
+              {sliderRadiusKm} km
+            </span>
+          </div>
+
+          <div className="sm:ml-auto text-body-sm text-neutral-600">
+            {!location ? null : isLoading ? (
+              "Finding collectors..."
+            ) : (
+              <span className="font-medium text-primary-700">
+                {collectors.length} {collectors.length === 1 ? "collector" : "collectors"} match this radius
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -160,7 +208,7 @@ export function CollectorsDirectoryView() {
             <Icon icon={User} size="xl" />
           </div>
           <h3 className="text-h4 text-neutral-900 font-medium mb-2">No collectors found</h3>
-          <p className="text-neutral-500">No verified collectors within 20 km yet — try adjusting your filters.</p>
+          <p className="text-neutral-500">No verified collectors within {radiusKm ?? 20} km yet — try adjusting your filters.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

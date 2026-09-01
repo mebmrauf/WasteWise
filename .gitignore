@@ -44,3 +44,7 @@ remember.txt
 web/AGENTS.md
 CLAUDE.md
 /server/scripts
+
+# Local DB
+.local_pg/
+server/neondb_dump.sql

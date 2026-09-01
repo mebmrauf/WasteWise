@@ -12,7 +12,7 @@ collectorsRouter.get("/", async (req, res) => {
     return sendError(res, 400, "VALIDATION_ERROR", parsed.error.message);
   }
 
-  const { serviceArea, vehicleType, lat, lng, minRating, sort } = parsed.data;
+  const { serviceArea, vehicleType, lat, lng, minRating, radiusKm, sort } = parsed.data;
 
   const collectors = await prisma.user.findMany({
     where: {
@@ -72,9 +72,10 @@ collectorsRouter.get("/", async (req, res) => {
     });
 
   if (lat !== undefined && lng !== undefined) {
+    const maxRadius = radiusKm ?? MAX_COLLECTOR_MATCH_DISTANCE_KM;
     directory = directory
       .filter((c) => c.hasServiceLocation)
-      .filter((c) => c.distanceKm !== null && c.distanceKm <= MAX_COLLECTOR_MATCH_DISTANCE_KM);
+      .filter((c) => c.distanceKm !== null && c.distanceKm <= maxRadius);
   }
 
   directory.sort((a, b) => {

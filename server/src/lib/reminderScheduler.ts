@@ -1,12 +1,3 @@
-// ---------------------------------------------------------------------------
-// Smart Pickup Reminder — periodic sweep that turns each user's recycling
-// pattern into an actual push notification (bell + socket, via
-// lib/notifications.ts) once they're "due", e.g.
-//   "You usually recycle every 12 days — it's been 11. Schedule now?"
-// No external scheduling dependency: a single in-process interval is enough
-// for this app's scale, mirroring how ensureAdminUser() seeds state on boot
-// in index.ts.
-// ---------------------------------------------------------------------------
 import { NotificationType, PickupStatus, Role } from "@prisma/client";
 import { prisma } from "./prisma";
 import { logger } from "./logger";

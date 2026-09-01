@@ -26,6 +26,7 @@ model User {
   latitude                              Float?
   longitude                             Float?
   placeId                               String?
+  collectorFindRadiusKm         Float?
   greenPointsBalance                    Int                         @default(0)
   discountCouponClaimed                 Boolean                     @default(false)
   giftClaimDate                         DateTime?
@@ -86,13 +87,13 @@ model User {
   paymentsMade                          Payment[]                   @relation("PaymentsMade")
   wasteAnalysisReportsRequested         WasteAnalysisReport[]       @relation("WasteAnalysisRequester")
   wasteAnalysisReportsReviewed          WasteAnalysisReport[]       @relation("WasteAnalysisReviewer")
-  communityName                 String?
-  hasJoinedCampaignCommunity     Boolean               @default(false)
-  campaignCommunityJoinedAt      DateTime?
-  campaignNotificationsEnabled   Boolean               @default(true)
-  campaignsCreated               RecyclingCampaign[]   @relation("CampaignsCreated")
-  campaignRegistrations          CampaignRegistration[]
-  campaignVideosUploaded         CampaignVideo[]        @relation("CampaignVideoUploader")
+  communityName                         String?
+  hasJoinedCampaignCommunity            Boolean                     @default(false)
+  campaignCommunityJoinedAt             DateTime?
+  campaignNotificationsEnabled          Boolean                     @default(true)
+  campaignsCreated                      RecyclingCampaign[]         @relation("CampaignsCreated")
+  campaignRegistrations                 CampaignRegistration[]
+  campaignVideosUploaded                CampaignVideo[]             @relation("CampaignVideoUploader")
 }
 
 model OAuthAccount {
@@ -253,6 +254,7 @@ model PickupRequest {
   payments                Payment[]
   ignoredByCollectors     User[]                   @relation("IgnoredPickups")
   wasteAnalysisReports    WasteAnalysisReport[]
+
   @@index([status])
   @@index([assignedCollectorId])
   @@index([requesterId, createdAt])
@@ -728,7 +730,7 @@ enum MobileRechargeStatus {
 }
 
 model CsrContribution {
-  id                 String   @id @default(cuid())
+  id                 String    @id @default(cuid())
   businessId         String
   pickupId           String
   donationAmount     Float
@@ -736,8 +738,8 @@ model CsrContribution {
   selectedCause      String
   paymentAmount      Float
   status             CsrStatus @default(PENDING)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   business User                   @relation("BusinessCsrContributions", fields: [businessId], references: [id], onDelete: Cascade)
   pickup   BulkMarketplaceRequest @relation(fields: [pickupId], references: [id], onDelete: Cascade)
@@ -828,11 +830,11 @@ model RecyclingCampaign {
 }
 
 model CampaignRegistration {
-  id           String                    @id @default(cuid())
+  id           String                   @id @default(cuid())
   campaignId   String
   userId       String
   type         CampaignRegistrationType
-  registeredAt DateTime                  @default(now())
+  registeredAt DateTime                 @default(now())
 
   campaign RecyclingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -165,13 +165,17 @@ export function NewPickupRequestView() {
 
   React.useEffect(() => {
     if (resolvedLocation) {
-      getVerifiedCollectors({ lat: resolvedLocation.latitude, lng: resolvedLocation.longitude })
+      getVerifiedCollectors({ 
+        lat: resolvedLocation.latitude, 
+        lng: resolvedLocation.longitude,
+        radiusKm: profile?.collectorFindRadiusKm ?? undefined
+      })
         .then(setLocalCollectors)
         .catch(console.error);
     } else {
       setLocalCollectors([]);
     }
-  }, [resolvedLocation]);
+  }, [resolvedLocation, profile?.collectorFindRadiusKm]);
 
 
 

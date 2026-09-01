@@ -95,7 +95,7 @@ export async function processGreenPointsForPickup(pickupRequestId: string) {
 
     const totalVerifiedWeight = validItems.reduce((sum, i) => sum + i.exactWeightKg, 0);
     if (userToUpdate.accountType === "HOUSEHOLD" && userToUpdate.referredById && !userToUpdate.referralRewardClaimed && validItems.length > 0) {
-      
+
       const existingReferralTx = await tx.greenPointsTransaction.findFirst({
         where: { userId: pickup.requesterId, category: "REFERRAL" }
       });
@@ -104,83 +104,83 @@ export async function processGreenPointsForPickup(pickupRequestId: string) {
         referralRewardsProcessed = true;
         referrerId = userToUpdate.referredById;
 
-      await tx.user.update({
-        where: { id: pickup.requesterId },
-        data: {
-          greenPointsBalance: { increment: 50 },
-          totalGreenPoints: { increment: 50 },
-          referralPointsEarned: { increment: 50 },
-          referralRewardClaimed: true,
-        },
-      });
+        await tx.user.update({
+          where: { id: pickup.requesterId },
+          data: {
+            greenPointsBalance: { increment: 50 },
+            totalGreenPoints: { increment: 50 },
+            referralPointsEarned: { increment: 50 },
+            referralRewardClaimed: true,
+          },
+        });
 
-      await tx.greenPointsTransaction.create({
-        data: {
-          userId: pickup.requesterId,
-          pickupRequestId,
-          points: 50,
-          type: GreenPointsTransactionType.EARNED,
-          category: "REFERRAL",
-          description: "Welcome Referral Bonus +50 Points",
-        },
-      });
+        await tx.greenPointsTransaction.create({
+          data: {
+            userId: pickup.requesterId,
+            pickupRequestId,
+            points: 50,
+            type: GreenPointsTransactionType.EARNED,
+            category: "REFERRAL",
+            description: "Welcome Referral Bonus +50 Points",
+          },
+        });
 
-      const referrer = await tx.user.update({
-        where: { id: userToUpdate.referredById },
-        data: {
-          greenPointsBalance: { increment: 100 },
-          totalGreenPoints: { increment: 100 },
-          referralPointsEarned: { increment: 100 },
-          successfulReferrals: { increment: 1 },
-        },
-        select: { successfulReferrals: true, milestonesClaimed: true, id: true }
-      });
+        const referrer = await tx.user.update({
+          where: { id: userToUpdate.referredById },
+          data: {
+            greenPointsBalance: { increment: 100 },
+            totalGreenPoints: { increment: 100 },
+            referralPointsEarned: { increment: 100 },
+            successfulReferrals: { increment: 1 },
+          },
+          select: { successfulReferrals: true, milestonesClaimed: true, id: true }
+        });
 
-      await tx.greenPointsTransaction.create({
-        data: {
-          userId: referrer.id,
-          pickupRequestId,
-          points: 100,
-          type: GreenPointsTransactionType.EARNED,
-          category: "REFERRAL",
-          description: "Referral Bonus - Invited Friend Completed First Pickup +100 Points",
-        },
-      });
+        await tx.greenPointsTransaction.create({
+          data: {
+            userId: referrer.id,
+            pickupRequestId,
+            points: 100,
+            type: GreenPointsTransactionType.EARNED,
+            category: "REFERRAL",
+            description: "Referral Bonus - Invited Friend Completed First Pickup +100 Points",
+          },
+        });
 
-      const milestones = [
-        { count: 10, points: 100 },
-        { count: 20, points: 300 },
-        { count: 30, physical: "Eco-friendly Tote Bag" },
-        { count: 50, physical: "Tree Sapling + Community Recognition Badge" },
-      ];
+        const milestones = [
+          { count: 10, points: 100 },
+          { count: 20, points: 300 },
+          { count: 30, physical: "Eco-friendly Tote Bag" },
+          { count: 50, physical: "Tree Sapling + Community Recognition Badge" },
+        ];
 
-      for (const m of milestones) {
-        if (referrer.successfulReferrals >= m.count && !referrer.milestonesClaimed.includes(m.count)) {
-          newMilestones.push(m.count);
-          await tx.user.update({
-            where: { id: referrer.id },
-            data: {
-              milestonesClaimed: { push: m.count },
-              ...(m.points ? {
-                greenPointsBalance: { increment: m.points },
-                totalGreenPoints: { increment: m.points },
-              } : {})
-            }
-          });
-
-          if (m.points) {
-            await tx.greenPointsTransaction.create({
+        for (const m of milestones) {
+          if (referrer.successfulReferrals >= m.count && !referrer.milestonesClaimed.includes(m.count)) {
+            newMilestones.push(m.count);
+            await tx.user.update({
+              where: { id: referrer.id },
               data: {
-                userId: referrer.id,
-                points: m.points,
-                type: GreenPointsTransactionType.EARNED,
-                category: "REFERRAL",
-                description: `Referral milestone reward (${m.count} friends)`,
+                milestonesClaimed: { push: m.count },
+                ...(m.points ? {
+                  greenPointsBalance: { increment: m.points },
+                  totalGreenPoints: { increment: m.points },
+                } : {})
               }
             });
+
+            if (m.points) {
+              await tx.greenPointsTransaction.create({
+                data: {
+                  userId: referrer.id,
+                  points: m.points,
+                  type: GreenPointsTransactionType.EARNED,
+                  category: "REFERRAL",
+                  description: `Referral milestone reward (${m.count} friends)`,
+                }
+              });
+            }
           }
         }
-      }
       }
     }
 

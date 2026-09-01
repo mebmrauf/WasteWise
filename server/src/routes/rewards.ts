@@ -84,10 +84,10 @@ rewardsRouter.get(
         })
       ]);
 
-      const totalWasteRecycledKg = 
-        (completedPickups._sum.exactWeightKg || 0) + 
+      const totalWasteRecycledKg =
+        (completedPickups._sum.exactWeightKg || 0) +
         (completedBulk._sum.verifiedTotalWeightKg || 0);
-      
+
       const totalCo2ReducedKg = Math.round(totalWasteRecycledKg * 2.5); // 2.5kg CO2 per 1kg waste
       const totalTreesSaved = Math.round(totalWasteRecycledKg / 50); // 1 tree per 50kg waste
 
@@ -208,7 +208,7 @@ rewardsRouter.post(
     const result = await prisma.$transaction(async (tx) => {
       const deducted = await tx.user.updateMany({
         where: { id: req.user!.id, greenPointsBalance: { gte: pointsSpent } },
-        data: { 
+        data: {
           greenPointsBalance: { decrement: pointsSpent },
         },
       });

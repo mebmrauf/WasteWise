@@ -40,6 +40,7 @@ export interface AuthUser {
   recyclingCompanyProfile?: any;
   collectorProfile?: any;
   businessProfile?: any;
+  collectorFindRadiusKm?: number | null;
 }
 
 export interface ApiError {

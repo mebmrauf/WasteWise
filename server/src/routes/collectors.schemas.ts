@@ -8,6 +8,7 @@ export const getVerifiedCollectorsSchema = z
     lat: z.coerce.number().min(-90).max(90).optional(),
     lng: z.coerce.number().min(-180).max(180).optional(),
     minRating: z.coerce.number().min(1).max(5).optional(),
+    radiusKm: z.coerce.number().min(5).max(50).optional(),
     sort: z.enum(["nearest", "rating"]).optional(),
   })
   .refine((data) => (data.lat === undefined) === (data.lng === undefined), {

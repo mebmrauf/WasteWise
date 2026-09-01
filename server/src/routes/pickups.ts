@@ -229,6 +229,9 @@ pickupsRouter.post(
     if (resolvedAddress.latitude !== null && resolvedAddress.longitude !== null) {
       const pickupLocation = { lat: resolvedAddress.latitude, lng: resolvedAddress.longitude };
 
+      const requester = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { collectorFindRadiusKm: true } });
+      const userMaxRadius = requester?.collectorFindRadiusKm ?? MAX_COLLECTOR_MATCH_DISTANCE_KM;
+
       const candidateCollectors = await prisma.collectorProfile.findMany({
         where: {
           verificationStatus: VerificationStatus.APPROVED,
@@ -243,7 +246,7 @@ pickupsRouter.post(
         const isInRange = isWithinRadiusKm(
           pickupLocation,
           { lat: collector.serviceAreaLatitude as number, lng: collector.serviceAreaLongitude as number },
-          Math.min(collector.serviceAreaRadiusKm as number, MAX_COLLECTOR_MATCH_DISTANCE_KM),
+          Math.min(collector.serviceAreaRadiusKm as number, userMaxRadius),
         );
         if (!isInRange) continue;
 
@@ -354,7 +357,7 @@ pickupsRouter.get(
           { preferredCollectorId: req.user!.id }
         ]
       },
-      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, weightRecord: true, requester: { select: { fullName: true, phone: true, avatarUrl: true } } },
+      include: { items: true, offers: { where: { status: OfferStatus.ACCEPTED } }, weightRecord: true, requester: { select: { fullName: true, phone: true, avatarUrl: true, collectorFindRadiusKm: true } } },
     });
     
     logger.debug(`[GET /open] Found ${pickups.length} PENDING pickups for collector ${req.user!.id}`);
@@ -369,7 +372,6 @@ pickupsRouter.get(
       collectorProfile.serviceAreaRadiusKm !== null;
 
     const collectorCenter = hasServiceArea ? { lat: collectorProfile.serviceAreaLatitude as number, lng: collectorProfile.serviceAreaLongitude as number } : null;
-    const maxRadius = hasServiceArea ? Math.min(collectorProfile.serviceAreaRadiusKm as number, MAX_COLLECTOR_MATCH_DISTANCE_KM) : Infinity;
 
     const pickupsWithDistance = pickups.map(pickup => {
       let dist = Infinity;
@@ -382,7 +384,9 @@ pickupsRouter.get(
     const nearbyPickups = pickupsWithDistance.filter(p => {
       if (!hasServiceArea) return true;
       if (p.pickup.latitude === null || p.pickup.longitude === null) return false;
-      return p.dist <= maxRadius;
+      const userMaxRadius = p.pickup.requester.collectorFindRadiusKm ?? MAX_COLLECTOR_MATCH_DISTANCE_KM;
+      const collectorMaxRadius = collectorProfile.serviceAreaRadiusKm as number;
+      return p.dist <= Math.min(collectorMaxRadius, userMaxRadius);
     });
 
     nearbyPickups.sort((a, b) => {

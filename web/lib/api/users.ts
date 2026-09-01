@@ -50,6 +50,7 @@ export interface UserProfile {
   latitude: number | null;
   longitude: number | null;
   placeId: string | null;
+  collectorFindRadiusKm: number | null;
   avatarUrl: string | null;
   emailNotificationsEnabled: boolean;
   smsNotificationsEnabled: boolean;
@@ -72,6 +73,7 @@ export interface UpdateProfileInput {
   formattedAddress?: string;
   latitude?: number;
   longitude?: number;
+  collectorFindRadiusKm?: number;
   emailNotificationsEnabled?: boolean;
   smsNotificationsEnabled?: boolean;
   rewardsEmailNotificationsEnabled?: boolean;

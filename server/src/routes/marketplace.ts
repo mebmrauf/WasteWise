@@ -365,7 +365,7 @@ marketplaceRouter.post(
           return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         });
         highestBidId = sorted[0].id;
-        
+
         await prisma.marketplaceQuotation.update({
           where: { id: highestBidId },
           data: { isHighestBid: true }
@@ -487,7 +487,7 @@ marketplaceRouter.post(
           return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         });
         highestBidId = sorted[0].id;
-        
+
         await prisma.marketplaceQuotation.update({
           where: { id: highestBidId },
           data: { isHighestBid: true }

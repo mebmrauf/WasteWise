@@ -114,7 +114,7 @@ csrRouter.get(
 
     const totalDonated = contributions.reduce((sum, c) => sum + c.donationAmount, 0);
     const totalContributions = contributions.length;
-    
+
     const causeCount: Record<string, number> = {};
     contributions.forEach(c => {
       causeCount[c.selectedCause] = (causeCount[c.selectedCause] || 0) + c.donationAmount;

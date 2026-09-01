@@ -96,6 +96,7 @@ function toPublicProfile(
     hasJoinedCampaignCommunity: user.hasJoinedCampaignCommunity,
     campaignCommunityJoinedAt: user.campaignCommunityJoinedAt,
     campaignNotificationsEnabled: user.campaignNotificationsEnabled,
+    collectorFindRadiusKm: user.collectorFindRadiusKm,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
     collectorProfile: user.collectorProfile ? toPublicCollectorProfile(user.collectorProfile) : null,

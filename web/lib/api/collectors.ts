@@ -22,6 +22,7 @@ export interface GetVerifiedCollectorsParams {
   lat?: number;
   lng?: number;
   minRating?: number;
+  radiusKm?: number;
   sort?: CollectorSort;
 }
 
@@ -32,6 +33,7 @@ export async function getVerifiedCollectors(params: GetVerifiedCollectorsParams)
   if (params.lat !== undefined) paramsStr.set("lat", String(params.lat));
   if (params.lng !== undefined) paramsStr.set("lng", String(params.lng));
   if (params.minRating !== undefined) paramsStr.set("minRating", String(params.minRating));
+  if (params.radiusKm !== undefined) paramsStr.set("radiusKm", String(params.radiusKm));
   if (params.sort) paramsStr.set("sort", params.sort);
 
   const query = paramsStr.toString() ? `?${paramsStr.toString()}` : "";

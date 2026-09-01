@@ -1,1 +1,5 @@
-export { ProfileView as default } from "./ProfileView";
+import { ProfileView } from "./ProfileView";
+
+export default function Page() {
+  return <ProfileView />;
+}

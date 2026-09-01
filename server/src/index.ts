@@ -17,7 +17,7 @@ const httpServer = http.createServer(app);
 async function ensureAdminUser() {
   const email = env.ADMIN_EMAIL;
   const passwordHash = await hashPassword(env.ADMIN_PASSWORD);
-  
+
   await prisma.user.upsert({
     where: { email },
     update: { passwordHash, role: "ADMIN", isEmailVerified: true },
