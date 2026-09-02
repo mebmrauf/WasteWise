@@ -3,10 +3,11 @@ import { prisma } from "../lib/prisma";
 import { getVerifiedCollectorsSchema } from "./collectors.schemas";
 import { sendError, sendData } from "../lib/apiResponse";
 import { distanceKm, MAX_COLLECTOR_MATCH_DISTANCE_KM } from "../lib/geoDistance";
+import { requireAuth } from "../lib/rbac";
 
 export const collectorsRouter = Router();
 
-collectorsRouter.get("/", async (req, res) => {
+collectorsRouter.get("/", requireAuth, async (req, res) => {
   const parsed = getVerifiedCollectorsSchema.safeParse(req.query);
   if (!parsed.success) {
     return sendError(res, 400, "VALIDATION_ERROR", parsed.error.message);
